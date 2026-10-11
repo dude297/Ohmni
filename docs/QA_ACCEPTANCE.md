@@ -1,6 +1,6 @@
 # Ohmni — QA & Safety Test Plan
 
-This is a test plan; a plan is not evidence. Executed so far: unit tests (`npm test`) and the production smoke (`npm run smoke`, below). The latest live smoke at 8fad171 was 12/12 PASS; the earlier dated run below is historical. Browser, mobile and keyboard checks are not recorded here.
+This is a historical safety/QA plan; a plan is not evidence. Today's build-stamped hosted smoke (11/11), Chrome browser user journeys (8/8), source/deployment provenance and outstanding signed-in Anbaric gates are recorded in [RELEASE_E2E_2026-10-11.md](RELEASE_E2E_2026-10-11.md). Older smoke results below remain historical, not current release sign-off.
 
 ### Deterministic DC solver
 - 5V with 10k/10k divider VOUT = 2.500000V (1e-5V tolerance).
