@@ -2,7 +2,17 @@ import { z } from 'zod';
 import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '../circuit/types';
 
 // Owner: Agent C. TypeSafe Jev choice routing over structured text state. Falls back to ask_user.
-const JEV_URL = 'https://api.typesafe.ai/v1/systemone';
+// Direct TypeSafe preferred (no free-tier rate limit); BeatAPI gateway serves the same API shape.
+const PROVIDERS = {
+  typesafe: { url: 'https://api.typesafe.ai/v1/systemone', keyEnv: 'TYPESAFE_API_KEY', modelEnv: 'JEV_MODEL', model: 'jev-latest' },
+  beatapi: { url: 'https://api.beatapi.io/v1/systemone', keyEnv: 'BEATAPI_API_KEY', modelEnv: 'BEATAPI_JEV_MODEL', model: 'jev-1.13-free' },
+} as const;
+
+function pickProvider() {
+  const name = process.env.TYPESAFE_API_KEY ? 'typesafe' : process.env.BEATAPI_API_KEY ? 'beatapi' : 'typesafe';
+  const p = PROVIDERS[name];
+  return { name, url: p.url, key: process.env[p.keyEnv], model: process.env[p.modelEnv] || p.model };
+}
 
 const JevResponse = z.object({
   answers: z.object({
@@ -47,18 +57,17 @@ export async function routeExtraction(input: {
   validationErrors: string[];
 }): Promise<{ route: RouteChoice; event: ModelTraceEvent }> {
   const start = Date.now();
-  const model = process.env.JEV_MODEL || 'jev-latest';
-  const base = { step: 'route', provider: 'typesafe', model };
+  const { name: provider, url, key, model } = pickProvider();
+  const base = { step: 'route', provider, model };
   const fallback = (status: 'error' | 'skipped', note: string) => ({
     route: 'ask_user' as RouteChoice,
     event: { ...base, durationMs: Date.now() - start, status, chosenRoute: 'ask_user' as RouteChoice, note },
   });
 
-  const key = process.env.TYPESAFE_API_KEY;
-  if (!key) return fallback('skipped', 'TYPESAFE_API_KEY not configured; defaulting to ask_user');
+  if (!key) return fallback('skipped', 'TYPESAFE_API_KEY / BEATAPI_API_KEY not configured; defaulting to ask_user');
 
   try {
-    const res = await fetch(JEV_URL, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
