@@ -1,0 +1,63 @@
+/* Repair Studio + bridge schematic. Plain CSS, vl- prefix.
+   Palette: ivory #F6F5F0, teal #142C32, sage #829E98, copper #F2B45A, fault #943E2C. */
+.vl-bridge { max-width: 460px; }
+.vl-schem { background: #F6F5F0; border-radius: 6px; }
+.vl-bg { fill: #F6F5F0; stroke: #829E98; stroke-width: 1; }
+.vl-bridge .vl-part path, .vl-bridge .vl-rail { stroke: #829E98; stroke-width: 2.5; fill: none; }
+.vl-bridge .vl-part rect { fill: #F6F5F0; stroke: #142C32; stroke-width: 2; }
+.vl-bridge .vl-part text, .vl-bridge .vl-rlabel, .vl-bridge .vl-nlabel { fill: #142C32; font-size: 12px; font-weight: 700; }
+.vl-rlabel { letter-spacing: 1px; }
+.vl-src { fill: #F6F5F0; stroke: #142C32; stroke-width: 2; }
+.vl-plus { font-size: 13px !important; }
+.vl-junc { fill: #142C32; }
+.vl-bridge .vl-dot { fill: #142C32; }
+.vl-bridge .vl-dotHollow { fill: #F6F5F0; stroke: #142C32; stroke-width: 2; }
+.vl-bridge .vl-dotOn, .vl-dotOn { fill: #F2B45A; stroke: #142C32; stroke-width: 2; }
+.vl-ring { fill: #F2B45A; fill-opacity: 0.4; stroke: #F2B45A; stroke-width: 3; }
+.vl-part[data-fault] rect { fill: #943E2C !important; stroke: #943E2C !important; }
+.vl-part[data-fault] text { fill: #943E2C !important; }
+.vl-nafter { fill: #142C32; font-style: italic; font-size: 11px; }
+.vl-bridge .vl-nread { fill: #2f6b4f; }
+
+/* decorative status animation: NOT audio amplitude */
+.vl-meter { display: inline-flex; gap: 3px; height: 10px; align-items: flex-end; opacity: 0.35; }
+.vl-meter i { width: 3px; height: 4px; background: #a9bbb7; border-radius: 1px; display: block; }
+.vl-ptt[aria-pressed="true"] .vl-meter { opacity: 1; }
+.vl-ptt[aria-pressed="true"] .vl-meter i { animation: vl-pulse-kf 1.2s ease-in-out infinite; background: #F2B45A; }
+.vl-ptt[aria-pressed="true"] .vl-meter i:nth-child(2) { animation-delay: 0.15s; }
+.vl-ptt[aria-pressed="true"] .vl-meter i:nth-child(3) { animation-delay: 0.3s; }
+.vl-ptt[aria-pressed="true"] .vl-meter i:nth-child(4) { animation-delay: 0.45s; }
+.vl-ptt[aria-pressed="true"] .vl-meter i:nth-child(5) { animation-delay: 0.6s; }
+@keyframes vl-pulse-kf { 0%, 100% { height: 4px; } 50% { height: 10px; } }
+@media (prefers-reduced-motion: reduce) { .vl-ptt[aria-pressed="true"] .vl-meter i { animation: none; height: 8px; } }
+
+.vl-repair { background: #F6F5F0; color: #142C32; border: 3px solid #829E98; border-radius: 8px; padding: 16px; display: grid; gap: 10px; }
+.vl-repair .vl-h2 { color: #142C32; display: inline-flex; gap: 6px; align-items: center; margin: 0 !important; }
+.vl-repairTop { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vl-repairTitle { font-size: 20px; font-weight: 600; margin: 0; }
+.vl-repairTitle b { color: #943E2C; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.vl-muted2 { font-size: 12px; color: #4a6168; margin: 0; }
+.vl-patch { font-size: 14px; margin: 0; }
+.vl-repair .vl-k { color: #4a6168; }
+.vl-diffs { display: grid; gap: 6px; }
+.vl-diff { display: grid; grid-template-columns: 52px 1fr auto 1fr; gap: 8px; align-items: center; border: 1px solid #c7d2cc; border-radius: 4px; padding: 8px; background: #fff; }
+.vl-diffKey { border: 2px solid #943E2C; }
+.vl-diffNode { font: 700 18px ui-monospace, Menlo, Consolas, monospace; }
+.vl-diffNum { font: 700 20px ui-monospace, Menlo, Consolas, monospace; display: grid; gap: 2px; }
+.vl-diffNum small { font: 600 10px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.8px; text-transform: uppercase; color: #4a6168; }
+.vl-arrow { font-size: 20px; color: #829E98; }
+.vl-tag { font: 700 9px ui-monospace, Menlo, Consolas, monospace; letter-spacing: 1px; padding: 2px 6px; border-radius: 3px; border: 1px solid; width: fit-content; }
+.vl-tagMEASURED { background: #142C32; color: #F6F5F0; border-color: #142C32; }
+.vl-tagSIMULATED { background: #fff; color: #142C32; border-color: #829E98; border-style: dashed; }
+.vl-tagHYPOTHESIZED { background: #F2B45A; color: #142C32; border-color: #F2B45A; }
+.vl-tagVERIFIED { background: #2f6b4f; color: #fff; border-color: #2f6b4f; }
+.vl-actions { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 14px; }
+.vl-approve { justify-content: center; }
+.vl-verify { border-top: 1px dashed #829E98; padding-top: 10px; display: grid; gap: 6px; }
+.vl-verify p { margin: 0; font-size: 14px; }
+.vl-vOk, .vl-vNo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-weight: 600; }
+.vl-vNo { color: #943E2C; }
+@media (max-width: 640px) {
+  .vl-diff { grid-template-columns: 1fr; }
+  .vl-arrow { transform: rotate(90deg); justify-self: start; }
+}

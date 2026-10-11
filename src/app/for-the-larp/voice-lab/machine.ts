@@ -6,7 +6,7 @@ import { fmtNum, fmtReading, volts, type VoiceIntent } from "./parser";
 
 export type Phase = "idle" | "listening" | "processing" | "confirming" | "committed" | "error";
 export type Reading = Extract<VoiceIntent, { type: "record_measurement" }>;
-export type Proposal = { reading: Reading; revision: number; warning?: string; transcript: string };
+export type Proposal = { reading: Reading; revision: number; warning?: string; transcript: string; id?: number };
 export type Obs = { node: string; volts: number };
 
 export type VLState = {
@@ -16,6 +16,7 @@ export type VLState = {
   proposal: Proposal | null;
   observations: Obs[];
   message: string; // last reply / clarification shown on screen (and optionally spoken)
+  seq: number; // id of the active proposal; "yes" can only ever apply to the proposal currently displayed
 };
 
 export type Action =
@@ -24,13 +25,14 @@ export type Action =
   | { type: "listen" }
   | { type: "heard" }
   | { type: "propose"; proposal: Proposal }
+  | { type: "correct"; reading: Reading; warning?: string; transcript: string } // "no, change it to ..." replaces the pending value, re-confirm
   | { type: "say"; message: string } // clarification or info, back to idle
   | { type: "cancel" }
   | { type: "commit_start" }
   | { type: "commit_done"; observations: Obs[]; message: string }
   | { type: "fail"; message: string };
 
-export const initialState: VLState = { phase: "idle", circuitConfirmed: false, revision: 0, proposal: null, observations: [], message: "" };
+export const initialState: VLState = { phase: "idle", circuitConfirmed: false, revision: 0, proposal: null, observations: [], message: "", seq: 0 };
 
 /** Why a commit must be refused, or null if it may proceed. */
 export function commitBlocker(s: VLState): string | null {
@@ -39,6 +41,14 @@ export function commitBlocker(s: VLState): string | null {
   if (s.phase === "processing") return "Already recording this reading.";
   if (s.proposal.revision !== s.revision) return "The circuit changed after this reading was heard. Say the reading again.";
   return null;
+}
+
+const sameReading = (a: Reading, b: Reading) => a.node === b.node && a.value === b.value && a.unit === b.unit;
+
+/** Spoken/typed "yes, record that" may only apply to a proposal that is on screen right now. */
+export function voiceConfirmBlocker(s: VLState): string | null {
+  if (!s.proposal || s.phase !== "confirming") return "There is no reading waiting for confirmation.";
+  return commitBlocker(s);
 }
 
 export function reducer(s: VLState, a: Action): VLState {
@@ -52,7 +62,15 @@ export function reducer(s: VLState, a: Action): VLState {
     case "heard": // a pending proposal stays pending while the user answers it by voice
       return { ...s, phase: s.proposal ? "confirming" : "processing" };
     case "propose":
-      return { ...s, phase: "confirming", proposal: a.proposal, message: "" };
+      // duplicate suppression: the same reading re-heard while it is already pending does not re-arm anything
+      if (s.proposal && s.phase !== "processing" && sameReading(s.proposal.reading, a.proposal.reading) && s.proposal.revision === a.proposal.revision)
+        return { ...s, phase: "confirming", message: "Same reading is already waiting for your confirmation." };
+      if (s.phase === "processing" && s.proposal) return s; // a commit is in flight: do not swap the proposal under it
+      return { ...s, phase: "confirming", proposal: { ...a.proposal, id: s.seq + 1 }, seq: s.seq + 1, message: "" };
+    case "correct": {
+      if (!s.proposal || s.phase === "processing") return { ...s, message: "There is no pending reading to change." };
+      return { ...s, phase: "confirming", proposal: { ...s.proposal, reading: a.reading, warning: a.warning, transcript: a.transcript, id: s.seq + 1 }, seq: s.seq + 1, message: "" };
+    }
     case "say":
       return { ...s, phase: s.proposal ? "confirming" : "idle", message: a.message };
     case "cancel":
@@ -121,6 +139,8 @@ export function groundedReply(r: Reading, solve: SolveResponse, probe: ProbeResu
   if (lead && Number.isFinite(expected) && Math.abs(volts(r) - expected) > 3 * sigma(volts(r)))
     out.push(`Leading hypothesis from the solver, not a confirmed fault: ${lead.title}.`);
   if (probe.fitWarning) out.push(probe.fitWarning);
+  const top = probe.hypotheses[0];
+  if (top && !probe.done && probe.hypotheses.filter((h) => h.probability >= top.probability * 0.5).length > 1) out.push("That reading fits several faults.");
   if (probe.next) out.push(`Measure node ${probe.next.node} next.`);
   else if (probe.done) out.push(`${probe.reason} This is a hypothesis, not a confirmed fault.`);
   return out.join(" ");

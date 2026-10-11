@@ -5,6 +5,7 @@ import type { CircuitGraph } from "../../../lib/circuit/types";
 
 export type VoiceIntent =
   | { type: "record_measurement"; node: string; value: number; unit: "V" | "mV" }
+  | { type: "correct_measurement"; node: string; value: number; unit: "V" | "mV" } // replaces the PENDING proposal only
   | { type: "next_probe" }
   | { type: "explain_result" }
   | { type: "show_hypotheses" }
@@ -115,21 +116,32 @@ function normalize(text: string): string {
 }
 
 const PHRASES: [RegExp, VoiceIntent["type"]][] = [
-  [/^(yes|yeah|yep|yup|correct|confirm|confirmed|that s right|thats right|right|affirmative)$/, "confirm"],
+  [/^((yes|yeah|yep|yup)( (record|save) (that|it))?|(record|save) (that|it)|correct|confirm|confirmed|that s right|thats right|right|affirmative)$/, "confirm"],
   [/^(no|nope|cancel|wrong|stop|scratch that|never mind|nevermind|incorrect)$/, "cancel"],
-  [/^(repeat|say (that|it) again|again|come again|what did you say)$/, "repeat"],
-  [/^(next|next probe|next step|where next|what next|where (should|do) i (probe|measure)( next)?|what should i measure( next)?|where now)$/, "next_probe"],
-  [/^(explain|explain (that|this|it|the result|result)|why|tell me why)$/, "explain_result"],
-  [/^((show|list|read)( me)?( the)? (hypotheses|suspects|faults)|hypotheses|suspects|what s wrong|whats wrong)$/, "show_hypotheses"],
+  [/^(repeat|repeat (that|it)|say (that|it) again|again|come again|what did you say)$/, "repeat"],
+  [/^(next|next probe|next step|next measurement|where next|what next|what s the next (measurement|probe|step)|where (should|do) i (probe|measure)( next)?|what should i measure( next)?|where now)$/, "next_probe"],
+  [/^(explain|explain (that|this|it|the result|result)|explain why|why|why is that|tell me why)$/, "explain_result"],
+  [/^((show|list|read)( me)?( the)? (likely )?(hypotheses|suspects|faults)|(what are|what s) (the )?(likely|probable|possible) (faults|suspects|hypotheses)|hypotheses|suspects|what s wrong|whats wrong)$/, "show_hypotheses"],
 ];
 
 const STOP = new Set(["node", "is", "at", "on", "reads", "reading", "read", "equals", "measures", "measured", "i", "get", "got", "the", "of", "it", "s", "and", "about", "shows", "showing", "was", "has", "volts", "volt", "v", "millivolts", "millivolt", "mv", "minus", "negative", "probe", "red", "black", "meter", "my", "say", "says", "its", "um", "uh", "so", "ok", "okay", "with", "to", "gnd", "that", "this", "voltage", "value", "there", "here"]);
 
-export function parseCommand(text: string, graph: CircuitGraph): Parsed {
+export type ParseCtx = { pendingNode?: string }; // node of the proposal currently displayed, enables "change it to ..."
+
+export function parseCommand(text: string, graph: CircuitGraph, ctx: ParseCtx = {}): Parsed {
   const t = normalize(text);
   const unknown = (reason: string): Parsed => ({ intent: { type: "unknown", reason } });
   if (!t) return unknown("I didn't catch anything. Try \"VOUT is 0.45 volts\".");
   for (const [re, type] of PHRASES) if (re.test(t)) return { intent: { type } as VoiceIntent };
+
+  // "no, change it to five point two volts" -> re-parse the tail against the pending node.
+  const fix = ctx.pendingNode && t.match(/^(?:no |nope |actually |sorry )*(?:(?:change|make|set|correct) (?:it|that|this)(?: to| is| should be)?|(?:it s|it is|its|that s|that is|i said|i meant)) (.+)$/);
+  if (fix) {
+    const re = parseCommand(`${ctx.pendingNode} is ${fix[1]}`, graph);
+    return re.intent.type === "record_measurement"
+      ? { intent: { type: "correct_measurement", node: re.intent.node, value: re.intent.value, unit: re.intent.unit }, warning: re.warning }
+      : re;
+  }
 
   const nodes = graphNodes(graph);
   const nodeList = nodes.filter((n) => n !== graph.groundNode).join(", ");
@@ -195,7 +207,7 @@ export function parseCommand(text: string, graph: CircuitGraph): Parsed {
 
   if (real.length === 0) {
     if (node || hasV || hasMv) return unknown(`I didn't catch a number${node ? ` for ${node}` : ""}. Say it like "${node ?? graph.measureNode} is 0.45 volts".`);
-    return unknown(`I didn't understand "${text.trim()}". Try "${graph.measureNode} is 2.5 volts", "next", "explain", or "repeat".`);
+    return unknown(`I can't do that yet: "${text.trim()}". Try "${graph.measureNode} is 2.5 volts", "next", "explain", or "repeat".`);
   }
   if (real.length > 1) return unknown(`I heard more than one number (${real.map((s) => s.join(" ")).join(" / ")}). Please say a single reading.`);
   const n = spanToNumber(real[0]);

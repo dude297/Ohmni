@@ -4,18 +4,24 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { AlertTriangle, ArrowLeft, Check, Loader2, Mic, MicOff, Volume2, X } from "lucide-react";
 import { Brand } from "../../../components/ohmni/brand";
-import { CIRCUITS, schematicLayout } from "../../probe/helpers";
-import type { CircuitGraph } from "../../../lib/circuit/types";
-import { fmtNum, fmtReading, parseCommand } from "./parser";
+import { CIRCUITS } from "../../probe/helpers";
+import { LOADED_BRIDGE } from "./bridge";
+import { Schematic } from "./schematics";
+import { RepairPanel } from "./repair-panel";
+import { RepairUnavailable, fetchRepair, proposalNarration, repairReady, verifyNarration, verifyRepair, type RepairResult, type VerifyResult } from "./repair";
+import { fmtNum, fmtReading, parseCommand, volts } from "./parser";
 import {
   commitBlocker, commitReading, getRecognitionCtor, hypothesesReply, initialState, nextReply, postJSON, reducer,
-  speechErrorMessage, type Phase, type ProbeResult,
+  speechErrorMessage, voiceConfirmBlocker, type Phase, type ProbeResult,
 } from "./machine";
 import "./voice-lab.css";
+import "./repair.css";
 
-// ponytail: ladder first-class, divider default (matches the e2e demo order in the PR).
-const ORDER = ["divider", "ladder", "series-parallel"];
-const CIRCS = ORDER.map((k) => CIRCUITS.find((c) => c.key === k)!);
+// Loaded bridge is the headline/default; ladder + divider stay as simpler examples.
+const CIRCS = [
+  { key: "loaded-bridge", label: "Loaded bridge", blurb: "12 V, 7 resistors (R5 bridges A–B, R6–R7 load); measure C", graph: LOADED_BRIDGE },
+  ...["ladder", "divider"].map((k) => CIRCUITS.find((c) => c.key === k)!),
+];
 
 type Source = "main" | "card";
 const noSubscribe = () => () => {};
@@ -31,39 +37,6 @@ type Explain = { explanation: { summary: string; steps: { title: string; text: s
 const PHASE_LABEL: Record<Phase, string> = {
   idle: "Ready", listening: "Listening", processing: "Working", confirming: "Awaiting your confirmation", committed: "Recorded", error: "Attention",
 };
-
-function Schematic({ graph, highlight, heard, readings }: { graph: CircuitGraph; highlight: string | null; heard: string | null; readings: Record<string, number> }) {
-  const { nodes, parts, width, height } = schematicLayout(graph);
-  return (
-    <svg className="vl-schem" viewBox={`0 0 ${width} ${height}`} role="img"
-      aria-label={`Circuit schematic.${highlight ? ` Probe node ${highlight} next.` : ""}${heard ? ` Pending reading at ${heard}.` : ""}`}>
-      {parts.map((p) => {
-        const mid = (p.a.y + p.b.y) / 2;
-        return (
-          <g key={p.id} className="vl-part">
-            <path d={`M${p.a.x} ${p.a.y}H${p.laneX}V${p.b.y}H${p.b.x}`} fill="none" />
-            <rect x={p.laneX - 9} y={mid - 14} width={18} height={28} rx={2} data-kind={p.kind} />
-            <text x={p.laneX + 14} y={mid + 4}>{p.id}</text>
-          </g>
-        );
-      })}
-      {nodes.map((n) => {
-        const on = n.name === highlight;
-        const h = n.name === heard;
-        return (
-          <g key={n.name} data-node={n.name} data-highlight={on || undefined} data-heard={h || undefined}>
-            {on && <circle className="vl-ring" cx={n.x} cy={n.y} r={14} />}
-            {h && <circle className="vl-heardRing" cx={n.x} cy={n.y} r={13} />}
-            <circle className={on ? "vl-dot vl-dotOn" : "vl-dot"} cx={n.x} cy={n.y} r={on ? 7 : 5} />
-            <text className="vl-nlabel" x={n.x - (on || h ? 20 : 14)} y={n.y + 4} textAnchor="end">{n.name}</text>
-            {n.name in readings && <text className="vl-nread" x={n.x - 14} y={n.y + 20} textAnchor="end">{fmtNum(+readings[n.name].toPrecision(3))} V</text>}
-            {on && <text className="vl-ncall" x={n.x + 12} y={n.y + 22}>probe here</text>}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
 
 export function VoiceLab() {
   const [ci, setCi] = useState(0);
@@ -84,6 +57,10 @@ export function VoiceLab() {
   const [exp, setExp] = useState<Explain | null>(null);
   const [expBusy, setExpBusy] = useState(false);
   const [expErr, setExpErr] = useState("");
+  const [repair, setRepair] = useState<RepairResult | null>(null);
+  const [repairErr, setRepairErr] = useState("");
+  const [approved, setApproved] = useState(false);
+  const [verifyRes, setVerifyRes] = useState<VerifyResult | null>(null);
   const recRef = useRef<Rec | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const typedRef = useRef<HTMLInputElement>(null);
@@ -109,19 +86,51 @@ export function VoiceLab() {
     cardRef.current?.scrollIntoView({ block: "nearest" });
   }, [state.phase, state.proposal]);
 
+  const repairRef = useRef<RepairResult | null>(null);
+  const approvedRef = useRef(false);
+  useLayoutEffect(() => { repairRef.current = repair; approvedRef.current = approved; }, [repair, approved]);
+
   const doCommit = useCallback(async () => {
     const s = stateRef.current;
     const block = commitBlocker(s);
     dispatch({ type: "commit_start" });
     if (block || !s.proposal) return speak(block ?? "");
+    const reading = s.proposal.reading;
+    const fetcher = (u: string, i: Parameters<typeof fetch>[1]) => fetch(u, i) as never;
     try {
-      const r = await commitReading((u, i) => fetch(u, i), graph, s.observations, s.proposal.reading);
+      // Verification step: the post-fix reading goes to /api/repair/verify and is never added to the pre-fix observations.
+      const top = repairRef.current?.proposals[0];
+      if (approvedRef.current && top && reading.node === top.verification.node) {
+        const v = await verifyRepair(fetcher, graph, top, { node: reading.node, volts: volts(reading) });
+        if (stateRef.current.revision !== s.revision) return;
+        setVerifyRes(v);
+        const msg = verifyNarration(v);
+        dispatch({ type: "commit_done", observations: s.observations, message: msg });
+        return speak(msg);
+      }
+      const r = await commitReading(fetcher, graph, s.observations, reading);
       if (stateRef.current.revision !== s.revision) return; // circuit changed mid-flight: drop the result
+      let msg = r.reply;
+      let rep: RepairResult | null = null;
+      let repErr = "";
+      if (repairReady(r.probe)) {
+        try {
+          rep = await fetchRepair(fetcher, graph, r.observations);
+          if (stateRef.current.revision !== s.revision) return;
+          msg = `${msg} ${proposalNarration(rep)}`;
+        } catch (e) {
+          repErr = e instanceof RepairUnavailable ? e.message : `Repair engine error: ${e instanceof Error ? e.message : "unknown"}`;
+        }
+      }
       setProbe(r.probe);
-      if (s.proposal.reading.node === graph.measureNode) setSolveHyp(r.solve.hypotheses ?? []);
+      setRepair(rep);
+      setRepairErr(repErr);
+      setApproved(false);
+      setVerifyRes(null);
+      if (reading.node === graph.measureNode) setSolveHyp(r.solve.hypotheses ?? []);
       setExp(null);
-      dispatch({ type: "commit_done", observations: r.observations, message: r.reply });
-      speak(r.reply);
+      dispatch({ type: "commit_done", observations: r.observations, message: msg });
+      speak(msg);
     } catch (e) {
       const m = e instanceof Error ? e.message : "Request failed.";
       dispatch({ type: "fail", message: `${m} Nothing was recorded.` });
@@ -150,15 +159,22 @@ export function VoiceLab() {
   }, [graph, say, speak]);
 
   const handleText = useCallback(
-    (text: string, source: Source) => {
+    (text: string, _source: Source) => { // eslint-disable-line @typescript-eslint/no-unused-vars
       const s = stateRef.current;
       setTranscript(text);
       if (!s.circuitConfirmed) return say("Confirm the circuit first. Voice never confirms a circuit.");
-      const { intent, warning } = parseCommand(text, graph);
+      const { intent, warning } = parseCommand(text, graph, { pendingNode: s.phase === "confirming" ? s.proposal?.reading.node : undefined });
       switch (intent.type) {
-        case "confirm":
-          if (source === "card" && s.proposal) return void doCommit();
-          return say(s.proposal ? "To record it, press Confirm on the reading card, or say yes using the card's own talk button." : "There is no reading waiting for confirmation.");
+        case "confirm": {
+          // "yes" applies ONLY to the proposal currently displayed (same revision); otherwise nothing is recorded.
+          const block = voiceConfirmBlocker(s);
+          return block ? say(block) : void doCommit();
+        }
+        case "correct_measurement": {
+          const reading = { type: "record_measurement" as const, node: intent.node, value: intent.value, unit: intent.unit };
+          dispatch({ type: "correct", reading, warning, transcript: text });
+          return speak(`Changed to ${fmtReading(reading)} at ${reading.node}. Correct?${warning ? " Check your range." : ""}`);
+        }
         case "cancel":
           if (s.proposal) { dispatch({ type: "cancel" }); return speak("Discarded."); }
           return say("Nothing to cancel.");
@@ -261,6 +277,10 @@ export function VoiceLab() {
     setSolveHyp([]);
     setExp(null);
     setExpErr("");
+    setRepair(null);
+    setRepairErr("");
+    setApproved(false);
+    setVerifyRes(null);
     setTranscript("");
     dispatch({ type: "select_circuit" });
   }
@@ -298,7 +318,8 @@ export function VoiceLab() {
               ))}
             </div>
             <p className="vl-muted"><span className="vl-fixture">Example fixture</span> {CIRCS[ci].blurb}</p>
-            <Schematic graph={graph} highlight={highlight} heard={phase === "confirming" ? proposal?.reading.node ?? null : null} readings={readings} />
+            <Schematic graph={graph} highlight={highlight} heard={phase === "confirming" ? proposal?.reading.node ?? null : null} readings={readings}
+              faultId={repair?.proposals[0]?.target.componentId ?? null} after={repair?.proposals[0]?.after.voltages ?? null} />
             {circuitConfirmed ? (
               <p className="vl-ok"><Check size={15} aria-hidden /> Circuit confirmed by you. Change it above to start over.</p>
             ) : (
@@ -336,6 +357,7 @@ export function VoiceLab() {
                   <Mic size={22} aria-hidden />
                   <span>{listenSrc === "main" ? "Listening… press to stop" : "Push to talk"}</span>
                   <small>Space / Enter · Esc cancels</small>
+                  <span className="vl-meter" aria-hidden><i /><i /><i /><i /><i /></span>
                 </button>
               )}
               <form className="vl-typed" onSubmit={(e) => { e.preventDefault(); if (typed.trim()) { handleText(typed.trim(), "main"); setTyped(""); } }}>
@@ -352,11 +374,12 @@ export function VoiceLab() {
               <span className="vl-k">HEARD</span>
               <span className="vl-v">{interim ? <i>{interim}</i> : transcript || "—"}</span>
             </div>
-            <p className="vl-hint">Try: “{graph.measureNode} is two point five volts”, “450 millivolts at {graph.measureNode}”, “next”, “show hypotheses”, “explain”, “repeat”.</p>
+            <p className="vl-hint">Try: “{graph.measureNode} is zero volts”, “I&apos;m getting 450 millivolts at {graph.measureNode}”, “yes, record that”, “no, change it to 5.2 volts”, “what&apos;s the next measurement?”, “what are the likely faults?”, “explain why”, “repeat that”.</p>
+            <p className="vl-hint">The pulsing light is a status indicator only. It does not show your voice level or prove the mic hears you; check the HEARD line.</p>
 
             {(phase === "confirming" || phase === "listening") && proposal && (
               <div className="vl-card" ref={cardRef} tabIndex={-1} role="group" aria-labelledby="vl-card-h">
-                <p className="vl-eyebrow">CONFIRM READING · NOTHING RECORDED YET</p>
+                <p className="vl-eyebrow">{approved && proposal.reading.node === repair?.proposals[0]?.verification.node ? "CONFIRM POST-FIX READING · NOT YET CHECKED" : "CONFIRM READING · NOTHING RECORDED YET"}</p>
                 <p id="vl-card-h" className="vl-big">
                   I heard <mark>{fmtNum(proposal.reading.value)}</mark> <mark>{proposal.reading.unit}</mark> at <mark>{proposal.reading.node}</mark>. Correct?
                 </p>
@@ -369,7 +392,7 @@ export function VoiceLab() {
                 <form className="vl-cardTyped" onSubmit={(e) => { e.preventDefault(); if (cardTyped.trim()) { handleText(cardTyped.trim(), "card"); setCardTyped(""); } }}>
                   <label htmlFor="vl-card-in">…or answer here: type “yes” / “no” or a corrected reading</label>
                   <div className="vl-row">
-                    <input id="vl-card-in" value={cardTyped} onChange={(e) => setCardTyped(e.target.value)} autoComplete="off" placeholder="yes" />
+                    <input id="vl-card-in" value={cardTyped} onChange={(e) => setCardTyped(e.target.value)} autoComplete="off" placeholder="yes, record that" />
                     <button className="button secondary" disabled={!cardTyped.trim()}>Answer</button>
                     {!typedMode && (
                       <button type="button" className="vl-pttSmall" aria-pressed={listenSrc === "card"} disabled={listenSrc === "main" || supported === null} onClick={() => toggleTalk("card")}>
@@ -406,6 +429,13 @@ export function VoiceLab() {
                 <p className="vl-safety">{probe.safety}</p>
               </div>
             )}
+
+            {repairErr && <p className="vl-note vl-noteWarn" role="status" data-testid="repair-err">{repairErr}</p>}
+            {repair && repair.proposals[0] && (
+              <RepairPanel proposal={repair.proposals[0]} observations={observations} approved={approved} verifyResult={verifyRes} verifyBusy={busy && approved}
+                onApprove={() => { setApproved(true); say(`Plan approved. Ohmni makes no physical change. ${repair.proposals[0].verification.instruction}`); }} />
+            )}
+            {repair && !repair.proposals[0] && <p className="vl-note" role="status">{proposalNarration(repair)}</p>}
 
             <div className="vl-foot">
               <button type="button" className="button secondary" disabled={!circuitConfirmed || expBusy} onClick={() => void runExplain()}>
