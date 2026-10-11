@@ -7,7 +7,7 @@
 Single Node/Next.js deploy. Anbaric Cloud is a **20-minute T0 spike**: verify public frontend, /api/health, POST handling, PORT/start and server-only env variables. If no real result, deploy unchanged app to Vercel immediately. Do not introduce Render free/second FastAPI service.
 
 ### Credentials and safety
-GEMINI_API_KEY, GEMINI_MODEL (real tested model), TYPESAFE_API_KEY, optional SECONDARY_VISION_API_KEY + model are server-only. Never NEXT_PUBLIC keys. .env.local excluded. Validate <=5MB file/MIME, timeouts, secrets in bundles/logs, no persistent images.
+GEMINI_API_KEY, GEMINI_MODEL (default `gemini-3.5-flash`), BEATAPI_API_KEY, BEATAPI_JEV_MODEL (`jev-1.13-free`), GROQ_API_KEY, GROQ_VISION_MODEL (`qwen/qwen3.8-27b`) are server-only (see .env.example). Production: https://multimodal-hackathon-sage.vercel.app (Vercel project "ohmni"); `GET /api/health` shows the build and which providers are configured; `npm run smoke` checks it. Never NEXT_PUBLIC keys. .env.local excluded. Validate <=5MB file/MIME, timeouts, secrets in bundles/logs, no persistent images.
 
 ### Smoke steps
 1. Public URL opens in incognito, mobile UI responsive.

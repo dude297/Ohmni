@@ -2,7 +2,7 @@
 
 Prod: https://multimodal-hackathon-sage.vercel.app. Rehearse once. Jev's free tier allows 1 call/min, so do not run two extractions back to back (wait 60 s).
 
-Prep: open `/` and `/lab` in tabs; have `public/samples/clear-divider.png` and `public/samples/ambiguous-junction.png` ready (if present; otherwise use any clean 10k/10k divider schematic image and skip the ambiguous beat).
+Prep: open `/` and `/lab` in tabs; have `public/samples/clear-divider.png` and `public/samples/ambiguous-junction.png` ready (both are in the repo; if missing, use any clean 10k/10k divider schematic image and skip the ambiguous beat). Extraction is limited to 6 per minute per IP and Groq's free plan allows about 3 per minute, so keep to the scripted uploads.
 
 | Time | Do | Say |
 |---|---|---|
@@ -22,7 +22,7 @@ Prep: open `/` and `/lab` in tabs; have `public/samples/clear-divider.png` and `
 
 ## Likely judge questions
 
-**Where is multimodel essential?** Gemini turns pixels into a graph; Jev decides trust routing from structured state; Groq is the fallback and verifier (integration PR in review at time of writing). The solver is deliberately not an LLM. Development use of Claude/ChatGPT is not counted.
+**Where is multimodel essential?** Gemini turns pixels into a graph; Jev decides trust routing from structured state; Groq is the vision fallback (used when Gemini is rate-limited or unavailable) and the topology verifier. The solver is deliberately not an LLM. Development use of Claude/ChatGPT is not counted.
 
 **Is it accurate?** Not measured at scale. We verified the divider end to end on production (exact graph, 2.5 V, correct top hypothesis) and the solver has fixtures. Two models agreeing is not proof, hence the confirmation gate.
 

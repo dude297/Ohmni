@@ -2,7 +2,7 @@
 
 **Important:** A free price listing does not guarantee this Google API project can invoke Gemini 3.8 Flash, that quota remains, or that images/JSON are enabled. No paid billing without explicit owner consent.
 
-## T0 real smoke test
+## T0 real smoke test (procedure; completed 2026-10-11, results under "Verified evidence" and the locked table below)
 1. Consult official models and pricing: https://ai.google.dev/gemini-api/docs/models and https://ai.google.dev/gemini-api/docs/pricing
 2. From the actual project/API key, test a small image and structured JSON output with gemini-3.8-flash, then gemini-3.6-flash, then another currently listed accessible image model. Record exact ID, HTTP outcome, latency, schema validation and 429/quota behavior; never log keys/images.
 3. Set GEMINI_MODEL only to a model that actually passed. If none passes, make manual graph input available and **do not claim real extraction**.
@@ -28,4 +28,6 @@ Jev policy: one decision per analysis; in-process pacing (60s after a success; w
 - 2026-10-11 Production E2E (https://multimodal-hackathon-sage.vercel.app): /api/extract on clean divider → gemini-3.5-flash ok 3790 ms (1310 in / 106 out tokens), graph exact; Jev jev-1.13-free ok 440 ms → review_extraction (p=1.00, 475 in / 49 out). /api/solve 10k/10k measured 0.45 V → VOUT 2.5 V, top hypothesis "R2 may be 1 kΩ instead of 10 kΩ".
 - Groq vision + 10-diagram comparison: see docs/VISION_FALLBACK.md (measured results only).
 
-References: https://beatapi.io/jev-api · https://docs.typesafe.ai/introduction/quickstart
+- Later the same day the Gemini free quota on this key was exhausted (429) by evaluation runs; a live smoke trace then showed gemini quota_exhausted (429) -> Groq ok 710 ms -> Jev ok 718 ms `review_extraction`. This is the fallback working as designed, and it also means Gemini availability on a free key is not guaranteed.
+
+References: https://beatapi.io/jev-api (Jev vendor docs: https://docs.typesafe.ai/introduction/quickstart; the app calls Jev only through BeatAPI)

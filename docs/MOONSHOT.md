@@ -1,6 +1,6 @@
 # Moonshot: Probe Guide (next-best-measurement)
 
-Status: exploratory prototype on `explore/probe-guide`. Draft PR, not merged.
+Status: merged to main (PR #25). Backend only: `POST /api/probe` and `src/lib/probe` work; the lab UI does not call it yet (see UI handoff spec below).
 
 ## Pitch
 One bad reading doesn't tell you which part failed. Probe Guide tells you **where to put the red probe next**.

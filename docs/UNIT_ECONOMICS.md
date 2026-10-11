@@ -34,6 +34,7 @@ Sample size: one clean run plus probes. These are anecdotes, not distributions.
 - Groq `qwen/qwen3.8-27b`: paid price **not listed** at https://groq.com/pricing. Free plan: 30 RPM, 1K RPD, 8K TPM, 200K TPD, https://console.groq.com/docs/rate-limits
 
 ## Free-tier ceiling
+Observed 2026-10-11: the Gemini free quota on this key was exhausted (429) by evaluation runs, so extraction ran on the Groq fallback; free-tier throughput is a real constraint, not a theory.
 Usage charges now: $0 per analysis. Binding limit: Jev 1 call/min, so **1 analysis/min (1440/day)** at one Jev call per analysis. Groq-only fallback, assuming Gemini-like tokens (unmeasured): about 5/min by TPM, 141/day by TPD. Unlocking Jev's 10/min needs a top-up, which this deployment refuses in code.
 
 ## Hypothetical paid cost per analysis (`node scripts/cost-model.mjs`)

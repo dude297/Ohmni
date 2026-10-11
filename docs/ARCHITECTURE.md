@@ -23,4 +23,7 @@ Anbaric Cloud: up to 20-minute real Next.js Node/PORT test (public UI, health an
 ## Safety / economics
 Server-side keys only, <=5MB supported image upload, timeouts/limits/one specialist pass, redacted logs, no photo persistence by default, no unsafe mains/high-voltage guidance. Every runtime trace records **actual** provider/model/status/latency/usage if returned, and never fabricated confidence. Marginal costs estimated from measured tokens/provider rates; missing charges marked unknown. UI distinguishes model extraction, confirmation, prediction, measurement and hypothesis.
 
+## Other server pieces
+`src/proxy.ts` applies per-IP limits to POST /api/extract and /api/solve (in-memory per instance). `POST /api/probe` (src/lib/probe, see MOONSHOT.md) ranks single-fault hypotheses and the next node to measure using the solver only; no model calls, UI not wired yet.
+
 More: MODEL_ACCESS.md, API_CONTRACT.md, DEPLOY_AND_DEMO.md.

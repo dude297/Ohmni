@@ -1,6 +1,6 @@
 # Ohmni — QA & Safety Test Plan
 
-**Not yet executed.** A test plan is not evidence.
+This is a test plan; a plan is not evidence. Executed so far: unit tests (`npm test`) and the production smoke (`npm run smoke`, below). The latest live smoke at 8fad171 was 12/12 PASS; the earlier dated run below is historical. Browser, mobile and keyboard checks are not recorded here.
 
 ### Deterministic DC solver
 - 5V with 10k/10k divider VOUT = 2.500000V (1e-5V tolerance).
@@ -25,17 +25,17 @@
 - UI separates original photo, extracted candidate, confirmed graph, mathematical prediction, observation and hypothesis.
 - Safe: no mains/high-voltage advice, power disconnected for resistance check.
 
-### Evidence ledger template
+### Evidence ledger
 | Check | Build SHA | Command/browser URL | Actual observation | Status |
 |---|---|---|---|---|
-| Solver fixtures | pending | pending | not run | UNVERIFIED |
-| Real Gemini image | pending | pending | not run | UNVERIFIED |
-| Real Jev routing | pending | pending | not run | UNVERIFIED |
-| Public E2E smoke | pending | pending | not run | UNVERIFIED |
+| Solver fixtures | 8fad171 | `npm run smoke` (solve checks) | 2.5 V and 0.454545 V plus negative cases PASS | VERIFIED |
+| Real Gemini image | see MODEL_ACCESS.md | production /api/extract | ok earlier on 2026-10-11; quota later exhausted (429), Groq fallback used | VERIFIED, quota-limited |
+| Real Jev routing | 8fad171 | `npm run smoke -- --live` | ok 718 ms, `review_extraction` after Groq extraction | VERIFIED |
+| Public E2E smoke | 8fad171 | `npm run smoke` | 12/12 PASS | VERIFIED |
 
 Do not mark PASS without actual action/output tied to a commit.
 
-## Smoke results
+## Smoke results (historical run, 2026-10-11 11:48 PDT; superseded by 12/12 PASS at 8fad171)
 
 Run with `npm run smoke` (add `-- --live` for one real extract call; `SMOKE_IMAGE=<png>` overrides the image).
 
@@ -53,7 +53,7 @@ Live (`--live`, image `fixtures/circuits/01_divider_5v_10k_10k.png`): HTTP 200 a
       trace: route provider=beatapi model=jev-1.13-free status=error durationMs=605 usage=null note=Jev rate limited (429), retry after 60s; defaulting to ask_user
 ```
 
-Findings: (1) production Gemini extraction FAILS ("Gemini request failed", 2.9 s) on a clean fixture, so the real-image path currently yields no graph; cause unknown (key, model id, or quota), needs a Vercel log check. (2) Jev 429 here is partly self-inflicted: an earlier live run about 1 min before (output not captured) used the free-tier call, so Jev routing is still unproven.
+Findings at that time (since addressed by the Groq fallback and Jev pacing; kept as history): (1) production Gemini extraction FAILS ("Gemini request failed", 2.9 s) on a clean fixture, so the real-image path currently yields no graph; cause unknown (key, model id, or quota), needs a Vercel log check. (2) Jev 429 here is partly self-inflicted: an earlier live run about 1 min before (output not captured) used the free-tier call, so Jev routing is still unproven.
 
 | Check | Result | ms |
 |---|---|---|

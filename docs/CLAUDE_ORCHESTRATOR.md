@@ -8,7 +8,7 @@ Every meaningful feature is a PR to main. You inspect each diff, test/build evid
 
 **Hard MVP:** clean image → actual Gemini candidate → actual Jev choice controls review/verification/clarification → user confirms/edit netlist → deterministic DC solver → expected vs observed → bounded testable fault hypothesis. Canonical graph is source of truth, not breadboard coordinates. Fixture 5V/10k/10k => 2.5V; 5V/10k/1k => 0.454545V; reject floating/invalid. 0.45V measured can suggest possible 1k lower resistor but isn't a confirmed fault.
 
-Don't assume Gemini 3.8 Flash is available on the owner's free tier. Make real tiny image+JSON smoke calls and set working GEMINI_MODEL. Jev receives structured state, not pixels, from official TypeSafe System One API. Failure routes to manual review with clear disclosure, no fake second model. No paid billing without user authorization. Claude/Work are development agents, not automatically runtime integrations.
+Don't assume Gemini 3.8 Flash is available on the owner's free tier. Make real tiny image+JSON smoke calls and set working GEMINI_MODEL. Jev receives structured state, not pixels, via Jev System One (shipped path: the BeatAPI gateway, free model `jev-1.13-free` only). Failure routes to manual review with clear disclosure, no fake second model. No paid billing without user authorization. Claude/Work are development agents, not automatically runtime integrations.
 
 Stack: single Next.js 16+React+TypeScript+Tailwind+Zod/Node app with TS MNA solver and SVG; no Python/Render/Supabase/auth. Anbaric Cloud 20-minute viability spike, Vercel fallback. P0 scope/clock: solver at T+65, real E2E at T+110, feature freeze at T+150, hosted proof at T+180, freeze verdict at T+210. Follow the roadmap stop gates.
 
