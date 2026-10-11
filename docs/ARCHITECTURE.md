@@ -1,40 +1,26 @@
-# CircuitScout | Architecture, Deployment and Runtime Routing
+# Ohmni — Architecture and Deployment Decision
 
-## Sprint decision (ADR-001)
-**Single deployable TypeScript application:** Next.js 16 App Router + React + TypeScript + Tailwind CSS + Zod + SVG circuit rendering; Node.js server runtime with route handlers. UI and backend in the same repo. Deterministic DC solver written in TypeScript (Modified Nodal Analysis, optionally using `mathjs` for a tested linear solver). No Python service or database required for hackathon MVP.
+## Locked stack (ADR-001)
+**Single deployable app:** Next.js 16 App Router + TypeScript/React/Tailwind/Zod, Node route handlers, SVG circuit viewer, Vitest. Pure TypeScript Modified Nodal Analysis (MNA) for resistors and independent DC voltage sources. No Python/FastAPI/Render backend, database, full CAD or SPICE today. Solver interface remains replaceable for future Python/ngspice.
 
-**Deployment:** First attempt Anbaric Cloud using its generic Node app deploy CLI (`anbaric app configure`, `anbaric app deploy`), with Next.js server listening on injected `PORT`; run an early deployment spike and verify build/start/runtime requests. If Anbaric cannot run it reliably within 20 minutes, deploy the unchanged Next.js app on Vercel; document what was tested. Render is *not* part of MVP: a free Render backend spins down after 15 min idle, increasing demo latency, and a second service adds integration/CORS and deployment risk. A future Python/FastAPI+NumPy/SPICE backend can replace the `CircuitSolver` interface without changing UI/contracts. **Anbaric is an optional deployment and auditable workflow layer, not the mathematical solver or mandatory core runtime.**
+## Runtime path
+1. Browser sends bounded image to server; model-access-selected Gemini multimodal model extracts a **candidate**, not a verified netlist.
+2. Structural/schema checks make text/JSON ambiguity summary. Jev System One makes a real typed decision from structured state: review_extraction / verify_topology / ask_user. Jev **does not process pixels or solve equations**; app code dispatches route.
+3. verify_topology calls independent second vision provider **only** if tested and configured; otherwise requests user clarification. Hard structural invalidity overrides any model choice.
+4. UI presents candidate and editable components/edges. User explicitly confirms. Backend validates submitted graph before solving.
+5. MNA solver computes node voltages/currents from **reviewed graph**; detects floating/singular/inconsistent circuits.
+6. User-provided measured voltage is compared to prediction. Diagnosis tests bounded alternate resistor/connection hypotheses and explains a safe next check. Treat hypothesis as unconfirmed.
 
-## Dataflow
-Image upload -> server validation (image type/size) -> Gemini 3.8 Flash visual analysis (structured candidate graph and warnings) -> deterministic schema/topology checks -> Jev System One `choice` routing (review / specialist vision / clarify) -> optional second vision provider (OpenAI model, only if ambiguous+configured) -> user review/edits -> canonical graph -> MNA DC solve -> observation comparison / hypotheses -> teaching notes -> trace UI.
+## Representations (ADR-002)
+**CircuitGraph** = canonical electrical nodes, component terminals, SI values. **VisualLayout** = coordinates/labels/source bounding boxes only; changing image coordinates cannot alter math. **BreadboardLayout** = standardized hole IDs, conductive row/rail groups, jumper endpoints; union-find maps holes/wires to electrical nodes. Components remain resistive/source edges between nodes. A schematic parser and virtual breadboard adapter both produce the graph; don't remap every schematic into breadboard holes. Arbitrary physical breadboard/PCB recognition is later research, NOT current product claim.
 
-## Roles
-- **Gemini 3.8 Flash**: visual perception only; candidate components, labels, symbols, wires, grounded estimates/uncertainty. Input images; output structured JSON.
-- **TypeSafe Jev**: adaptive decision over *structured textual state*, selects `review_extraction`, `verify_topology`, `ask_user`. API `POST https://api.typesafe.ai/v1/systemone`, `model: jev-latest`, `state` and named `questions`. Jev never reads raw pixels or performs calculations.
-- **Optional OpenAI image-capable model**: independent targeted read of ambiguous region, invoked *only if Jev chooses verify* and API key exists. Must disclose missing provider and fall back to user review.
-- **MNA solver**: ONLY authority for electrical math from reviewed netlist. Reject unsolvable circuits and unsupported elements.
-- **Diagnosis engine**: determines which simple component variations would explain the observation by rerunning solver with hypothetical parameter values; AI narrative may explain the hypothesis but cannot overrule numeric evidence.
-- **Optional Anbaric state-machine**: if quick to implement, record `uploaded -> extracted -> routed -> awaiting_review -> solved -> diagnosed`, actor attribution and human confirmation. Otherwise local ephemeral structured trace suffices.
+## Model access/routing (ADR-003)
+Gemini free-tier **must be smoke-tested** for actual image+structured JSON on this key: try gemini-3.8-flash, gemini-3.6-flash, then any valid accessible image model. Set GEMINI_MODEL to proven ID; free pricing is not a quota guarantee. Jev via official TypeSafe System One endpoint from structured state; validate route output. Unavailable → manual clarify, explicitly not a real Jev success. Second provider only if authenticated and real call succeeds. Claude Code / ChatGPT Work development activity **does not count as product multimodel runtime**.
 
-## Circuit representations
-`CircuitGraph` is the solver's source of truth: electrical nodes, components and terminals. `VisualLayout` is a separate projection. A standard breadboard has known internal hole connectivity; hole locations map to conductive groups using union-find while resistors stay edges *between* those groups. A schematic parser creates the same graph via symbol/wire tracing. Both can render through an SVG graph view; neither requires a fully functioning virtual breadboard editor.
+## Hosting (ADR-004)
+Anbaric Cloud: up to 20-minute real Next.js Node/PORT test (public UI, health and route). If no proof, use a single Vercel deployment. Free Render sleeps and split deployment adds cold start/CORS risks. Sponsor audit/review integration is optional and cannot block the MVP.
 
-## Security, performance, and economics
-- Server-side provider credentials; `.env.local` never committed; `.env.example` contains placeholders only.
-- Validate MIME type and size (initial cap 5MB); avoid storing images; never log secrets or raw unredacted user images.
-- Timeouts on model calls (suggest 15-25s); no unbounded recursive agents; at most one specialist pass per run.
-- Log model IDs, elapsed milliseconds, provider token usage when available, and rough cost estimates only when official price inputs known. Label estimates; do not fabricate usage.
-- Disable unsupported modes; fail closed to manual confirmation if Jev or second model is unavailable.
-- API boundaries are typed and versioned so a Python backend can be introduced after launch without changing user-visible behavior.
+## Safety / economics
+Server-side keys only, <=5MB supported image upload, timeouts/limits/one specialist pass, redacted logs, no photo persistence by default, no unsafe mains/high-voltage guidance. Every runtime trace records **actual** provider/model/status/latency/usage if returned, and never fabricated confidence. Marginal costs estimated from measured tokens/provider rates; missing charges marked unknown. UI distinguishes model extraction, confirmation, prediction, measurement and hypothesis.
 
-## Folder ownership
-- Claude backend lead: `src/lib/circuit/**`, `src/lib/ai/**`, `src/app/api/**`, `tests/**`, root package/tests/CI (only coordinating agent edits shared files).
-- ChatGPT Work UI lead: `src/app/page.tsx`, `src/app/lab/**`, `src/components/**`, `src/app/globals.css` (UI branch). Shared types are read-only to UI.
-- Docs and CI: architecture/orchestrator branch exclusively; require PR.
-
-## Source docs
-- https://docs.typesafe.ai/introduction/quickstart
-- https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash
-- https://www.npmjs.com/package/anbaric
-- https://nextjs.org/docs/app/getting-started/deploying
-- https://render.com/docs/free
+More: MODEL_ACCESS.md, API_CONTRACT.md, DEPLOY_AND_DEMO.md.

@@ -1,59 +1,59 @@
-# CircuitScout | API and Canonical Data Contract v1
-Both UI and backend must build against this contract. A generated typed file should be merged in the first PR; changes after that require coordinated approval.
+# Ohmni — Binding API / Canonical Circuit Contract v1
 
-```ts
+Shared frontend/backend v1 payloads. SI units throughout. Zod server validation required. New fields optional and coordinated; no silent contract drift.
+
+~~~ts
 export type CircuitComponent = {
   id: string;
-  kind: 'resistor' | 'dc_voltage';
-  value: number; // SI units: ohm or volt
-  positiveNode: string; // resistor terminals are symmetric; voltage source terminals are directional
+  kind: "resistor" | "dc_voltage";
+  value: number; // ohms (>0) for R; signed volts for source
+  positiveNode: string;
   negativeNode: string;
-  sourceBoundingBox?: [number, number, number, number]; // optional normalized image box
+  sourceBoundingBox?: [number,number,number,number]; // normalized 0..1
 };
 export type CircuitGraph = {
   schemaVersion: 1;
   components: CircuitComponent[];
-  groundNode: 'GND';
+  groundNode: "GND";
   measureNode: string;
 };
 export type CandidateExtraction = {
-  inputKind: 'schematic' | 'breadboard_template' | 'unknown';
+  inputKind: "schematic" | "breadboard_template" | "unknown";
   graph: CircuitGraph | null;
   warnings: string[];
   unresolvedConnections: string[];
   requiresHumanReview: true;
 };
-export type RouteChoice = 'review_extraction' | 'verify_topology' | 'ask_user';
+export type RouteChoice = "review_extraction" | "verify_topology" | "ask_user";
 export type ModelTraceEvent = {
   step: string;
   provider: string;
   model?: string;
   durationMs: number;
-  status: 'ok' | 'error' | 'skipped';
+  status: "ok" | "error" | "skipped";
   chosenRoute?: RouteChoice;
-  confidence?: number;
+  confidence?: number; // only actual provider response
   usage?: { inputTokens?: number; outputTokens?: number };
-  note?: string;
+  note?: string; // redacted
 };
 export type SolveResponse = {
-  voltages: Record<string, number>;
-  currents: Record<string, number>;
-  grounded: true;
-  hypotheses?: { title: string; rationale: string; nextMeasurement: string }[];
+  voltages: Record<string,number>; // volts, incl GND: 0
+  currents: Record<string,number>; // amperes, documented sign
+  hypotheses: Array<{title:string;rationale:string;nextMeasurement:string;status:"hypothesis"}>;
   trace: ModelTraceEvent[];
 };
-```
+export type ApiError = {error:{code:string;message:string;reviewable?:boolean}};
+~~~
 
-## Endpoints (JSON)
-- `POST /api/extract` multipart image -> `{ extraction: CandidateExtraction, route: RouteChoice, trace: ModelTraceEvent[] }`. Cannot claim final correctness.
-- `POST /api/solve` `{ graph: CircuitGraph, userConfirmed: true, measuredVoltage?: number }` -> `{ result: SolveResponse }` or typed `422` error. Require user confirmation server-side; do not accept unresolved, unsupported graph.
-- `GET /api/health` -> `{ status: 'ok', build?: string }`.
+## Routes
+- **POST /api/extract** multipart field image, JPEG/PNG/WebP <=5MB -> { extraction: CandidateExtraction, route: RouteChoice, trace: ModelTraceEvent[] }. Invalid upload typed 400/413/415; quota/failure typed 503/manual fallback. Every candidate requires user review.
+- **POST /api/solve** JSON { graph: CircuitGraph, userConfirmed: true, measuredVoltage?: number } -> { result: SolveResponse }; typed 422 for invalid graph and 409 for missing confirmation. Boolean confirmation records a user action; it does not prove physical truth.
+- **GET /api/health** -> { status:"ok", build?:string }, checks server, NOT providers.
 
-## Test fixture
-```json
-{"schemaVersion":1,"components":[{"id":"V1","kind":"dc_voltage","value":5,"positiveNode":"VIN","negativeNode":"GND"},{"id":"R1","kind":"resistor","value":10000,"positiveNode":"VIN","negativeNode":"VOUT"},{"id":"R2","kind":"resistor","value":10000,"positiveNode":"VOUT","negativeNode":"GND"}],"groundNode":"GND","measureNode":"VOUT"}
-```
-Expected VOUT = 2.5V. With R2 = 1000, VOUT ~ 0.454545V.
+## Invariants
+Unique IDs; finite values; positive R; supported kinds; nonempty named terminals; valid measure node; source polarity preserved. Handle floating, singular or conflicting ideal voltage sources as typed failures, never silently zero volts. Unresolved candidate must be corrected before solving. Invalid/missing Jev route -> ask_user, with honest trace. Candidate extraction does not prove topology recognition.
 
-## Jev decision contract
-Use documented `questions: { route: { type: 'choice', instructions, criteria: { review_extraction, verify_topology, ask_user } } }` over candidate summary, validation output, and image-type classification. Parse `answers.route.choice`, `confidence`, `probabilities` only after schema checking. When missing/invalid, route to `ask_user`. Do not attach arbitrary assumed confidence scores to vision output.
+## Deterministic fixture
+V1 = 5V between VIN/GND; R1 = 10k between VIN/VOUT; R2 = 10k between VOUT/GND; VOUT = 2.5V. Set R2=1k -> VOUT=5/11 ≈ 0.454545V. Math tolerance 1e-5V.
+
+A contract change requires API types+Zod+fixtures+UI coordination in a reviewed PR. See ROADMAP.md.
