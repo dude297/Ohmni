@@ -1,24 +1,27 @@
-# Ohmni 3-minute demo script (Groq-primary pipeline)
+# Ohmni 4-minute demo script (Groq-primary pipeline)
 
 Prod: https://multimodal-hackathon-sage.vercel.app. Check `/api/health` first (build SHA, `visionPrimary: "groq"`, all three providers `configured: true`).
 
-Pipeline you are showing: **Groq `qwen/qwen3.8-27b` reads the image** → Zod + graph validation → **Jev `jev-1.13-free`** picks `review_extraction` / `verify_topology` / `ask_user` → **you confirm** the graph → **local MNA solver** → diagnosis. **Gemini `gemini-3.5-flash-lite`** is the vision fallback (only when Groq fails) and powers the grounded tutor.
+Core value (say it once, early): **Ohmni turns a circuit schematic and real electrical measurements into an explainable investigation, helping users determine what went wrong and what to measure next.**
+
+Pipeline you are showing: **Groq `qwen/qwen3.8-27b` reads the image** → Zod + graph validation → **Jev `jev-1.13-free`** does structured decision routing and ambiguity escalation (`review_extraction` / `verify_topology` / `ask_user`) → **you confirm** the graph → **local MNA solver** → diagnosis. **Gemini `gemini-3.5-flash-lite`** has two separate roles: independent vision fallback (only when Groq fails) and the grounded EE tutor (`/api/explain`, demonstrated on its own below). The **local MNA solver** is the mathematical authority; no model does the math.
 
 Quota rules (free tiers): Jev allows **1 successful call per minute**, Groq's free plan about 3 extractions per minute, the app 6 extractions/min per IP. Keep **≥ 65 s between uploads**, and do not test-upload in the 5 minutes before going on stage.
 
-Prep: tabs on `/` and `/probe`; have `public/samples/clear-divider.png` and `public/samples/ambiguous-smudged.png` in an easy folder; backup video `docs/demo/ohmni-demo-backup.webm` open in a player (see `docs/demo/README.md`).
+Prep: tabs on `/lab` and `/probe`; have `public/samples/clear-divider.png` and `public/samples/ambiguous-smudged.png` in an easy folder; backup video `docs/demo/ohmni-demo-backup.webm` open in a player (see `docs/demo/README.md`).
 
 Note: ChatGPT's PR #35 (merged, prod `d1096b7`) put the Probe Guide inside `/lab` and reworked the lab layout; button names below were re-checked in the browser against `d1096b7`. If the lab UI changes again, re-run the click-through once before demoing.
 
 | Time | Do | Say |
 |---|---|---|
-| 0:00-0:15 | `/` hero "Your circuit has a problem. Find out why." Click **Upload your schematic**. | "You expect 2.5 V, your meter says 0.45 V. Which part is wrong, and what do I check next?" |
-| 0:15-0:40 | In **Capture**, choose `clear-divider.png`. Wait ~2 s. Open **Model Orchestration** at the bottom. | "Groq reads the pixels into a candidate graph. Jev never sees the image; it reads a structured summary and picks the route: here `review_extraction`. Those are the real model, latency and tokens from this request." |
-| 0:40-0:55 | In **Review**, tick any "I corrected or verified" boxes, then **I verified values, terminals and ground**. | "Nothing is solved until a human confirms the graph. Edits clear the confirmation." |
-| 0:55-1:30 | In **Understand**, **Use demo reading: 0.45 V** → **Analyze & compare**. Point at Expected 2.500 V vs Observed 0.450 V and the hypothesis card. | "The solver is deterministic MNA, not an LLM: 2.5 V. 0.45 V fits R2 being 1 kΩ instead of 10 kΩ (0.455 V). It's a hypothesis with a safe next action: power off, measure R2." |
-| 1:30-2:10 | Probe Guide: either scroll to **What should I check next?** in the lab and click **Guide me**, or (smoother for the iterative story) switch to the `/probe` tab: Resistor ladder, type `0` → **Guide me** → it says **Measure A next** and shows what each reading would mean → type `5` → **Submit reading** → "Most likely: R2 open". Optionally click **Explain this circuit**. | "One wrong reading doesn't say which part failed. Ohmni re-solves every candidate fault and picks the probe that splits them best. Two readings, one answer. The tutor's numbers are checked against the solver." |
-| 2:10-2:45 | Second route, only if ≥ 65 s since the first upload: `/lab` → **Upload your schematic** → `ambiguous-smudged.png`. Open **Model Orchestration**. Otherwise play `docs/demo/ohmni-demo-backup.webm` from ~1:23 and say **"this is a recording"**. | "Same pipeline, smudged value. Jev routes to `ask_user`: R2 reads '1?k', so Ohmni refuses to guess and asks me." If the trace shows a Groq 429 and a Gemini row: "Groq hit its free rate limit, Gemini took over automatically; that's the fallback, live." |
-| 2:45-3:00 | Footer safety line. | "DC resistive circuits only, free-tier models, hypotheses not verdicts. Every trace row is real." |
+| 0:00-0:20 | `/` hero "Your circuit has a problem. Find out why." Click **Upload your schematic**. | "You expect 2.5 V, your meter says 0.45 V. Which part is wrong, and what do I check next?" |
+| 0:20-0:50 | In **Capture**, choose `clear-divider.png`. Wait ~2 s. Open **Model Orchestration** at the bottom. | "Groq reads the pixels into a candidate graph. Jev never sees the image; it reads a structured summary and routes: here `review_extraction`. Model, latency and tokens are from this request." |
+| 0:50-1:05 | In **Review**, tick any "I corrected or verified" boxes, then **I verified values, terminals and ground**. | "Nothing is solved until a human confirms the graph." |
+| 1:05-1:50 | In **Understand**, **Use demo reading: 0.45 V** -> **Analyze & compare**. Point at Expected 2.500 V vs Observed 0.450 V and the hypothesis card. | "The solver is deterministic MNA, not an LLM: 2.5 V. 0.45 V fits R2 being 1 kΩ instead of 10 kΩ (0.455 V). A hypothesis with a safe next action: power off, measure R2." |
+| 1:50-2:35 | Probe Guide on the `/probe` tab: Resistor ladder, type `0` -> **Guide me** -> **Measure A next**, with what each reading would mean -> type `5` -> **Submit reading** -> "Most likely: R2 open (100%)". (In the lab: **What should I check next?** -> **Guide me**.) | "One reading doesn't say which part failed. Ohmni re-solves every candidate fault and picks the probe that splits them best. Two readings, one answer. No LLM in this step." |
+| 2:35-3:15 | Tutor beat, still on `/probe` (ladder): click **Explain this circuit**. Expect `grounded: true` and clean numbers (~0.167 mA, 3.33 V, 1.67 V). | "Separate model role: Gemini Flash Lite is the tutor. It explains the circuit in plain language, but every number is checked against the solver, and flagged if it doesn't match." |
+| 3:15-3:45 | Second route, only if >= 65 s since the first upload (Jev: 1 call/min): `/lab` -> **Upload your schematic** -> `ambiguous-smudged.png`, open **Model Orchestration**. Otherwise play `docs/demo/ohmni-demo-backup.webm` from ~1:23 and say **"this is a recording"** (label it RECORDED). | "Same pipeline, smudged value. Jev escalates to `ask_user`: R2 reads '1?k', so Ohmni refuses to guess and asks me." If the trace shows a Groq 429 and a Gemini row: "Groq hit its free limit, Gemini took over as the independent fallback." |
+| 3:45-4:00 | Footer safety line. | "DC resistive circuits only, free-tier models, hypotheses not verdicts. Every trace row is real." |
 
 ## Backup (provider rate-limited or down)
 

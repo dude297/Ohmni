@@ -1,13 +1,13 @@
 # Ohmni — Submission
 
-**From schematic to verified electrical diagnosis, with intelligent model routing, human oversight, and a deterministic engineering solver.**
+**Ohmni turns a circuit schematic and real electrical measurements into an explainable investigation, helping users determine what went wrong and what to measure next.** Intelligent model routing, human oversight, and a deterministic engineering solver.
 
 - Live app (no signup): https://multimodal-hackathon-sage.vercel.app
   - Lab (upload → review → solve → diagnose → Probe Guide): https://multimodal-hackathon-sage.vercel.app/lab
   - Probe Guide + tutor: https://multimodal-hackathon-sage.vercel.app/probe
   - Health / build SHA / model ids: https://multimodal-hackathon-sage.vercel.app/api/health
 - Repo: https://github.com/dude297/Ohmni
-- 3-minute demo script: [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
+- 4-minute demo script: [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
 - Backup recording (RECORDED, live calls at the time; 2026-10-11 12:51 PDT, build `d1096b7`): [demo/ohmni-demo-backup.webm](demo/ohmni-demo-backup.webm), details in [demo/README.md](demo/README.md)
 
 ## The problem
@@ -38,10 +38,10 @@ Next.js 16 (App Router, Node route handlers), React 19, TypeScript, Tailwind 4, 
 
 | Component | Role | Never does |
 |---|---|---|
-| Groq `qwen/qwen3.8-27b` | Primary image reader → candidate graph JSON; topology verifier on `verify_topology` | Override validation, do the math |
-| Gemini `gemini-3.5-flash-lite` | Vision fallback when Groq fails (429, timeout, error, malformed output); tutor explanations | Decide trust, do the math |
-| Jev `jev-1.13-free` (BeatAPI) | Reads a structured summary (never pixels) and chooses the trust route, with probabilities | See the image, solve equations |
-| Local MNA solver | The only authority for voltages and currents; also powers diagnosis and Probe Guide | Trust an image |
+| Groq `qwen/qwen3.8-27b` | Image → circuit-graph extraction (primary); also the verifier if Jev ever routes `verify_topology` | Override validation, do the math |
+| Gemini `gemini-3.5-flash-lite` | Two separate roles: independent vision fallback only when Groq fails (429, timeout, error, malformed output); and the grounded EE tutor (`/api/explain`, numbers checked against the solver) | Decide trust, do the math |
+| Jev `jev-1.13-free` (BeatAPI) | Structured decision routing and ambiguity escalation: reads a structured summary (never pixels), chooses the trust route with probabilities | See the image, solve equations |
+| Local MNA solver | The mathematical authority: the only source for voltages and currents; also powers diagnosis and Probe Guide | Trust an image |
 | Human | Confirms values, terminals and ground before any solve | — |
 
 Why Groq first: on our 10 synthetic fixtures Groq was 10/10 exact with 0 API errors at 735 ms median, vs Gemini 3.5 Flash 7/7 exact with 3/10 503 errors at 4223 ms ([VISION_FALLBACK.md](VISION_FALLBACK.md)). Synthetic fixtures; not a general accuracy benchmark.
