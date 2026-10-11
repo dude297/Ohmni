@@ -10,13 +10,16 @@ function failed(warning: string): CandidateExtraction {
   return { inputKind: 'unknown', graph: null, warnings: [warning], unresolvedConnections: [], requiresHumanReview: true };
 }
 
+// Single source of truth for the Gemini default (health route and fallback adapter read this too).
+export const geminiModel = () => process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+
 export async function extractCircuit(
   image: Uint8Array,
   mimeType: string,
 ): Promise<{ extraction: CandidateExtraction; event: ModelTraceEvent; failure?: FailureReason }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_NOT_CONFIGURED');
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+  const model = geminiModel();
   const started = Date.now();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
