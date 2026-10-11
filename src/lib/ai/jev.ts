@@ -1,17 +1,19 @@
 import { z } from 'zod';
 import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '../circuit/types';
 
-// Owner: Agent C. TypeSafe Jev choice routing over structured text state. Falls back to ask_user.
-// Direct TypeSafe preferred (no free-tier rate limit); BeatAPI gateway serves the same API shape.
-const PROVIDERS = {
-  typesafe: { url: 'https://api.typesafe.ai/v1/systemone', keyEnv: 'TYPESAFE_API_KEY', modelEnv: 'JEV_MODEL', model: 'jev-latest' },
-  beatapi: { url: 'https://api.beatapi.io/v1/systemone', keyEnv: 'BEATAPI_API_KEY', modelEnv: 'BEATAPI_JEV_MODEL', model: 'jev-1.13-free' },
-} as const;
+// Owner: Agent C. Jev choice routing over structured text state. Falls back to ask_user.
+// Locked to BeatAPI's FREE Jev model. Paid ids (e.g. jev-1.13) are refused, never silently used.
+const JEV_URL = 'https://api.beatapi.io/v1/systemone';
+const FREE_MODELS = new Set(['jev-1.13-free']);
+// BeatAPI free tier: 1 successful call/min before first top-up.
+const MIN_INTERVAL_MS = 60_000;
+const MAX_WAIT_MS = 8_000;
 
-function pickProvider() {
-  const name = process.env.TYPESAFE_API_KEY ? 'typesafe' : process.env.BEATAPI_API_KEY ? 'beatapi' : 'typesafe';
-  const p = PROVIDERS[name];
-  return { name, url: p.url, key: process.env[p.keyEnv], model: process.env[p.modelEnv] || p.model };
+// ponytail: in-memory per server instance; parallel serverless instances can still collide,
+// which the 429 + Retry-After handling below covers. Shared store (KV) if that bites.
+let nextAllowedAt = 0;
+export function __resetJevPacing() {
+  nextAllowedAt = 0;
 }
 
 const JevResponse = z.object({
@@ -57,17 +59,24 @@ export async function routeExtraction(input: {
   validationErrors: string[];
 }): Promise<{ route: RouteChoice; event: ModelTraceEvent }> {
   const start = Date.now();
-  const { name: provider, url, key, model } = pickProvider();
-  const base = { step: 'route', provider, model };
+  const model = process.env.BEATAPI_JEV_MODEL || 'jev-1.13-free';
+  const key = process.env.BEATAPI_API_KEY;
+  const base = { step: 'route', provider: 'beatapi', model };
   const fallback = (status: 'error' | 'skipped', note: string) => ({
     route: 'ask_user' as RouteChoice,
     event: { ...base, durationMs: Date.now() - start, status, chosenRoute: 'ask_user' as RouteChoice, note },
   });
 
-  if (!key) return fallback('skipped', 'TYPESAFE_API_KEY / BEATAPI_API_KEY not configured; defaulting to ask_user');
+  if (!key) return fallback('skipped', 'BEATAPI_API_KEY not configured; defaulting to ask_user');
+  if (!FREE_MODELS.has(model)) return fallback('skipped', `Refused non-free Jev model "${model}"; defaulting to ask_user`);
+
+  const wait = nextAllowedAt - Date.now();
+  if (wait > MAX_WAIT_MS)
+    return fallback('skipped', `Jev free-tier pacing: next call allowed in ${Math.ceil(wait / 1000)}s; defaulting to ask_user`);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
 
   try {
-    const res = await fetch(url, {
+    const res = await fetch(JEV_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
@@ -83,7 +92,14 @@ export async function routeExtraction(input: {
       }),
       signal: AbortSignal.timeout(15_000),
     });
+    if (res.status === 429) {
+      const retry = Number(res.headers.get('retry-after'));
+      const retryMs = Number.isFinite(retry) && retry > 0 ? retry * 1000 : MIN_INTERVAL_MS;
+      nextAllowedAt = Date.now() + retryMs;
+      return fallback('error', `Jev rate limited (429), retry after ${Math.ceil(retryMs / 1000)}s; defaulting to ask_user`);
+    }
     if (!res.ok) return fallback('error', `Jev HTTP ${res.status}; defaulting to ask_user`);
+    nextAllowedAt = Date.now() + MIN_INTERVAL_MS;
     const parsed = JevResponse.safeParse(await res.json());
     if (!parsed.success) return fallback('error', 'Jev response failed schema check; defaulting to ask_user');
     const { choice, confidence, probabilities } = parsed.data.answers.route;

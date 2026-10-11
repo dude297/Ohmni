@@ -11,4 +11,7 @@ Jev might reduce cost/latency by selecting a second expensive provider only on a
 ## Revenue hypothesis
 EE lab/instructor subscription and later engineer/prototyping team licenses. Value = less rework and troubleshooting time, not invented willingness-to-pay. Validate with pilot interviews/time-to-diagnosis and instructor intervention count.
 
+## Current operating mode (hackathon)
+All runtime model calls run on free plans: Gemini free tier, Groq free plan, Jev `jev-1.13-free` via BeatAPI ($0, paid `jev-1.13` refused in code). Usage-based API charges for this deployment: **$0 by construction** — this is a free-plan constraint, not a production marginal-cost claim. Free-plan limits (e.g. Jev 1 call/min) cap throughput; production would need paid tiers priced from measured tokens.
+
 Current actual metrics: **not measured**. Current provider costs/quota: **not verified**. Update these only with evidence.

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/lib/ai/gemini', () => ({ extractCircuit: vi.fn() }));
 
 import { POST } from '@/app/api/extract/route';
+import { __resetJevPacing } from '@/lib/ai/jev';
 import { extractCircuit } from '@/lib/ai/gemini';
 import { DIVIDER_10K_10K, MALFORMED_FLOATING } from '@/lib/circuit/fixtures';
 
@@ -19,7 +20,10 @@ const mockExtract = (graph: unknown) =>
 const jevReply = (choice: string) =>
   vi.fn().mockResolvedValue(new Response(JSON.stringify({ answers: { route: { choice, confidence: 0.9 } } })));
 
-beforeEach(() => vi.stubEnv('TYPESAFE_API_KEY', 'k'));
+beforeEach(() => {
+  __resetJevPacing();
+  vi.stubEnv('BEATAPI_API_KEY', 'k');
+});
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
