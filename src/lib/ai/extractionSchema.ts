@@ -96,7 +96,7 @@ export function toCandidateExtraction(raw: unknown): CandidateExtraction {
     const mapped =
       kind === 'resistor'
         ? 'resistor'
-        : ['dc_voltage', 'voltage_source', 'dc_source', 'battery'].includes(kind)
+        : ['dc_voltage', 'voltage_source', 'dc_source', 'battery', 'vsource', 'v_source', 'dc_voltage_source', 'voltage', 'dc_battery'].includes(kind)
           ? 'dc_voltage'
           : null;
     if (!mapped) {
@@ -133,3 +133,15 @@ export function toCandidateExtraction(raw: unknown): CandidateExtraction {
     requiresHumanReview: true,
   };
 }
+
+// Shared by every vision provider.
+export const EXTRACTION_PROMPT = `You read images of simple DC circuits (schematic or breadboard layout).
+Extract ONLY what is visible. Never guess or infer a value, label or wire that is not clearly shown.
+- components: every part with its printed id (R1, V1...), kind, value exactly as printed, and its two node names.
+  Use kind "resistor" or "dc_voltage"; for any other part use its real name (capacitor, led, opamp...).
+  For dc_voltage, positiveNode is the + terminal. Omit value if not legible.
+- Name nodes by their printed labels (VIN, VOUT...); the ground symbol is "GND". Give unlabeled junctions short names like N1.
+- measureNode: only if a node is explicitly labelled VOUT (or a clearly marked measurement point); otherwise omit it.
+- unresolvedConnections: describe any wire or junction you are unsure about.
+- warnings: anything illegible or ambiguous.
+Return JSON matching the schema.`;
