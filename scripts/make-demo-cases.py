@@ -76,3 +76,43 @@ build(False).save(os.path.join(OUT, "clear-divider.png"))
 build(True, smudge=False).save(os.path.join(OUT, "ambiguous-junction.png"))
 build(True, smudge=True).save(os.path.join(OUT, "ambiguous-smudged.png"))
 print("ok")
+
+
+def build_groq():
+    """T-touch with no dot: R2's top lead stops 6px short of the VOUT wire, a second R2-like lead crosses it
+    with no dot, and the lower rail has a gap at the ground tap. Slight rotation + scan noise."""
+    im = Image.new("RGB", (W, H), "white")
+    d = ImageDraw.Draw(im)
+    wire = lambda *p: d.line(p, fill="black", width=3)
+    text = lambda x, y, s, f=F, a="mm": d.text((x, y), s, fill="black", font=f, anchor=a)
+    top, bot, xv, xm = 120, 340, 120, 460
+    d.ellipse((xv - 30, 200, xv + 30, 260), outline="black", width=3)
+    text(xv, 219, "+"); text(xv, 242, "-")
+    wire((xv, 200), (xv, top), (215, top)); wire((xv, 260), (xv, bot), (xm + 60, bot))
+    text(xv - 45, 216, "V1", F, "rm"); text(xv - 45, 244, "5V", F, "rm")
+    text(190, top - 40, "VIN", B)
+    wire((305, top), (400, top)); wire((400, top), (700, top))
+    d.rectangle((215, top - 16, 305, top + 16), outline="black", width=3)
+    text(260, top - 36, "R1"); text(260, top + 38, "10k")
+    # R2 hangs from a lead that nearly touches the VOUT wire (no dot) while another wire crosses it
+    wire((xm, 70), (xm, 185)); wire((xm, 275), (xm, bot))
+    d.rectangle((xm - 16, 185, xm + 16, 275), outline="black", width=3)
+    text(xm + 28, 216, "R2", F, "lm"); text(xm + 28, 244, "10k", F, "lm")
+    text(745, top, "VOUT", B)
+    wire((600, bot), (600, 395)); wire((600, 395), (640, 395))  # dangling stub off the rail, no dot
+    wire((560, 70), (560, 175))  # unlabeled wire crossing VOUT, no dot
+    gx = 290
+    wire((gx, bot), (gx, bot + 18))
+    for i, hw in enumerate((26, 17, 8)):
+        wire((gx - hw, bot + 18 + i * 9), (gx + hw, bot + 18 + i * 9))
+    text(gx + 40, bot + 28, "GND", F, "lm")
+    random.seed(11)
+    px = im.load()
+    for _ in range(4000):
+        x, y = random.randrange(W), random.randrange(H)
+        g = random.randint(170, 235); px[x, y] = (g, g, g)
+    im = im.rotate(0.8, fillcolor="white").filter(ImageFilter.GaussianBlur(0.8))
+    im.save(os.path.join(OUT, "ambiguous-junction-groq.png"))
+
+
+build_groq()
