@@ -29,11 +29,11 @@ const JevResponse = z.object({
 
 const CRITERIA = {
   review_extraction:
-    'The circuit graph is present and valid, with no or only minor warnings and no unresolved connections. Ready for the user to review.',
+    'The circuit graph is present and valid, every component value was read clearly (no warning says a value is obscured, partially legible, guessed or "appears to be"), and there are no unresolved connections. Ready for the user to review.',
   verify_topology:
     'A graph exists but has unresolved connections or ambiguous wiring that a second vision read of the image could settle.',
   ask_user:
-    'The graph is missing or invalid, or component values are unreadable. The user must enter the circuit manually.',
+    'The graph is missing or invalid, or any component value is unreadable, obscured, partially legible, guessed or described as "appears to be" — a guessed value must not reach the solver without the user re-entering it.',
 };
 
 function buildState(e: CandidateExtraction, validationErrors: string[]): string {
