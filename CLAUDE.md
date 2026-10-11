@@ -49,8 +49,17 @@ Whether a PR merges; whether production deploys; P0/P1/P2 classification; contra
 owners; architectural boundary changes; the final release SHA; final submission readiness.
 
 ## Other-agent boundaries
-Subagents work only within Claude-owned surfaces (backend). A bug in another owner's surface → PR comment or handoff,
-not a direct edit, unless ownership is explicitly transferred.
+This project is built jointly with **ChatGPT Work**, which opens PRs into `integration` like any contributor.
+
+| Owner       | Surfaces                                  |
+|-------------|-------------------------------------------|
+| Claude      | backend (Supabase schema, RLS, Edge Functions, migrations), integration, deploys |
+| ChatGPT Work| TBD — record here once assigned           |
+
+Subagents don't bypass ownership: Claude's subagents work only within Claude-owned surfaces and never modify
+ChatGPT Work's surfaces unless ownership is explicitly transferred (record the transfer in `CURRENT_STATE.md`).
+A bug in ChatGPT Work's surface → PR comment or handoff with exact evidence, not a direct edit.
+ChatGPT Work PRs get the same review, stale-base check, and merge rules as any other PR.
 
 # Release rules (submission)
 
