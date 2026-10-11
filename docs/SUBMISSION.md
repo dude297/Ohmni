@@ -2,13 +2,15 @@
 
 **Ohmni turns a circuit schematic and real electrical measurements into an explainable investigation, helping users determine what went wrong and what to measure next.** Intelligent model routing, human oversight, and a deterministic engineering solver.
 
-- Live app (no signup): https://multimodal-hackathon-sage.vercel.app
-  - Lab (upload → review → solve → diagnose → Probe Guide): https://multimodal-hackathon-sage.vercel.app/lab
-  - Probe Guide + tutor: https://multimodal-hackathon-sage.vercel.app/probe
-  - Health / build SHA / model ids: https://multimodal-hackathon-sage.vercel.app/api/health
+- **Primary host (Anbaric Cloud):** https://ohmni.cloud.anbaric.ai (app `ohmni`, build `89251fd` (release candidate, redeployed 15:20 PDT)). It requires an Anbaric login, so judges need organizer/Anbaric access ([ANBARIC_DEPLOYMENT.md](ANBARIC_DEPLOYMENT.md)). Includes `/api/topology`.
+- **Public fallback (Vercel, no signup):** https://multimodal-hackathon-sage.vercel.app, frozen at `d5a0035` because the Vercel daily deploy allowance is exhausted. Same demo flow; it lacks only `/api/topology` (#57) and the newest docs.
+  - Lab (guided: Capture, Review, Compare, Investigate; Probe Guide): `/lab`
+  - Probe Guide + tutor: `/probe` · Under the Hood: `/for-the-larp`
+  - Health / build SHA / model ids: `/api/health` (on either host)
 - Repo: https://github.com/dude297/Ohmni
 - 4-minute demo script: [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
-- Backup recording (RECORDED, live calls at the time; 2026-10-11 12:51 PDT, build `d1096b7`): [demo/ohmni-demo-backup.webm](demo/ohmni-demo-backup.webm), details in [demo/README.md](demo/README.md)
+- Backup recording (RECORDED, 2:35, guided lab UI, live traces recorded 2026-10-11 14:05-14:08 PDT on build `c27807c` against the Vercel host): [demo/ohmni-demo-guided.webm](demo/ohmni-demo-guided.webm), details in [demo/README.md](demo/README.md). The older `ohmni-demo-backup.webm` is superseded (old UI).
+- Code review: Prelint (GitHub App) reviewed PRs #51 and #55 with real findings ([PRELINT_INTEGRATION.md](PRELINT_INTEGRATION.md)); it is now `tag_only` (manual, `@prelint`) since #60 while billing is disputed.
 
 ## The problem
 
@@ -30,9 +32,10 @@ image ─► Groq qwen/qwen3.8-27b (vision, primary) ──fail──► Gemini 
       ─► local MNA solver (TypeScript, deterministic) ─► expected V/I
       ─► measured voltage ─► diagnosis hypotheses + next safe action
       ─► Probe Guide (/api/probe, solver-only)   ·   grounded tutor (/api/explain, Gemini + solver check)
+      ─► ambiguous junction? /api/topology (solver-only dual-candidate probe; Anbaric host only right now)
 ```
 
-Next.js 16 (App Router, Node route handlers), React 19, TypeScript, Tailwind 4, Zod 4, Vitest; deployed on Vercel. Keys are server-only; uploads are size-bounded and not persisted by default; per-IP rate limits on public endpoints.
+Next.js 16 (App Router, Node route handlers), React 19, TypeScript, Tailwind 4, Zod 4, Vitest; primary host Anbaric Cloud (login required), public fallback on Vercel (frozen at `d5a0035`). Keys are server-only; uploads are size-bounded and not persisted by default; per-IP rate limits on public endpoints.
 
 ## Model roles
 
@@ -46,7 +49,7 @@ Next.js 16 (App Router, Node route handlers), React 19, TypeScript, Tailwind 4, 
 
 Why Groq first: on our 10 synthetic fixtures Groq was 10/10 exact with 0 API errors at 735 ms median, vs Gemini 3.5 Flash 7/7 exact with 3/10 503 errors at 4223 ms ([VISION_FALLBACK.md](VISION_FALLBACK.md)). Synthetic fixtures; not a general accuracy benchmark.
 
-Observed live on production (2026-10-11, build `d1096b7`): `clear-divider.png` → Groq ok 839 ms → Jev `review_extraction` (p=1.00) → 2.500 V expected vs 0.450 V measured → "R2 may be 1 kΩ instead of 10 kΩ". `ambiguous-smudged.png` 66 s later → Groq 429 → Gemini fallback ok 1140 ms → Jev `ask_user` (p=1.00).
+Observed live on the Vercel host (2026-10-11, earlier build `d1096b7`, before the guided lab): `clear-divider.png` → Groq ok 839 ms → Jev `review_extraction` (p=1.00) → 2.500 V expected vs 0.450 V measured → "R2 may be 1 kΩ instead of 10 kΩ". `ambiguous-smudged.png` 66 s later → Groq 429 → Gemini fallback ok 1140 ms → Jev `ask_user` (p=1.00).
 
 ## Limitations
 

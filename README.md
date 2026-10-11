@@ -2,7 +2,7 @@
 
 **Photo of a circuit in, testable diagnosis out. Several models, one deterministic solver, a human in the loop.**
 
-Live: https://multimodal-hackathon-sage.vercel.app (no signup) · Demo flow: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
+Primary: https://ohmni.cloud.anbaric.ai (Anbaric Cloud, needs an Anbaric login; judges need organizer/Anbaric access) · Public fallback: https://multimodal-hackathon-sage.vercel.app (no signup; frozen at `d5a0035`, lacks only `/api/topology` and newest docs) · Demo flow: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
 
 ## The problem
 
@@ -47,7 +47,7 @@ flowchart LR
 
 Two models agreeing is not proof of electrical correctness, which is why a human confirmation gate sits before the solver. Development-time Claude Code / ChatGPT Work activity is not counted as runtime multimodel.
 
-Measured on production (2026-10-11 12:51 PDT, build `d1096b7`, clean 10k/10k divider `public/samples/clear-divider.png`): Groq extraction ok in 839 ms (1208 in / 211 out tokens) with an exact graph; Jev ok in 711 ms, `review_extraction`, p=1.00. A minute later Groq returned 429 on `ambiguous-smudged.png`, Gemini `gemini-3.5-flash-lite` took over (1140 ms) and Jev chose `ask_user` (recorded: [docs/demo/README.md](docs/demo/README.md)). Earlier, Gemini-primary run: Gemini ok in 3790 ms, Jev 440 ms `review_extraction`; `/api/solve` gave VOUT 2.5 V, and a measured 0.45 V ranked "R2 may be 1 kΩ instead of 10 kΩ" first. Evidence ledger: [docs/MODEL_ACCESS.md](docs/MODEL_ACCESS.md).
+Measured on the Vercel host (2026-10-11 12:51 PDT, earlier build `d1096b7`, clean 10k/10k divider `public/samples/clear-divider.png`): Groq extraction ok in 839 ms (1208 in / 211 out tokens) with an exact graph; Jev ok in 711 ms, `review_extraction`, p=1.00. A minute later Groq returned 429 on `ambiguous-smudged.png`, Gemini `gemini-3.5-flash-lite` took over (1140 ms) and Jev chose `ask_user` (recorded: [docs/demo/README.md](docs/demo/README.md)). Earlier, Gemini-primary run: Gemini ok in 3790 ms, Jev 440 ms `review_extraction`; `/api/solve` gave VOUT 2.5 V, and a measured 0.45 V ranked "R2 may be 1 kΩ instead of 10 kΩ" first. Evidence ledger: [docs/MODEL_ACCESS.md](docs/MODEL_ACCESS.md).
 
 ## Trust and safety
 
@@ -67,7 +67,7 @@ Unit economics: free-plan charges are $0 by construction, which is **not** a pro
 
 ```bash
 npm i
-cp .env.example .env.local   # fill GEMINI_API_KEY, GEMINI_MODEL=gemini-3.5-flash, BEATAPI_API_KEY, ...
+cp .env.example .env.local   # fill GEMINI_API_KEY, GEMINI_MODEL=gemini-3.5-flash-lite, BEATAPI_API_KEY, ...
 npm run dev                  # http://localhost:3000
 npm test                     # vitest
 npm run lint
@@ -84,13 +84,14 @@ Without keys, the sample and manual divider still solve locally; extraction repo
 | `POST /api/solve` | `{ graph, userConfirmed: true, measuredVoltage? }` → `{ result: { voltages, currents, hypotheses, trace } }` (422 `NOT_CONFIRMED` / `INVALID_GRAPH` / `UNSOLVABLE`) |
 | `POST /api/probe` | Probe Guide: `{ graph, userConfirmed: true, observations? }` → ranked single-fault hypotheses and the next node to probe, computed by the solver (no model calls). Used by the in-lab Probe Guide and the standalone `/probe` page ([docs/MOONSHOT.md](docs/MOONSHOT.md)) |
 | `POST /api/explain` | Grounded tutor: `{ graph, userConfirmed: true, measuredVoltage? }` → step-by-step explanation (Gemini) whose numbers are checked against the solver (`grounded`, `ungroundedNumbers`); used on `/probe` ([docs/EXPLAIN.md](docs/EXPLAIN.md)) |
+| `POST /api/topology` | Dual-candidate topology probe for one ambiguous junction: `{ graph, userConfirmed: true, ambiguous: { a, b } }` → both wirings plus the single best meter reading (solver-only, no model calls; refuses to suggest powering a shorting wiring). Anbaric host only right now ([docs/TOPOLOGY_CANDIDATES.md](docs/TOPOLOGY_CANDIDATES.md)) |
 | `GET /api/health` | `{ status, build, providers: { gemini, groq, jev } }` (configured flag and model id per provider; never key values) |
 
 Wire shapes: [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
 
 ## Tech stack
 
-Next.js 16 (App Router, Node route handlers), React 19, TypeScript, Tailwind 4, Zod 4, `@google/genai`, Vitest, deployed on Vercel. Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+Next.js 16 (App Router, Node route handlers), React 19, TypeScript, Tailwind 4, Zod 4, `@google/genai`, Vitest, hosted on Anbaric Cloud (primary) with a Vercel fallback. UI: guided lab (`/lab`), Probe Guide (`/probe`), Under the Hood (`/for-the-larp`). Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Limitations
 

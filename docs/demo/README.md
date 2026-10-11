@@ -5,7 +5,7 @@
 Play only if live providers are down during judging, and say "recorded".
 
 - Recorded 2026-10-11, 14:05:41 to 14:08:16 PDT (about 2 min 35 s; 1280x800 video (re-encoded from the raw Playwright capture, 6.1 MB), real production, Playwright headless Chromium, scripted clicks with pauses; no audio). A 43 s idle wait (so extract 2 lands 79 s after extract 1, Jev quota) sits at about 1:00 to 1:45; the page is static on the Investigate stage there.
-- Target: https://multimodal-hackathon-sage.vercel.app, `/api/health` at start: build **`c27807c`** (= main), visionPrimary groq, gemini `gemini-3.5-flash-lite`, groq `qwen/qwen3.8-27b`, jev `jev-1.13-free`, all configured.
+- Target: the Vercel host https://multimodal-hackathon-sage.vercel.app (now frozen at `d5a0035`; the primary host is Anbaric https://ohmni.cloud.anbaric.ai, build `89251fd` (release candidate, redeployed 15:20 PDT), login required, same flow), `/api/health` at start: build **`c27807c`** (= main at the time), visionPrimary groq, gemini `gemini-3.5-flash-lite`, groq `qwen/qwen3.8-27b`, jev `jev-1.13-free`, all configured.
 - Nothing mocked. 2 live `/api/extract` calls (79 s apart, Jev quota), plus `/api/solve` x1, `/api/probe` x4 (solver only), `/api/explain` x1 (Gemini tutor).
 
 | Step | Live or static | What the backend actually returned |
