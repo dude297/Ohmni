@@ -8,11 +8,12 @@ import type {
   SolveResponse as Result,
 } from "../../lib/circuit/types";
 export type { Component, Graph, Route, Trace, Extraction, Result };
-import { DIVIDER_10K_10K } from "../../lib/circuit/fixtures";
-export const sampleGraph = (): Graph => ({
-  ...DIVIDER_10K_10K,
-  components: DIVIDER_10K_10K.components.map((c) => ({ ...c })),
-});
+import { DIVIDER_10K_10K, SERIES_PARALLEL_12V } from "../../lib/circuit/fixtures";
+export type SampleKind = "divider" | "network";
+export const sampleGraph = (kind: SampleKind = "divider"): Graph => {
+  const fixture = kind === "network" ? SERIES_PARALLEL_12V : DIVIDER_10K_10K;
+  return { ...fixture, components: fixture.components.map((c) => ({ ...c })) };
+};
 const record = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 const finite = (v: unknown): v is number =>

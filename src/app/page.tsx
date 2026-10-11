@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Brand } from "../components/ohmni/brand";
 import { HeroCircuit } from "../components/ohmni/hero-circuit";
+import { LaunchShowcase } from "../components/ohmni/launch-showcase";
 
 export const metadata: Metadata = {
   title: "Ohmni | Understand your circuit",
@@ -42,8 +43,8 @@ export default function Home() {
               <span>Find out why.</span>
             </h1>
             <p>
-              From a circuit photo to a testable diagnosis—through intelligent
-              model routing and verified electrical analysis.
+              From a clear circuit schematic to a testable diagnosis—through intelligent
+              model routing, human review and verified electrical analysis.
             </p>
             <div className="hero-actions">
               <Link href="/lab?sample=divider" className="button primary">
@@ -111,6 +112,7 @@ export default function Home() {
             ))}
           </div>
         </section>
+        <LaunchShowcase />
         <section className="closing-cta">
           <div>
             <span className="eyebrow">LESS GUESSWORK. MORE UNDERSTANDING.</span>
