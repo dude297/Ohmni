@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "trigger_mode": "tag_only",
+  "exclude_authors": ["dependabot[bot]", "renovate[bot]", "github-actions[bot]", "snyk-bot"],
+  "include_authors": [],
+  "ignore_patterns": ["package-lock.json", "fixtures/**", "public/**", "docs/demo/**", "**/*.png"],
+  "context_files": [
+    "docs/API_CONTRACT.md", "docs/ARCHITECTURE.md", "docs/MODEL_ACCESS.md", "docs/PRD.md",
+    "docs/PR_WORKFLOW.md", "docs/QA_ACCEPTANCE.md", "CLAUDE.md", "AGENTS.md"
+  ],
+  "output": { "comments": true, "check_run": true },
+  "rules": [
+    { "name": "No fabricated model traces or probabilities",
+      "description": "ModelTraceEvent entries (provider, model, durationMs, status, confidence, usage) must come from a real call result or be status 'skipped'/'error' with a note. Flag hard-coded, randomised or default confidence/probability values, invented token usage, traces emitted when no call was made, and UI text that shows a model's self-reported confidence as a calibrated probability. Probabilities shown to users may only come from the measurement-based probe posterior or from a cited labelled-set evaluation." },
+    { "name": "Human confirmation before solving",
+      "description": "/api/solve, /api/probe and /api/explain must reject requests unless userConfirmed === true and validateGraph passes. Flag any removal or weakening of this gate, any client code that sets userConfirmed without an explicit user action, and any path that solves a model-extracted graph the user has not confirmed." },
+    { "name": "No unsupported electrical-safety claims",
+      "description": "Ohmni supports low-voltage DC resistor/source circuits only. Flag copy or code that claims something is 'safe', guides mains/high-voltage/high-energy work, tells users to power a circuit whose candidate topology shorts the supply, or drops the existing SAFETY text. Measurements are hypotheses, not confirmed faults." },
+    { "name": "Model roles must match docs/MODEL_ACCESS.md",
+      "description": "Vision models (Groq qwen, Gemini) read images; Jev only chooses a route from a structured summary and never receives pixels; all voltages/currents/resistances come from the local MNA solver (solveDC), never from an LLM. Flag an LLM computing circuit values, Jev being sent images, or a model's numeric output used as a solved result." },
+    { "name": "No paid-model or billing escalation",
+      "description": "Flag any use of jev-1.13 (paid; only jev-1.13-free is allowed), any OpenAI/Anthropic/other paid API call or SDK, enabling Gemini billing, auto top-up, raised spend limits, or new keys, unless the PR links explicit owner approval. Secrets must stay server-side: no API keys in NEXT_PUBLIC_* or client bundles, no logging of keys or uploaded images." },
+    { "name": "CircuitGraph and solver contract stability",
+      "description": "src/lib/circuit/types.ts mirrors docs/API_CONTRACT.md v1 (schemaVersion 1, kinds resistor|dc_voltage, groundNode 'GND', SI units). Flag changes to these types, validateGraph or solveDC behaviour without a matching API_CONTRACT.md update and tests covering both known voltage cases (10k/10k divider at 5 V gives 2.5 V) and malformed/floating-graph errors." },
+    { "name": "New dependencies need justification",
+      "description": "Flag any added dependency in package.json unless the PR description states why existing code, the standard library or an installed package cannot do it, plus its licence and bundle/runtime impact." },
+    { "name": "Claims must not exceed implementation",
+      "description": "Flag README, docs, UI copy or PR descriptions that claim features, accuracy figures, provider participation or test results that the diff and repo do not implement or evidence (e.g. 'verifies topology' when no independent check runs, 'calibrated' without a labelled-set result, research code under docs/research or src/lib/topology described as shipped)." }
+  ]
+}
