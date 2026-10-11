@@ -1,6 +1,6 @@
 # Ohmni 4-minute demo script (Groq-primary pipeline)
 
-Hosts: primary Anbaric https://ohmni.cloud.anbaric.ai (build `89251fd` (release candidate, redeployed 15:20 PDT), needs an Anbaric login; `/api/topology` available); public fallback Vercel https://multimodal-hackathon-sage.vercel.app (frozen at `d5a0035`, no `/api/topology`, same demo flow). Check `/api/health` first (build SHA, `visionPrimary: "groq"`, all three providers `configured: true`).
+Hosts: primary Anbaric https://ohmni.cloud.anbaric.ai (build `d4b97d2` (release candidate #62 + Loaded bridge sample #64, redeployed ~16:00 PDT), needs an Anbaric login; `/api/topology` available); public fallback Vercel https://multimodal-hackathon-sage.vercel.app (frozen at `d5a0035`, no `/api/topology`, same demo flow). Check `/api/health` first (build SHA, `visionPrimary: "groq"`, all three providers `configured: true`).
 
 Core value (say it once, early): **Ohmni turns a circuit schematic and real electrical measurements into an explainable investigation, helping users determine what went wrong and what to measure next.**
 
@@ -10,7 +10,7 @@ Quota rules (free tiers): Jev allows **1 successful call per minute**, Groq's fr
 
 Prep: tabs on `/lab` and `/probe`. The lab has one-click demo images (**Clear divider**, **Smudged value**), so no files are needed. Backup video `docs/demo/ohmni-demo-guided.webm` open in a player (see `docs/demo/README.md`).
 
-Note: the lab is now the guided four-stage flow (PR #49: **Capture, Review, Compare, Investigate**, with a **Next step** button between stages). Button names below were re-checked in the browser against the Vercel host at `c27807c`; the Anbaric build `89251fd` (release candidate, redeployed 15:20 PDT) adds docs only to this flow, but re-run the click-through there once. If the lab UI changes again, re-run the click-through once before demoing.
+Note: the lab is now the guided four-stage flow (PR #49: **Capture, Review, Compare, Investigate**, with a **Next step** button between stages). Button names below were re-checked in the browser against the Vercel host at `c27807c`; the Anbaric build `d4b97d2` (release candidate #62 + Loaded bridge sample #64, redeployed ~16:00 PDT) adds docs only to this flow, but re-run the click-through there once. If the lab UI changes again, re-run the click-through once before demoing.
 
 | Time | Do | Say |
 |---|---|---|
