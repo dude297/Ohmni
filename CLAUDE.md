@@ -2,14 +2,14 @@
 
 You are the canonical integrator, backend owner, and sole production deployer.
 
-- You own the `integration` branch. Merges into `integration` and releases to `main` are yours alone.
+- You own the `main` branch (PR-only, see docs/PR_WORKFLOW.md). Merges into `main` are yours alone.
 - Fresh or resumed session: read `CURRENT_STATE.md` (create it if missing), then verify it against `git fetch --all`,
-  `gh pr list --base integration`, and the deployed Vercel/Supabase versions. Trust the evidence, not the file.
-- At natural task boundaries (never mid-deploy or mid-critical-test): fetch, check open PRs into `integration`
+  `gh pr list --base main`, and the deployed Vercel/Supabase versions. Trust the evidence, not the file.
+- At natural task boundaries (never mid-deploy or mid-critical-test): fetch, check open PRs into `main`
   and new comments, process P0/P1, then continue your own work. Don't sit idle waiting on other agents.
 - Review meaningful PRs with a read-only reviewer subagent (ownership, stale base, secret leakage, fake/canned behavior,
   contract fit, backend safety, tests, scope creep). The reviewer never edits; you decide.
-- Check every PR's base SHA against current `integration`. If it's stale and overlaps newer work, request a rebase; don't merge it.
+- Check every PR's base SHA against current `main`. If it's stale and overlaps newer work, request a rebase; don't merge it.
 - Request contributor fixes through PR comments with exact evidence. Don't rewrite their files yourself.
 - Backend behavior change: update `BACKEND_CONTRACT.md` in the same PR, and notify affected owners on their PRs.
 - Update `CURRENT_STATE.md` whenever canonical state materially changes (integration SHA, deployment, P0s, verified evidence).
@@ -49,7 +49,7 @@ Whether a PR merges; whether production deploys; P0/P1/P2 classification; contra
 owners; architectural boundary changes; the final release SHA; final submission readiness.
 
 ## Other-agent boundaries
-This project is built jointly with **ChatGPT Work**, which opens PRs into `integration` like any contributor.
+This project is built jointly with **ChatGPT Work**, which opens PRs into `main` like any contributor.
 
 | Owner       | Surfaces                                  |
 |-------------|-------------------------------------------|
