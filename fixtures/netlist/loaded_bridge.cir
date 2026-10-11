@@ -1,0 +1,12 @@
+* SYNTHETIC example: 7-resistor loaded bridge, 12 V (same circuit as LOADED_BRIDGE_12V)
+* ohmni:measure C
+V1 VIN 0 DC 12
+R1 VIN A 1k
+R2 A 0 2k
+R3 VIN B 1.5k
+R4 B 0 1k
+R5 A B 3k3
+R6 B C 680
+R7 C GND 1.2kohm
+.op
+.end

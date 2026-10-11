@@ -1,0 +1,67 @@
+{
+  "synthetic": true,
+  "description": "SYNTHETIC: loaded bridge as built; nets named differently (N1->X1, B->MID, VOUT->OUT), electrically identical",
+  "graph": {
+    "schemaVersion": 1,
+    "components": [
+      {
+        "id": "V1",
+        "kind": "dc_voltage",
+        "value": 12,
+        "positiveNode": "VIN",
+        "negativeNode": "GND"
+      },
+      {
+        "id": "R1",
+        "kind": "resistor",
+        "value": 1000,
+        "positiveNode": "VIN",
+        "negativeNode": "X1"
+      },
+      {
+        "id": "R2",
+        "kind": "resistor",
+        "value": 2000,
+        "positiveNode": "X1",
+        "negativeNode": "GND"
+      },
+      {
+        "id": "R3",
+        "kind": "resistor",
+        "value": 1500,
+        "positiveNode": "VIN",
+        "negativeNode": "MID"
+      },
+      {
+        "id": "R4",
+        "kind": "resistor",
+        "value": 1000,
+        "positiveNode": "MID",
+        "negativeNode": "GND"
+      },
+      {
+        "id": "R5",
+        "kind": "resistor",
+        "value": 3300,
+        "positiveNode": "X1",
+        "negativeNode": "MID"
+      },
+      {
+        "id": "R6",
+        "kind": "resistor",
+        "value": 680,
+        "positiveNode": "MID",
+        "negativeNode": "OUT"
+      },
+      {
+        "id": "R7",
+        "kind": "resistor",
+        "value": 1200,
+        "positiveNode": "OUT",
+        "negativeNode": "GND"
+      }
+    ],
+    "groundNode": "GND",
+    "measureNode": "OUT"
+  }
+}
