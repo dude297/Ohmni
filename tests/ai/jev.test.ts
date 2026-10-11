@@ -37,12 +37,25 @@ describe('routeExtraction', () => {
 
   it('missing key -> ask_user skipped, no fetch', async () => {
     vi.stubEnv('TYPESAFE_API_KEY', '');
+    vi.stubEnv('BEATAPI_API_KEY', '');
     const f = vi.fn();
     vi.stubGlobal('fetch', f);
     const r = await routeExtraction(input);
     expect(r.route).toBe('ask_user');
     expect(r.event.status).toBe('skipped');
     expect(f).not.toHaveBeenCalled();
+  });
+
+  it('uses BeatAPI gateway when only BEATAPI_API_KEY is set', async () => {
+    vi.stubEnv('TYPESAFE_API_KEY', '');
+    vi.stubEnv('BEATAPI_API_KEY', 'b');
+    const f = ok({ answers: { route: { type: 'choice', choice: 'review_extraction', confidence: 0.94 } } });
+    vi.stubGlobal('fetch', f);
+    const r = await routeExtraction(input);
+    expect(r.route).toBe('review_extraction');
+    expect(r.event).toMatchObject({ provider: 'beatapi', model: 'jev-1.13-free', status: 'ok' });
+    expect(f.mock.calls[0][0]).toBe('https://api.beatapi.io/v1/systemone');
+    expect(f.mock.calls[0][1].headers.Authorization).toBe('Bearer b');
   });
 
   it('timeout -> ask_user error', async () => {
