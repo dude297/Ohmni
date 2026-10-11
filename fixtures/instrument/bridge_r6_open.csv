@@ -1,0 +1,5 @@
+# SYNTHETIC — generated for tests, not captured by an instrument
+# Circuit: bridge (12 V loaded bridge, LOADED_BRIDGE_12V). Truth: R6 open / not connected.
+node,value,unit,timestamp,instrument
+C,0.000,V,2026-10-11T11:00:00Z,DMM-1
+A,7.533,V,2026-10-11T11:00:30Z,DMM-1
