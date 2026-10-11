@@ -84,7 +84,7 @@ const explanationSchema = z.object({
 const PROMPT = `You are an electrical-engineering tutor. Explain the user's DC circuit to an EE student in plain language.
 The FACTS JSON below was computed by a circuit solver; it is the only source of truth.
 Rules:
-- Use ONLY numbers that appear in FACTS (you may write resistances in kΩ and currents in mA). Never compute or invent new numbers, percentages or ratios.
+- Use ONLY numbers that appear in FACTS (you may write resistances in kΩ and currents in mA, and round to 3 significant figures). Never compute or invent new numbers, percentages or ratios.
 - At most 5 steps. Use KVL, KCL, Ohm's law and voltage-divider reasoning where relevant.
 - If a measured voltage and hypotheses are given, explain why the measurement may differ, using the hypotheses only; call them hypotheses, not confirmed faults.
 - Safety: always say to disconnect power before measuring resistance. Give no unsafe advice.
@@ -108,7 +108,7 @@ async function callModel(facts: unknown): Promise<{ explanation: Explanation | n
       hang,
       new GoogleGenAI({ apiKey }).models.generateContent({
         model,
-        contents: [{ role: 'user', parts: [{ text: PROMPT + JSON.stringify(facts) }] }],
+        contents: [{ role: 'user', parts: [{ text: PROMPT + JSON.stringify(facts, (_k, v) => (typeof v === 'number' ? +v.toPrecision(4) : v)) }] }],
         config: { temperature: 0.2, responseMimeType: 'application/json', abortSignal: ctrl.signal },
       }),
     ]);
