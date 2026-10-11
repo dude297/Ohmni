@@ -47,7 +47,7 @@ const sameReading = (a: Reading, b: Reading) => a.node === b.node && a.value ===
 
 /** Spoken/typed "yes, record that" may only apply to a proposal that is on screen right now. */
 export function voiceConfirmBlocker(s: VLState): string | null {
-  if (!s.proposal || s.phase !== "confirming") return "There is no reading waiting for confirmation.";
+  if (!s.proposal || (s.phase !== "confirming" && s.phase !== "listening")) return "There is no reading waiting for confirmation.";
   return commitBlocker(s);
 }
 

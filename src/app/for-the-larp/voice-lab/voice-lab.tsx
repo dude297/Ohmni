@@ -163,7 +163,7 @@ export function VoiceLab() {
       const s = stateRef.current;
       setTranscript(text);
       if (!s.circuitConfirmed) return say("Confirm the circuit first. Voice never confirms a circuit.");
-      const { intent, warning } = parseCommand(text, graph, { pendingNode: s.phase === "confirming" ? s.proposal?.reading.node : undefined });
+      const { intent, warning } = parseCommand(text, graph, { pendingNode: s.phase === "confirming" || s.phase === "listening" ? s.proposal?.reading.node : undefined });
       switch (intent.type) {
         case "confirm": {
           // "yes" applies ONLY to the proposal currently displayed (same revision); otherwise nothing is recorded.

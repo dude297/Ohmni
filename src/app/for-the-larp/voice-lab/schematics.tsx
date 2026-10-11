@@ -61,9 +61,9 @@ function BridgeSchematic(p: SchemProps) {
     );
   };
   return (
-    <svg className="vl-schem vl-bridge" viewBox="0 0 400 300" role="img" aria-label={label(p)}>
-      <rect className="vl-bg" x="0" y="0" width="400" height="300" rx="6" />
-      <path className="vl-rail" d="M40 36H350M40 268H350" />
+    <svg className="vl-schem vl-bridge" viewBox="0 0 440 300" role="img" aria-label={label(p)}>
+      <rect className="vl-bg" x="0" y="0" width="440" height="300" rx="6" />
+      <path className="vl-rail" d="M40 36H360M40 268H360" />
       <text className="vl-rlabel" x="46" y="26">VIN</text>
       <text className="vl-rlabel" x="46" y="288">GND</text>
       {/* V1 */}
@@ -72,7 +72,7 @@ function BridgeSchematic(p: SchemProps) {
         <circle cx="40" cy="150" r="18" className="vl-src" />
         <text x="40" y="146" textAnchor="middle" className="vl-plus">+</text>
         <text x="40" y="162" textAnchor="middle" className="vl-plus">−</text>
-        <text x="40" y="192" textAnchor="middle">V1 12 V</text>
+        <text x="40" y="236" textAnchor="middle">V1 12 V</text>
       </g>
       {vert("R1", 120, 36, 150)}
       {vert("R2", 120, 150, 268)}
