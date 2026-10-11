@@ -22,15 +22,19 @@ export default function Home() {
   return (
     <div className="ohmni home-page">
       <ScrollExperience />
-      <header className="site-header">
-        <Brand />
-        <nav aria-label="Main navigation">
-          <a href="#how-it-works">How it works</a>
-          <Link href="/lab" className="nav-cta">
-            Open workspace <ArrowUpRight size={15} />
-          </Link>
-        </nav>
-      </header>
+      <div className="site-header-bar">
+        <header className="site-header">
+          <Brand />
+          <nav aria-label="Main navigation">
+            <a href="#how-it-works" className="nav-secondary">How it works</a>
+            <Link href="/probe" className="nav-secondary">Probe Guide</Link>
+            <Link href="/for-the-larp" className="nav-secondary">Under the Hood</Link>
+            <Link href="/lab" className="nav-cta">
+              Open workspace <ArrowUpRight size={15} />
+            </Link>
+          </nav>
+        </header>
+      </div>
       <main>
         <section className="hero">
           <div className="hero-copy">
@@ -112,6 +116,47 @@ export default function Home() {
                 <p>{text}</p>
               </article>
             ))}
+          </div>
+        </section>
+        <section id="who-its-for" className="audience-section" aria-labelledby="audience-heading">
+          <div className="showcase-heading">
+            <div>
+              <span className="eyebrow">WHO IT&apos;S FOR</span>
+              <h2 id="audience-heading">Built for the people who build, test, and fix.</h2>
+            </div>
+            <p>
+              Same loop for everyone: confirm the circuit, compare a real reading
+              with the math, then take the next useful measurement.
+            </p>
+          </div>
+          <ul className="audience-list">
+            {[
+              { who: "Students & educators", why: "Check a lab reading against the expected value and learn why it differs — not just that it does." },
+              { who: "Makers & hobbyists", why: "Turn a confusing multimeter reading into one concrete next probe point." },
+              { who: "Research & R&D labs", why: "Keep a reviewed circuit graph and the measurement evidence together, exportable as JSON." },
+              { who: "Technicians, repair specialists & hardware teams", why: "Narrow down an open or a wrong value with a guided measurement sequence." },
+            ].map(({ who, why }) => (
+              <li key={who} className="audience-item">
+                <h3>{who}</h3>
+                <p>{why}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="scope-split">
+            <div className="scope-now">
+              <span className="eyebrow">WORKS TODAY</span>
+              <p>
+                Low-voltage DC resistor networks from clear schematics: resistors
+                and DC voltage sources, human-confirmed, solved deterministically.
+              </p>
+            </div>
+            <div className="scope-later">
+              <span className="eyebrow">ON THE ROADMAP · PLANNED / RESEARCH</span>
+              <p>
+                Denser schematics, breadboard photos, more component types and
+                AC/transient analysis. Not available yet — see the roadmap below.
+              </p>
+            </div>
           </div>
         </section>
         <LaunchShowcase />

@@ -39,6 +39,7 @@ import {
   solveSample,
   type SampleKind,
 } from "./api";
+import { STAGES, maxStage } from "./stages";
 
 type Mode = "empty" | "sample" | "manual" | "upload";
 type Phase = "review" | "extracting" | "solving";
@@ -103,6 +104,17 @@ export function LabWorkspace() {
     Math.abs(delta) > Math.max(0.05, Math.abs(expected!) * 0.05);
   const events = [...trace, ...(result?.trace ?? [])];
   const allNodes = graph ? [...new Set(graph.components.flatMap((c) => [c.positiveNode, c.negativeNode]))] : [];
+  const [stage, setStage] = useState(params.has("sample") ? 1 : 0);
+  const reachable = maxStage({ hasGraph: !!graph, confirmed, reviewReady, hasResult: !!result });
+  // Derived clamp: any edit that clears confirmation/result also pulls the user back to the furthest valid stage.
+  const activeStage = Math.min(stage, reachable);
+  const needsInput = route === "ask_user" && !reviewReady;
+  const stageStatus = `Step ${activeStage + 1} of 4 — ${STAGES[activeStage].heading}`;
+  const stageMounted = useRef(false);
+  useEffect(() => {
+    if (!stageMounted.current) { stageMounted.current = true; return; }
+    document.getElementById(`stage-title-${activeStage}`)?.focus();
+  }, [activeStage]);
 
   useEffect(
     () => () => {
@@ -132,6 +144,7 @@ export function LabWorkspace() {
     setJson("");
     setUseBackend(true);
     if (inputRef.current) inputRef.current.value = "";
+    setStage(1);
   }
   function editGraph(next: Graph) {
     setGraph(next);
@@ -179,6 +192,7 @@ export function LabWorkspace() {
     setFileName(file.name);
     setImageUrl(URL.createObjectURL(file));
     setUseBackend(true);
+    setStage(0);
     setPhase("extracting");
     const body = new FormData();
     body.append("image", file);
@@ -188,9 +202,10 @@ export function LabWorkspace() {
       setRoute(response.route);
       setTrace(response.trace);
       setGraph(response.extraction.graph);
-      if (response.extraction.graph)
+      if (response.extraction.graph) {
         setSelected(response.extraction.graph.components[0].id);
-      else
+        setStage(1);
+      } else
         setError(
           `${response.extraction.warnings.join(" ")} No supported graph was extracted. Use a manual divider, or paste a reviewed circuit graph below.`.trim(),
         );
@@ -270,6 +285,7 @@ export function LabWorkspace() {
       setRoute(null);
       setTrace([]);
       setError("");
+      setStage(1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Invalid circuit JSON.");
     }
@@ -308,16 +324,11 @@ export function LabWorkspace() {
         >
           <div>
             <span className="tiny-dot" />
-            <strong>
-              {mode === "sample"
-                ? sampleKind === "network" ? "SERIES + PARALLEL / DEMO" : sampleKind === "ladder" ? "FAULT ISOLATION / DEMO" : "VOLTAGE DIVIDER / DEMO"
-                : mode === "manual"
-                  ? "MANUAL DIVIDER"
-                  : mode === "upload"
-                    ? "BACKEND ANALYSIS"
-                    : "READY WHEN YOU ARE"}
-            </strong>
+            <strong className="stage-status">{stageStatus}</strong>
             <span>
+              {mode === "sample"
+                ? sampleKind === "network" ? "Series + parallel demo · " : sampleKind === "ladder" ? "Fault isolation demo · " : "Voltage divider demo · "
+                : mode === "manual" ? "Manual divider · " : ""}
               {mode === "upload"
                 ? "Candidate extraction requires your review. Provider steps appear only when returned by the backend."
                 : mode === "empty"
@@ -327,6 +338,7 @@ export function LabWorkspace() {
                     : "Local divider calculation. No AI providers have run."}
             </span>
           </div>
+          <div className="sr-only" aria-live="polite" aria-atomic="true">{stageStatus}</div>
           {mode !== "empty" && (
             <button
               className="icon-button"
@@ -338,24 +350,45 @@ export function LabWorkspace() {
             </button>
           )}
         </div>
-        <nav className="investigation-steps" aria-label="Investigation progress">
-          {[
-            { href: "#capture-title", title: "Capture", complete: !!graph || !!imageUrl, state: phase === "extracting" ? "Waiting for extraction" : graph ? "Graph loaded" : imageUrl ? "Image loaded" : "Choose a starting point" },
-            { href: "#review-title", title: "Review", complete: confirmed, state: confirmed ? "Confirmed by you" : graph ? "Check values and terminals" : "Awaiting a graph" },
-            { href: "#analyze-title", title: "Understand", complete: !!result, state: phase === "solving" ? "Waiting for solver" : result ? resultSource === "backend" ? "Actual backend result" : "Local fallback result" : "Compare a measurement" },
-          ].map((step, i) => <a href={step.href} key={step.title} className={step.complete ? "step-complete" : ""} aria-current={phase === "extracting" && i === 0 || phase === "solving" && i === 2 || phase === "review" && !result && i === 1 && !!graph ? "step" : undefined}><span>{step.complete ? <Check size={14} /> : `0${i + 1}`}</span><div><strong>{step.title}</strong><small>{step.state}</small></div><ArrowRight size={14} /></a>)}
+        <nav className="investigation-steps" aria-label="Investigation stages">
+          <ol>
+            {[
+              { complete: !!graph, state: phase === "extracting" ? "Waiting for extraction" : graph ? "Circuit loaded" : imageUrl ? "Image loaded" : "Choose a starting point" },
+              { complete: confirmed && reviewReady, state: needsInput ? "Needs your input" : confirmed ? "Confirmed by you" : graph ? "Check and confirm" : "Awaiting a circuit" },
+              { complete: !!result, state: phase === "solving" ? "Waiting for solver" : result ? resultSource === "backend" ? "Backend result" : "Local fallback result" : "Measured vs expected" },
+              { complete: false, state: result?.hypotheses?.length ? `${result.hypotheses.length} hypotheses` : "Next measurement" },
+            ].map((step, i) => (
+              <li key={i}>
+                <button type="button" disabled={i > reachable || pending} onClick={() => setStage(i)} className={`${step.complete ? "step-complete" : ""} ${i === 1 && needsInput ? "step-attention" : ""}`} aria-current={i === activeStage ? "step" : undefined}>
+                  <span>{step.complete && i !== activeStage ? <Check size={14} /> : `0${i + 1}`}</span>
+                  <div><strong>{STAGES[i].title}</strong><small>{step.state}</small></div>
+                </button>
+              </li>
+            ))}
+          </ol>
         </nav>
-        <div className="workspace-grid">
+        {error && activeStage !== 2 && (
+          <div className="error-card stage-error" role="alert">
+            <CircleAlert size={18} />
+            <div>
+              <strong>Something needs attention</strong>
+              <p>{error}</p>
+              <span>Your image and edits remain available for review.</span>
+            </div>
+          </div>
+        )}
+        <div className={`stage-layout ${graph && activeStage !== 1 ? "with-preview" : ""}`}>
           <section
             className="workspace-panel capture-panel"
-            aria-labelledby="capture-title"
+            aria-labelledby="stage-title-0"
+            hidden={activeStage !== 0}
           >
             <PanelHeader
               number="01"
               icon={<ScanLine size={17} />}
-              title="Capture"
-              id="capture-title"
-              subtitle="Start with what you can see."
+              title="Capture a circuit"
+              id="stage-title-0"
+              subtitle="Upload a schematic or start from a sample."
             />
             <label className={`upload-zone ${pending ? "disabled" : ""}`}>
               <input
@@ -451,18 +484,34 @@ export function LabWorkspace() {
                 Load graph for review
               </button>
             </details>
+            <StageFooter
+              next={reachable >= 1 ? () => setStage(1) : undefined}
+              nextLabel="Review circuit"
+              hint={graph ? undefined : phase === "extracting" ? "Reading your circuit…" : "Upload a schematic or choose a sample to continue."}
+              disabled={pending}
+            />
           </section>
           <section
             className="workspace-panel review-panel"
-            aria-labelledby="review-title"
+            aria-labelledby="stage-title-1"
+            hidden={activeStage !== 1}
           >
             <PanelHeader
               number="02"
               icon={<Network size={17} />}
-              title="Review"
-              id="review-title"
+              title={extraction ? "Review the extracted circuit" : "Review the circuit"}
+              id="stage-title-1"
               subtitle="Your connections. Your confirmation."
             />
+            {needsInput && (
+              <div className="needs-input" role="status">
+                <CircleAlert size={18} />
+                <div>
+                  <strong>Needs your input</strong>
+                  <p>Some values or connections could not be read with confidence. Correct them below, tick each item you verified, then confirm the circuit before comparing.</p>
+                </div>
+              </div>
+            )}
             {graph ? (
               <>
                 <div className="diagram-toolbar">
@@ -701,17 +750,25 @@ export function LabWorkspace() {
                 </button>
               </div>
             )}
+            <StageFooter
+              back={() => setStage(0)}
+              next={reachable >= 2 ? () => setStage(2) : undefined}
+              nextLabel="Continue to compare"
+              hint={needsInput ? "Resolve the flagged items and confirm the circuit to continue." : graph && !confirmed ? "Confirm the circuit above to continue. Any edit clears confirmation and results." : undefined}
+              disabled={pending}
+            />
           </section>
           <section
             className="workspace-panel analyze-panel"
-            aria-labelledby="analyze-title"
+            aria-labelledby="stage-title-2"
+            hidden={activeStage !== 2}
           >
             <PanelHeader
               number="03"
               icon={<Activity size={17} />}
-              title="Understand"
-              id="analyze-title"
-              subtitle="Turn a reading into a next step."
+              title="Compare your measurement"
+              id="stage-title-2"
+              subtitle="Measured voltage vs the confirmed circuit's prediction."
             />
             <div className="measurement-block">
               <label htmlFor="measured-vout">
@@ -862,6 +919,49 @@ export function LabWorkspace() {
                       </div>
                     </div>
                   )}
+                </>
+              ) : (
+                !error && (
+                  <div className="analysis-empty">
+                    <Activity size={27} />
+                    <p>The answer starts with a confirmed circuit.</p>
+                    <span>
+                      Enter what your meter reads, then solve. Expected voltages
+                      and the comparison appear here.
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+            <StageFooter
+              back={() => setStage(1)}
+              next={reachable >= 3 ? () => setStage(3) : undefined}
+              nextLabel={mismatch ? "Investigate the difference" : "See details"}
+              hint={result ? undefined : "Solve the confirmed circuit to continue."}
+              disabled={pending}
+            />
+          </section>
+          <section
+            className="workspace-panel analyze-panel investigate-panel"
+            aria-labelledby="stage-title-3"
+            hidden={activeStage !== 3}
+          >
+            <PanelHeader
+              number="04"
+              icon={<FlaskConical size={17} />}
+              title="Investigate the difference"
+              id="stage-title-3"
+              subtitle="Testable hypotheses and the next useful measurement."
+            />
+            <div className="analysis-status">
+              {result && (
+                <>
+                  {mismatch === false && delta !== undefined && (
+                    <p className="solve-hint">Your reading matches the prediction within the demo threshold — no fault to chase. Details below.</p>
+                  )}
+                  {delta === undefined && (
+                    <p className="solve-hint">No measurement entered. Go back to Compare to add one and get hypotheses.</p>
+                  )}
                   {(result.hypotheses ?? []).slice(0, 1).map((h, i) => (
                     <HypothesisCard key={i} hypothesis={h} />
                   ))}
@@ -904,20 +1004,17 @@ export function LabWorkspace() {
                   {useBackend && mismatch && graph && measured !== undefined && Number.isFinite(measured) && <ProbeGuide key={JSON.stringify(graph) + measured} graph={graph} initialVoltage={measured} onTarget={setProbeTarget} />}
                   <button className="evidence-export" onClick={exportEvidence}><Download size={15} /> Download investigation evidence</button>
                 </>
-              ) : (
-                !error && (
-                  <div className="analysis-empty">
-                    <Activity size={27} />
-                    <p>The answer starts with a confirmed circuit.</p>
-                    <span>
-                      Expected voltages, currents and measurement insights will
-                      appear here.
-                    </span>
-                  </div>
-                )
               )}
             </div>
+            <StageFooter back={() => setStage(2)} disabled={pending} />
           </section>
+          {graph && activeStage !== 1 && (
+            <aside className="stage-preview" aria-label="Circuit preview">
+              <div className="eyebrow">{confirmed ? "CONFIRMED CIRCUIT" : "CIRCUIT"} · {graph.measureNode}</div>
+              <CircuitView graph={graph} result={result} uncertain={!!extraction && !confirmed} highlightedNode={result ? probeTarget : undefined} />
+              <button type="button" className="text-button" disabled={pending} onClick={() => setStage(1)}>Edit in Review <ArrowRight size={14} /></button>
+            </aside>
+          )}
         </div>
         {events.length > 0 && <div className="evidence-strip" aria-label="Returned execution evidence"><span><Activity size={14} /> {events.length} returned events</span><span>{events.filter((event) => event.status === "ok").length} succeeded</span><span>{events.reduce((sum, event) => sum + event.durationMs, 0).toLocaleString()} ms reported step time</span>{events.some((event) => event.status !== "ok") && <strong>Review errors / skipped steps below</strong>}</div>}
         <details className="trace-panel">
@@ -993,9 +1090,18 @@ function PanelHeader({
       <div className="panel-title">
         <span className="panel-number">{number}</span>
         {icon}
-        <h2 id={id}>{title}</h2>
+        <h2 id={id} tabIndex={-1}>{title}</h2>
       </div>
       <p>{subtitle}</p>
+    </div>
+  );
+}
+function StageFooter({ back, next, nextLabel, hint, disabled }: { back?: () => void; next?: () => void; nextLabel?: string; hint?: string; disabled?: boolean }) {
+  return (
+    <div className="stage-footer">
+      {back ? <button type="button" className="button secondary small" disabled={disabled} onClick={back}><ArrowLeft size={15} /> Back</button> : <span />}
+      {hint && <p>{hint}</p>}
+      {nextLabel && <button type="button" className="button primary small" disabled={disabled || !next} onClick={next}>{nextLabel} <ArrowRight size={15} /></button>}
     </div>
   );
 }
