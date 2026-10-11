@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, GraduationCap, Loader2, Undo2, X } from "lucide-react";
 import { Brand } from "../../components/ohmni/brand";
+import { AdvancedCircuit } from "../../components/ohmni/advanced-circuit";
 import type { FaultHypothesis, ProbeStep } from "../../lib/probe";
 import type { ModelTraceEvent } from "../../lib/circuit/types";
 import { CIRCUITS, Obs, addObservation, apiErrorMessage, fmtPct, fmtV, parseVolts } from "./helpers";
@@ -42,6 +43,8 @@ const TraceList = ({ trace }: { trace?: ModelTraceEvent[] }) =>
 
 export function ProbeClient() {
   const [ci, setCi] = useState(0);
+  const [reviewed, setReviewed] = useState(false);
+  const [selected, setSelected] = useState<string>();
   const circuit = CIRCUITS[ci];
   const graph = circuit.graph;
   const [obs, setObs] = useState<Obs[]>([]);
@@ -64,6 +67,7 @@ export function ProbeClient() {
   const value = parseVolts(input);
 
   async function run(list: Obs[]) {
+    if (circuit.key === "loaded-bridge" && !reviewed) { setError("Confirm the prepared bridge connections before investigating."); return; }
     setLoading(true);
     setError("");
     try {
@@ -95,6 +99,7 @@ export function ProbeClient() {
   };
   const reset = (i: number) => {
     setCi(i);
+    setReviewed(false); setSelected(undefined);
     setObs([]);
     setResult(null);
     setInput("");
@@ -104,6 +109,7 @@ export function ProbeClient() {
   };
 
   async function explain() {
+    if (circuit.key === "loaded-bridge" && !reviewed) { setExpError("Review and confirm the prepared graph first."); return; }
     setExpLoading(true);
     setExpError("");
     try {
@@ -127,7 +133,7 @@ export function ProbeClient() {
     ids.map((id) => result?.hypotheses.find((h) => h.id === id)?.title ?? id);
 
   return (
-    <div className="ohmni lab-page">
+    <div className="ohmni lab-page living-probe">
       <header className="site-header lab-header">
         <Brand />
         <nav aria-label="Probe navigation">
@@ -142,8 +148,9 @@ export function ProbeClient() {
 
       <main className={s.main}>
         <div className={s.title}>
-          <h1>Where should I probe next?</h1>
-          <p>One wrong reading doesn&apos;t tell you which part failed. Ohmni tells you where to probe next.</p>
+          <div className={s.eyebrow}>FOLLOW THE EVIDENCE</div>
+          <h1>One reading. Fewer possibilities.</h1>
+          <p>Enter a voltage. Let the solver choose the next experiment.</p>
         </div>
 
         <div className={s.grid}>
@@ -151,13 +158,13 @@ export function ProbeClient() {
             <h2 id="circ-h" className={s.h2}>1. Circuit</h2>
             <div className={s.picker} role="group" aria-label="Choose a circuit">
               {CIRCUITS.map((c, i) => (
-                <button key={c.key} type="button" aria-pressed={i === ci} disabled={loading} className={`${s.pick} ${i === ci ? s.pickOn : ""}`} onClick={() => reset(i)}>
+                <button key={c.key} type="button" aria-pressed={i === ci} disabled={loading || expLoading} className={`${s.pick} ${i === ci ? s.pickOn : ""}`} onClick={() => reset(i)}>
                   {c.label}
                 </button>
               ))}
             </div>
             <p className={s.muted}>{circuit.blurb}</p>
-            <ProbeSchematic graph={graph} highlight={result ? (result.done ? null : result.next?.node ?? null) : graph.measureNode} />
+            {circuit.key === "loaded-bridge" ? <><AdvancedCircuit graph={graph} selected={selected} onSelect={setSelected} highlightedNode={result ? result.next?.node : graph.measureNode} readings={Object.fromEntries(obs.map(o=>[o.node,o.volts]))}/><label className="advanced-confirm"><input type="checkbox" checked={reviewed} disabled={loading || expLoading} onChange={e=>{setReviewed(e.target.checked);setResult(null);setObs([]);if (!e.target.checked) setInput("");}}/> I reviewed this prepared graph and its connections.</label></> : <ProbeSchematic graph={graph} highlight={result ? (result.done ? null : result.next?.node ?? null) : graph.measureNode} />}
             {result && !result.done && result.next && (
               <>
                 <button ref={toggleRef} type="button" className={`button secondary ${s.toggle}`} aria-expanded={guideOpen} onClick={() => (guideOpen ? closeGuide() : setGuideOpen(true))}>
@@ -204,7 +211,7 @@ export function ProbeClient() {
                 <label htmlFor="v0">Reading at <b>{node}</b> (volts)</label>
                 <div className={s.row}>
                   <input id="v0" inputMode="decimal" placeholder="e.g. 0" value={input} onChange={(e) => setInput(e.target.value)} disabled={loading} />
-                  <button className="button primary" disabled={loading || value === null}>
+                  <button className="button primary" disabled={loading || value === null || (circuit.key === "loaded-bridge" && !reviewed)}>
                     {loading ? <Loader2 className={s.spin} size={16} /> : null} Guide me
                   </button>
                 </div>
@@ -253,8 +260,9 @@ export function ProbeClient() {
               <div className={s.done} role="status">
                 <CheckCircle2 size={22} />
                 <div>
-                  <b>Diagnosis</b>
-                  <p>{result.reason}</p>
+                  <b>{result.fitWarning ? "Recheck the evidence" : top[0]?.probability > .9 ? "Most consistent model" : "Unresolved possibilities"}</b>
+                  <p>{result.fitWarning ? result.reason : top.filter(h=>Math.abs(h.probability-(top[0]?.probability??0))<1e-6).map(h=>h.title).join(" or ") || result.reason}</p>
+                  {!result.fitWarning && <details className={s.how}><summary>Why this conclusion?</summary><p>{result.reason}</p></details>}
                 </div>
               </div>
             )}
@@ -264,12 +272,12 @@ export function ProbeClient() {
                 <h3 className={s.h3}>Hypotheses</h3>
                 <ul className={s.bars}>
                   {top.map((h) => (
-                    <li key={h.id}>
+                    <li key={h.id} className={h.probability < .01 ? "pg-unlikely" : ""}>
                       <div className={s.barTop}>
                         <span>{h.title}</span>
                         <b>{fmtPct(h.probability)}</b>
                       </div>
-                      <div className={s.track}><div className={s.fill} style={{ width: `${Math.max(2, h.probability * 100)}%` }} /></div>
+                      <div className={s.track}><div className={s.fill} style={{ transform: `scaleX(${h.probability})` }} /></div>
                     </li>
                   ))}
                 </ul>
@@ -284,10 +292,10 @@ export function ProbeClient() {
           </section>
         </div>
 
-        <section className={`workspace-panel ${s.panel} ${s.tutor}`} aria-labelledby="tutor-h" aria-live="polite">
-          <h2 id="tutor-h" className={s.h2}><GraduationCap size={18} /> Explain this circuit</h2>
+        <details className={`workspace-panel ${s.panel} ${s.tutor}`} aria-labelledby="tutor-h" aria-live="polite">
+          <summary><h2 id="tutor-h" className={s.h2}><GraduationCap size={18} /> Explain this circuit</h2></summary>
           <p className={s.muted}>A tutor explains {circuit.label.toLowerCase()} step by step. Every number is checked against the solver.</p>
-          <button type="button" className="button secondary" onClick={explain} disabled={expLoading}>
+          <button type="button" className="button secondary" onClick={explain} disabled={expLoading || (circuit.key === "loaded-bridge" && !reviewed)}>
             {expLoading ? <Loader2 className={s.spin} size={16} /> : null} {expLoading ? "Explaining…" : "Explain this circuit"}
           </button>
           {expError && <div className={s.errorBox} role="alert"><X size={16} /> {expError}</div>}
@@ -323,7 +331,7 @@ export function ProbeClient() {
               </details>
             </div>
           )}
-        </section>
+        </details>
       </main>
     </div>
   );

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Maximize, Minus, Plus } from "lucide-react";
 import { Component, Graph, Result, formatValue, isDivider } from "./api";
+import { AdvancedCircuit } from "./advanced-circuit";
+import { isAdvancedGraph } from "./advanced-sample";
 
 export function CircuitView({
   graph,
@@ -25,6 +27,7 @@ export function CircuitView({
 }) {
   const [zoom, setZoom] = useState(1);
   const divider = isDivider(graph);
+  if (isAdvancedGraph(graph)) return <AdvancedCircuit graph={graph} selected={selected} onSelect={onSelect} result={result} highlightedNode={highlightedNode} onMeasureNode={onMeasureNode}/>;
   const nodes = [
     ...new Set(
       graph.components.flatMap((c) => [c.positiveNode, c.negativeNode]),

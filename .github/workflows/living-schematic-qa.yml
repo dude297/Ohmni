@@ -1,0 +1,60 @@
+name: Living Schematic isolated browser QA
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  production-browser:
+    if: startsWith(github.head_ref, 'feat/living-schematic-post-submission')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install application and QA browser driver separately
+        run: |
+          npm ci
+          npm install --prefix "$RUNNER_TEMP/ohmni-browser" --no-save playwright
+          echo "GUIDED_PLAYWRIGHT_MODULE=file://$RUNNER_TEMP/ohmni-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+          echo "GUIDED_BROWSER_EXECUTABLE=$(command -v google-chrome)" >> "$GITHUB_ENV"
+      - name: Test immutable release baseline in real Next production server
+        env:
+          BASELINE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_URL: http://127.0.0.1:3000
+          LIVING_UI_OUTPUT_DIR: work/living-browser/before
+          LIVING_UI_ENVIRONMENT: Full Next production build, immutable PR base, real Chrome; no model calls
+        run: |
+          git fetch --depth=1 origin "$BASELINE_SHA"
+          git worktree add --detach "$RUNNER_TEMP/ohmni-baseline" "$BASELINE_SHA"
+          (cd "$RUNNER_TEMP/ohmni-baseline" && npm ci && npm run build)
+          (cd "$RUNNER_TEMP/ohmni-baseline" && npm run start) > "$RUNNER_TEMP/baseline-next.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; fuser -k 3000/tcp 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do if curl -fsS "$BASE_URL" >/dev/null; then break; fi; sleep 1; done
+          node scripts/living-ui-smoke.mjs --before
+      - name: Build and test isolated experience in real Next production server
+        env:
+          BASE_URL: http://127.0.0.1:3000
+          LIVING_UI_OUTPUT_DIR: work/living-browser/after
+          LIVING_UI_ENVIRONMENT: Full Next production build on PR, real Chrome and deterministic API handlers; no model calls
+        run: |
+          npm run build
+          npm run start > "$RUNNER_TEMP/living-next.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; fuser -k 3000/tcp 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do if curl -fsS "$BASE_URL" >/dev/null; then break; fi; sleep 1; done
+          node scripts/living-ui-smoke.mjs
+      - name: Preserve before/after screenshots and browser results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: living-schematic-before-after
+          path: work/living-browser/
+          retention-days: 14

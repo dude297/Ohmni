@@ -20,7 +20,7 @@ export const CIRCUITS: { key: string; label: string; blurb: string; graph: Circu
   { key: "ladder", label: "Resistor ladder", blurb: "5 V, R1 to R2 to R3, all 10 kΩ; measure B", graph: LADDER_5V },
   { key: "divider", label: "Voltage divider", blurb: "5 V, 10 kΩ + 10 kΩ; measure VOUT", graph: DIVIDER_10K_10K },
   { key: "series-parallel", label: "Series-parallel", blurb: "12 V, 100 Ω then 200 Ω || 300 Ω", graph: SERIES_PARALLEL_12V },
-  { key: "loaded-bridge", label: "Loaded bridge", blurb: "12 V, 7 resistors (R5 bridges A–B, R6–R7 load); measure C", graph: LOADED_BRIDGE_12V },
+  { key: "loaded-bridge", label: "Advanced bridge", blurb: "12 V, 7 resistors (R5 bridges A–B, R6–R7 load); measure C", graph: LOADED_BRIDGE_12V },
 ];
 
 export function parseVolts(s: string): number | null {
