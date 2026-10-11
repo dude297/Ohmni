@@ -1,0 +1,64 @@
+/* Plain CSS, "st-" prefix (NOT a CSS module: next.config's turbopack "*.css" rule breaks module semantics). */
+.st-root { --st-ivory: #f6f5f0; --st-teal: #142c32; --st-copper: #f2b45a; --st-sage: #829e98; --st-fault: #943e2c; --st-line: #d9dcd3; }
+.st-main { max-width: 1480px; margin: 0 auto; padding: 24px 24px 56px; }
+.st-title h1 { font-size: 32px; font-weight: 500; letter-spacing: -1px; color: var(--st-teal); }
+.st-title p { color: #53656a; margin-top: 4px; max-width: 760px; font-size: 14px; }
+.st-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; }
+.st-btn { border: 1px solid var(--st-sage); background: #fff; color: var(--st-teal); border-radius: 6px; padding: 8px 12px; font-size: 13px; cursor: pointer; min-height: 36px; }
+.st-btn:hover { background: #eef1ec; }
+.st-btn:focus-visible, .st-svg [tabindex]:focus-visible, .st-check input:focus-visible { outline: 3px solid var(--st-copper); outline-offset: 2px; }
+.st-btnOn { background: var(--st-teal); color: #fff; border-color: var(--st-teal); }
+.st-btnOn:hover { background: var(--st-teal); }
+.st-btnDanger { color: var(--st-fault); border-color: var(--st-fault); }
+.st-sep { width: 1px; align-self: stretch; background: var(--st-line); margin: 0 4px; }
+.st-badge { display: inline-block; font-size: 10px; letter-spacing: 1.4px; font-weight: 700; color: var(--st-teal); background: var(--st-copper); padding: 2px 7px; border-radius: 3px; vertical-align: middle; }
+.st-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; align-items: start; }
+.st-card { background: #fff; border: 1px solid var(--st-line); border-radius: 8px; padding: 14px; }
+.st-card h2 { font-size: 13px; letter-spacing: 1.3px; text-transform: uppercase; color: #53656a; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.st-svg { width: 100%; height: auto; display: block; background: var(--st-ivory); border-radius: 6px; touch-action: manipulation; }
+.st-board3d { position: relative; width: 100%; height: 480px; background: #e9e7de; border-radius: 6px; overflow: hidden; }
+.st-board3d canvas { display: block; touch-action: none; }
+.st-hint { font-size: 12px; color: #53656a; margin-top: 6px; }
+.st-tool { background: #fff3d6; border: 1px solid var(--st-copper); border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-top: 8px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.st-notice { background: #f6e4df; color: var(--st-fault); border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-top: 8px; }
+.st-below { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; margin-top: 16px; align-items: start; }
+.st-list { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 6px; font-size: 13px; }
+.st-list li { background: var(--st-ivory); border-radius: 5px; padding: 7px 9px; }
+.st-list button { all: unset; cursor: pointer; display: block; width: 100%; }
+.st-list button:focus-visible { outline: 3px solid var(--st-copper); }
+.st-status { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; }
+.st-statusBad { background: #f6e4df; color: var(--st-fault); }
+.st-statusOk { background: #e2efe9; color: #1e5a46; }
+.st-volts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.st-volt { border: 1px solid var(--st-line); border-radius: 8px; padding: 12px; background: var(--st-ivory); }
+.st-volt small { display: block; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: #53656a; }
+.st-num { font-size: 44px; font-weight: 500; letter-spacing: -1.5px; color: var(--st-teal); font-variant-numeric: tabular-nums; line-height: 1.15; }
+.st-numBad { color: var(--st-fault); }
+.st-numDim { color: var(--st-sage); }
+.st-check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; padding: 10px 12px; border: 1px solid var(--st-sage); border-radius: 6px; margin-top: 8px; }
+.st-check input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--st-teal); }
+.st-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.st-table th, .st-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--st-line); }
+.st-kv { font-size: 13px; display: grid; gap: 4px; margin-top: 6px; }
+.st-kv code { background: var(--st-ivory); padding: 1px 5px; border-radius: 3px; }
+/* svg classes */
+.st-hole { fill: #c8c9bf; }
+.st-holeUsed { fill: var(--st-teal); }
+.st-holeNet { fill: var(--st-copper); stroke: var(--st-teal); stroke-width: 0.08; }
+.st-holeFault { fill: var(--st-fault); stroke: var(--st-fault); }
+.st-ring { fill: none; stroke: var(--st-fault); stroke-width: 0.22; }
+.st-pulse { animation: st-pulse 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes st-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(1.7); } }
+.st-sel { stroke: var(--st-copper); }
+.st-hit { fill: transparent; cursor: pointer; }
+.st-clickable { cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .st-pulse { animation: none; } }
+@media (max-width: 960px) {
+  .st-grid, .st-below { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .st-main { padding: 16px 16px 40px; }
+  .st-title h1 { font-size: 24px; }
+  .st-board3d { height: 340px; }
+  .st-num { font-size: 34px; }
+}
