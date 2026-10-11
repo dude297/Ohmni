@@ -10,6 +10,7 @@ import {
 import { Brand } from "../components/ohmni/brand";
 import { HeroCircuit } from "../components/ohmni/hero-circuit";
 import { LaunchShowcase } from "../components/ohmni/launch-showcase";
+import { ScrollExperience } from "../components/ohmni/scroll-experience";
 
 export const metadata: Metadata = {
   title: "Ohmni | Understand your circuit",
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="ohmni home-page">
+      <ScrollExperience />
       <header className="site-header">
         <Brand />
         <nav aria-label="Main navigation">
