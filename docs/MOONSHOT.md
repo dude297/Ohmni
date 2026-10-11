@@ -1,6 +1,6 @@
 # Moonshot: Probe Guide (next-best-measurement)
 
-Status: merged to main (PR #25). Backend only: `POST /api/probe` and `src/lib/probe` work; the lab UI does not call it yet (see UI handoff spec below).
+Status: shipped. Backend `POST /api/probe` + `src/lib/probe` (PR #25); standalone UI at `/probe` with the grounded tutor (PR #33); in-lab Probe Guide (`src/components/ohmni/probe-guide.tsx`, PR #35).
 
 ## Pitch
 One bad reading doesn't tell you which part failed. Probe Guide tells you **where to put the red probe next**.
@@ -64,7 +64,7 @@ curl -s localhost:3000/api/probe -H 'content-type: application/json' -d '{"userC
 - The 0.5 nominal prior, σ and the thresholds are hand-picked, not calibrated on lab data.
 - Probabilities are model-relative confidence, not validated fault rates.
 
-## UI handoff spec (for ChatGPT Work: src/app/lab/**, src/components/**)
+## UI handoff spec (implemented; kept for reference)
 - After a solve with a mismatching `measuredVoltage`, show a **"Guide me"** button. It calls `/api/probe` with
   `observations: [{ node: graph.measureNode, volts: measuredVoltage }]`.
 - **Probe card**: big text "Measure **{next.node}**", then `next.instruction`, then a number input (V) and a Submit button. Submit adds
