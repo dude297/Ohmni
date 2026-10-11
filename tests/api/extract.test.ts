@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../src/lib/ai/gemini', () => ({ extractCircuit: vi.fn() }));
-vi.mock('../../src/lib/ai/jev', () => ({ routeExtraction: vi.fn() }));
-vi.mock('../../src/lib/ai/secondary', () => ({ verifyTopology: vi.fn() }));
-vi.mock('../../src/lib/circuit/validate', () => ({ validateGraph: vi.fn(() => ({ ok: true })) }));
+vi.mock('@/lib/ai/gemini', () => ({ extractCircuit: vi.fn() }));
+vi.mock('@/lib/ai/jev', () => ({ routeExtraction: vi.fn() }));
+vi.mock('@/lib/ai/secondary', () => ({ verifyTopology: vi.fn() }));
+vi.mock('@/lib/circuit/validate', () => ({ validateGraph: vi.fn(() => ({ ok: true })) }));
 
-import { POST } from '../../src/app/api/extract/route';
-import { extractCircuit } from '../../src/lib/ai/gemini';
-import { routeExtraction } from '../../src/lib/ai/jev';
+import { POST } from '@/app/api/extract/route';
+import { extractCircuit } from '@/lib/ai/gemini';
+import { routeExtraction } from '@/lib/ai/jev';
 
 const post = (file?: File) => {
   const fd = new FormData();

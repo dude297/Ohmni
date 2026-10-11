@@ -1,8 +1,8 @@
-import { extractCircuit } from '../../../lib/ai/gemini';
-import { routeExtraction } from '../../../lib/ai/jev';
-import { verifyTopology } from '../../../lib/ai/secondary';
-import { validateGraph } from '../../../lib/circuit/validate';
-import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '../../../lib/circuit/types';
+import { extractCircuit } from '@/lib/ai/gemini';
+import { routeExtraction } from '@/lib/ai/jev';
+import { verifyTopology } from '@/lib/ai/secondary';
+import { validateGraph } from '@/lib/circuit/validate';
+import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '@/lib/circuit/types';
 
 const MIMES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX = 5 * 1024 * 1024;

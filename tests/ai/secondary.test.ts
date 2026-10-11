@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { verifyTopology } from '../../src/lib/ai/secondary';
+import { verifyTopology } from '@/lib/ai/secondary';
 
 const ex = { inputKind: 'schematic' as const, graph: null, warnings: [], unresolvedConnections: ['R1?'], requiresHumanReview: true as const };
 const img = new Uint8Array([1, 2, 3]);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { routeExtraction } from '../../src/lib/ai/jev';
+import { routeExtraction } from '@/lib/ai/jev';
 
 const input = {
   extraction: { inputKind: 'schematic' as const, graph: null, warnings: [], unresolvedConnections: ['R1?'], requiresHumanReview: true as const },
