@@ -1,0 +1,10 @@
+# SYNTHETIC — generated for tests, not captured by an instrument
+# Circuit: ladder. Exercises rejection paths: GND target, unknown node, bad unit, comma decimal, contradiction.
+Timestamp,Node,Value,Unit,Instrument,Channel,Note,Operator
+2026-10-11T12:00:00Z,B,0.01,V,DMM-1,CH1,,ana
+2026-10-11T12:00:05Z,GND,0,V,DMM-1,CH1,black probe check,ana
+2026-10-11T12:00:10Z,C,1.0,V,DMM-1,CH1,typo node,ana
+2026-10-11T12:00:15Z,A,5,kV,DMM-1,CH1,wrong range,ana
+2026-10-11T12:00:20Z,A,"1,5",V,DMM-1,CH1,"locale decimal, rejected",ana
+2026-10-11T12:00:25Z,VIN,5.00,V,DMM-1,CH1,,ana
+2026-10-11T12:00:30Z,VIN,3.30,V,DMM-2,CH2,"other meter, ""loose lead""?",ana
