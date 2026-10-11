@@ -219,7 +219,7 @@ describe('runInvestigation', () => {
 
   it('every fixture is labeled synthetic', () => {
     for (const f of ['ladder_r2_open.csv', 'divider_r2_1k.csv', 'messy_export.csv'])
-      expect(fixture(f).split('\n')[0]).toBe('# SYNTHETIC — generated for tests, not captured by an instrument');
+      expect(fixture(f).split(/\r?\n/)[0]).toBe('# SYNTHETIC — generated for tests, not captured by an instrument');
   });
 
   it('rejects an invalid graph instead of throwing', () => {
