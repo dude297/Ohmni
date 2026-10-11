@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
-import s from "./tracks.module.css";
+import "./tracks.css";
 
 export const metadata: Metadata = {
   title: "Ohmni Workspaces | Learn · Build · Teams",
@@ -41,39 +40,29 @@ const TrackArtwork = ({ kind }: { kind: "learn" | "build" | "teams" }) => {
 };
 
 const tracks = [
-  { key: "learn" as const, number: "01", title: "Ohmni Learn", intro: "Predict, experiment and understand what each component changes.", label: "Try a guided circuit lesson" },
-  { key: "build" as const, number: "02", title: "Ohmni Build", intro: "Investigate real solver predictions and choose your next useful measurement.", label: "Open the engineering bench" },
-  { key: "teams" as const, number: "03", title: "Ohmni Teams", intro: "Turn findings and evidence into an exportable engineering review packet.", label: "Prepare a review packet" },
+  { key: "learn" as const, title: "Learn", chip: "Live · solver-backed", cls: "tk-live" },
+  { key: "build" as const, title: "Build", chip: "Experimental", cls: "" },
+  { key: "teams" as const, title: "Teams", chip: "browser-only report", cls: "tk-warn" },
 ];
 
 export default function TracksPage() {
   return (
-    <div className={s.shell}>
-      <header className={s.top}>
-        <Link href="/" className={s.logo} aria-label="Ohmni home">ohmni<span>.</span></Link>
-        <nav className={s.topnav} aria-label="Workspace navigation">
-          <Link href="/lab">Lab</Link>
-          <Link href="/probe">Probe guide</Link>
-        </nav>
-      </header>
-      <main className={s.wrap}>
-        <div className={s.kicker}>Three workspaces · one electrical evidence engine</div>
-        <h1 className={s.heading}>Learn the circuit.<br/><em>Build with confidence.</em><br/>Share the evidence.</h1>
-        <p className={s.intro}>From first-principles learning to hardware investigation and review-ready reports. Each workspace is an experimental preview built around Ohmni's existing DC capabilities.</p>
-        <div className={s.three}>
+    <div className="tk-shell">
+      <main className="tk-wrap">
+        <Link href="/" aria-label="Ohmni home">ohmni.</Link>
+        <h1>Choose your workspace</h1>
+        <div className="tk-three">
           {tracks.map((t) => (
-            <Link className={s.track} href={"/" + t.key} key={t.key}>
-              <div className={s.trackVisual}><span className={s.trackNumber}>{t.number} / 03</span><TrackArtwork kind={t.key}/></div>
-              <div className={s.trackInfo}>
-                <div className={s.eyebrow}>Workspace {t.number}</div>
+            <Link className="tk-card" href={"/" + t.key} key={t.key}>
+              <TrackArtwork kind={t.key} />
+              <div className="tk-info">
                 <h2>{t.title}</h2>
-                <p>{t.intro}</p>
-                <span className={s.open}>{t.label} <ArrowRight size={17} aria-hidden="true"/></span>
+                <span className={"tk-chip " + t.cls}>{t.chip}</span>
               </div>
             </Link>
           ))}
         </div>
-        <div className={s.footer}>Preview workspaces. No 3D breadboard, voice-controlled Lab, multi-user collaboration, AC simulation or verified physical repair is claimed here. <Link href="/lab" className={s.link}>Open the current Lab <ArrowUpRight size={14}/></Link></div>
+        <p className="tk-foot">DC circuits only. <Link href="/lab">Open the current Lab</Link></p>
       </main>
     </div>
   );
