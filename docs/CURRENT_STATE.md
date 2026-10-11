@@ -23,3 +23,12 @@ P0 blockers: complete actual backend, UI integration, verified model/route and p
 **Release status: RED / NOT PRODUCT FREEZE-READY.**
 
 Update dated state transitions with links and proof. Do not replace observed history with desired results.
+
+
+## Post-documentation-merge verification (2026-10-11)
+- **PR #3 merged**: https://github.com/dude297/Ohmni/pull/3 ; squash merge SHA **2b2fbce1644d64b02505dbaa929fe6c5f452c1f4**. Both CI runs on final PR head c8007d051f40824d6620692fd8017c8f94806f57 completed successfully.
+- North star now on main: https://github.com/dude297/Ohmni/blob/main/docs/ROADMAP.md . This is a **documentation-level freeze**.
+- **Frontend PR #4 remains open at audit**: https://github.com/dude297/Ohmni/pull/4 . Its inspected head dd931ad5710759a5b1f2e0b7bcad62e08f38894b had two CI failures at npm run typecheck; npm test and npm run build were skipped in those runs. Newer commits/runs must be checked before any merge decision.
+- Solver, Gemini and Jev implementations remained unverified stubs on main as of audit. No public deployment or live E2E model/solver test was verified.
+- **Formal freeze notification: DOCS READY / PRODUCT RED (NOT RELEASE FREEZE READY).** Required next evidence: real solver fixtures; Gemini image call; Jev route divergence; frontend typecheck/build; deployment URL and three-minute E2E smoke.
+- This record is time-scoped and may become stale as autonomous agents commit more work; verify live repository/CI before reporting current progress.
