@@ -117,3 +117,12 @@ describe('POST /api/explain', () => {
     expect(generateContent).not.toHaveBeenCalled();
   });
 });
+
+describe('grounding respects honest rounding', () => {
+  it('accepts 0.17 mA for 0.1667 mA (ladder 5 V / 30 kΩ) but still flags real inventions', () => {
+    const allowed = [5, 30000, 5 / 30000, 1.6667];
+    expect(checkGrounding('about 0.17 mA flows; B sits near 1.67 V', allowed)).toEqual([]);
+    expect(checkGrounding('about 0.2 mA flows', allowed)).toEqual(['0.2 mA']); // 20% off, beyond the 5% cap
+    expect(checkGrounding('B is 2 V', allowed)).toEqual(['2 V']); // integers get no rounding slack
+  });
+});

@@ -28,23 +28,29 @@ const PREFIX: Record<string, number> = { '': 1, k: 1e3, K: 1e3, M: 1e6, m: 1e-3,
 const NUM_RE =
   /(?<![A-Za-z0-9_.])(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|-?\.\d+)\s*(?:(k|K|M|m|u|µ|μ)?(V|A|Ω|ohms?)|(k|K|M)(?![A-Za-z]))?(?![A-Za-z0-9])/g;
 
-export type FoundNumber = { text: string; value: number; scale: number };
+export type FoundNumber = { text: string; value: number; scale: number; halfUlp: number };
 
 export function extractNumbers(text: string): FoundNumber[] {
   const out: FoundNumber[] = [];
   for (const m of text.matchAll(NUM_RE)) {
     const scale = PREFIX[m[2] ?? m[4] ?? ''];
-    out.push({ text: m[0].trim(), value: Number(m[1].replace(/,/g, '')) * scale, scale });
+    const dec = m[1].split('.')[1]?.length;
+    // Half a unit in the last written decimal place: "0.17 mA" stands for anything that rounds to it.
+    const halfUlp = dec ? 0.5 * 10 ** -dec * scale : 0;
+    out.push({ text: m[0].trim(), value: Number(m[1].replace(/,/g, '')) * scale, scale, halfUlp });
   }
   return out;
 }
 
-/** Returns the numbers in `text` not matching any allowed value (1% relative, or 1e-6 in the displayed unit's scale). */
+/** Returns the numbers in `text` not matching any allowed value: 1% relative, or honest rounding to the written
+ * decimals (capped at 5% relative), or 1e-6 in the displayed unit's scale. */
 export function checkGrounding(text: string, allowed: number[]): string[] {
   const abs = allowed.map(Math.abs);
   // ponytail: abs tolerance scales with the written prefix so "0.2 µA" can't silently match 0
   return extractNumbers(text)
-    .filter(({ value, scale }) => !abs.some((a) => Math.abs(Math.abs(value) - a) <= Math.max(0.01 * a, 1e-6 * scale)))
+    .filter(({ value, scale, halfUlp }) =>
+      !abs.some((a) => Math.abs(Math.abs(value) - a) <= Math.max(0.01 * a, Math.min(halfUlp, 0.05 * a), 1e-6 * scale)),
+    )
     .map((n) => n.text);
 }
 
