@@ -1,6 +1,6 @@
 # Prelint integration
 
-Status (2026-10-11 13:45 PDT): **GitHub App installed** on dude297/Ohmni by the owner; `trigger_mode: auto` verified — Prelint reviewed PR #51 on @prelint and again automatically on the next push (see Evidence).
+Status (2026-10-11 13:45 PDT): **GitHub App installed** on dude297/Ohmni by the owner; `trigger_mode: tag_only` (switched 2026-10-11 ~14:55 PDT after the initial $10 credit was consumed despite public-repo pricing; reviews now run only when someone comments `@prelint`) verified — Prelint reviewed PR #51 on @prelint and again automatically on the next push (see Evidence).
 
 ## Install (owner, interactive OAuth - cannot be done by an agent; completed 2026-10-11)
 
