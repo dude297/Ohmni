@@ -1,0 +1,180 @@
+// Voice Lab e2e (outside the repo). Typed path is real; speech path uses a FAKE SpeechRecognition injected here only.
+import { chromium } from "playwright";
+import fs from "node:fs";
+import path from "node:path";
+
+const BASE = process.env.BASE || "http://localhost:3107";
+const OUT = process.argv[2];
+const URL = `${BASE}/for-the-larp/voice-lab`;
+const LIVE_EXPLAIN = process.env.LIVE_EXPLAIN === "1";
+fs.mkdirSync(OUT, { recursive: true });
+const results = [];
+const ok = (name, cond, extra = "") => {
+  results.push(`${cond ? "PASS" : "FAIL"} ${name}${extra ? ` — ${extra}` : ""}`);
+  if (!cond) process.exitCode = 1;
+};
+const shot = async (page, name, target) => { if (target) await page.locator(target).first().scrollIntoViewIfNeeded(); return page.screenshot({ path: path.join(OUT, `${name}.png`) }); };
+
+async function typed(page, text) {
+  const i = page.getByLabel("Type a command");
+  await i.fill(text);
+  await i.press("Enter");
+}
+const reply = (page) => page.locator(".vl-reply").last();
+
+async function dividerFlow(page, tag) {
+  await page.goto(URL);
+  await page.getByRole("button", { name: "Voltage divider" }).click();
+  ok(`${tag}: input disabled before circuit confirmed`, await page.getByLabel("Type a command").isDisabled());
+  await page.getByRole("button", { name: /I confirm this matches/ }).click();
+  await typed(page, "VOUT is 0.45 volts");
+  const card = page.locator(".vl-card");
+  await card.waitFor();
+  ok(`${tag}: proposal card shows value/unit/node`, (await card.locator("mark").allInnerTexts()).join("|") === "0.45|V|VOUT");
+  ok(`${tag}: nothing recorded before confirm`, (await page.locator(".vl-chip").count()) === 0);
+  await shot(page, `${tag}-02-divider-proposal`, ".vl-card");
+  await card.getByRole("button", { name: "Confirm", exact: true }).click();
+  await page.getByText(/predicts 2\.5 volts at VOUT/).first().waitFor();
+  const t = await reply(page).innerText();
+  ok(`${tag}: divider grounded reply`, /Recorded 0\.45 V at VOUT\. Your circuit predicts 2\.5 volts at VOUT\. That reading doesn't match\./.test(t), t.replace(/\s+/g, " ").slice(0, 200));
+  ok(`${tag}: hypotheses shown`, (await page.locator(".vl-hyp li").count()) > 0);
+  await shot(page, `${tag}-03-divider-result`, ".vl-reply");
+}
+
+async function ladderFlow(page, tag) {
+  await page.getByRole("button", { name: "Resistor ladder" }).click();
+  ok(`${tag}: switching circuit clears confirmation`, (await page.getByRole("button", { name: /I confirm this matches/ }).count()) === 1);
+  await page.getByRole("button", { name: /I confirm this matches/ }).click();
+  await typed(page, "B is zero volts");
+  await page.locator(".vl-card").getByRole("button", { name: "Confirm", exact: true }).click();
+  await page.getByText(/Measure node A next/).first().waitFor();
+  ok(`${tag}: ladder next = A highlighted`, (await page.locator('svg g[data-node="A"][data-highlight]').count()) === 1);
+  await shot(page, `${tag}-04-ladder-next-A`, tag === "mobile" ? "svg.vl-schem" : null);
+  await typed(page, "node A five volts");
+  // Answer via the card's own input (typed "yes" only counts from the focused card)
+  const ci = page.getByLabel(/answer here/);
+  await ci.fill("yes");
+  await ci.press("Enter");
+  await page.getByText(/Most likely/).first().waitFor();
+  const t = await reply(page).innerText();
+  ok(`${tag}: ladder conclusion`, /Most likely: .*hypothesis, not a confirmed fault/.test(t), t.replace(/\s+/g, " ").slice(0, 220));
+  ok(`${tag}: no node highlighted after conclusion`, (await page.locator("svg g[data-highlight]").count()) === 0);
+  await shot(page, `${tag}-05-ladder-conclusion`, ".vl-reply");
+}
+
+const browser = await chromium.launch();
+try {
+  // ---------- Desktop typed path ----------
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, recordVideo: { dir: path.join(OUT, "video"), size: { width: 1280, height: 800 } } });
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto(URL);
+    await shot(page, "desktop-01-initial");
+    await dividerFlow(page, "desktop");
+    // ambiguity + main-input "yes" must not commit
+    await typed(page, "vout is four five volts");
+    ok("desktop: 'four five' asks to clarify", /ambiguous/.test(await reply(page).innerText()));
+    await typed(page, "vout 0.45");
+    ok("desktop: missing unit asks V or mV", /volts or 0\.45 millivolts/.test(await reply(page).innerText()));
+    await typed(page, "node C is 2 volts");
+    ok("desktop: unknown node rejected", /don't see a node "C"/.test(await reply(page).innerText()));
+    await typed(page, "VOUT is 4.5 volts");
+    await page.locator(".vl-card").waitFor();
+    await typed(page, "yes");
+    ok("desktop: typed 'yes' in main input does NOT commit", (await page.locator(".vl-card").count()) === 1 && (await page.locator(".vl-chip").innerText()).includes("0.45"));
+    await page.keyboard.press("Escape");
+    ok("desktop: Esc cancels proposal", (await page.locator(".vl-card").count()) === 0);
+    await typed(page, "VOUT is 45 volts");
+    await page.locator(".vl-warn").waitFor();
+    ok("desktop: 45 V flagged check your range", /Check your range/.test(await page.locator(".vl-warn").innerText()));
+    await shot(page, "desktop-06-range-warning");
+    await page.keyboard.press("Escape");
+    if (LIVE_EXPLAIN) {
+      await page.getByRole("button", { name: /Explain/ }).click();
+      await page.locator(".vl-explain, .vl-warn").first().waitFor({ timeout: 45000 });
+      const ex = await page.locator(".vl-explain, .vl-warn").first().innerText();
+      ok("desktop: live explain returned (grounded flag shown or error surfaced)", ex.length > 0, ex.replace(/\s+/g, " ").slice(0, 200));
+      await shot(page, "desktop-07-explain");
+    }
+    await ladderFlow(page, "desktop");
+    ok("desktop: no page errors", errors.length === 0, errors.join("; "));
+    await ctx.close();
+  }
+  // ---------- Mobile typed path ----------
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+    const page = await ctx.newPage();
+    await dividerFlow(page, "mobile");
+    await ladderFlow(page, "mobile");
+    const sw = await page.evaluate(() => document.documentElement.scrollWidth);
+    ok("mobile: no horizontal scroll", sw <= 390, `scrollWidth=${sw}`);
+    await ctx.close();
+  }
+  // ---------- FAKE speech recognition (event plumbing only) ----------
+  const fake = (mode) => `
+    window.__say = ["VOUT is zero point four five volts", "yes"];
+    class FakeRec { constructor(){ this.onresult=null; this.onerror=null; this.onend=null; }
+      start(){ window.__started = (window.__started||0)+1;
+        setTimeout(() => {
+          if (${JSON.stringify(mode)} === "denied") { this.onerror && this.onerror({ error: "not-allowed" }); this.onend && this.onend(); return; }
+          const t = window.__say.shift();
+          const r = [{ transcript: t }]; r.isFinal = true;
+          this.onresult && this.onresult({ resultIndex: 0, results: [r] });
+          this.onend && this.onend();
+        }, 900); }
+      stop(){} abort(){ this.onerror && this.onerror({ error: "aborted" }); this.onend && this.onend(); } }
+    window.SpeechRecognition = FakeRec; window.webkitSpeechRecognition = FakeRec;`;
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript(fake("ok"));
+    const page = await ctx.newPage();
+    await page.goto(URL);
+    ok("fake-speech: nothing starts on page load", (await page.evaluate(() => window.__started || 0)) === 0);
+    await page.getByRole("button", { name: "Voltage divider" }).click();
+    await page.getByRole("button", { name: /I confirm this matches/ }).click();
+    const ptt = page.getByRole("button", { name: /Push to talk/ });
+    await ptt.focus();
+    await page.keyboard.press("Space");
+    await page.waitForTimeout(150);
+    ok("fake-speech: Space starts listening (aria-pressed=true)", (await page.locator(".vl-ptt").getAttribute("aria-pressed")) === "true");
+    await shot(page, "speech-fake-01-listening");
+    await page.locator(".vl-card").waitFor();
+    ok("fake-speech: transcript -> proposal", (await page.locator(".vl-card mark").allInnerTexts()).join("|") === "0.45|V|VOUT");
+    await page.getByRole("button", { name: /Say yes \/ no/ }).click();
+    await page.getByText(/predicts 2\.5 volts/).first().waitFor();
+    ok("fake-speech: spoken 'yes' from the card's own button commits", true);
+    await ctx.close();
+  }
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await ctx.addInitScript(fake("denied"));
+    const page = await ctx.newPage();
+    await page.goto(URL);
+    await page.getByRole("button", { name: /I confirm this matches/ }).click();
+    await page.getByRole("button", { name: /Push to talk/ }).click();
+    await page.getByRole("alert").filter({ hasText: /denied/ }).first().waitFor();
+    ok("fake-speech: mic denied -> message + typed focus", (await page.evaluate(() => document.activeElement?.id)) === "vl-typed-in");
+    await shot(page, "speech-fake-02-mic-denied");
+    await ctx.close();
+  }
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
+    await ctx.addInitScript("delete window.SpeechRecognition; delete window.webkitSpeechRecognition; Object.defineProperty(window,'webkitSpeechRecognition',{value:undefined}); Object.defineProperty(window,'SpeechRecognition',{value:undefined});");
+    const page = await ctx.newPage();
+    await page.goto(URL);
+    await page.getByText(/isn't available in this browser/).first().waitFor();
+    ok("unavailable: typed mode note, no talk button", (await page.locator(".vl-ptt").count()) === 0);
+    await page.getByRole("button", { name: /I confirm this matches/ }).click();
+    await typed(page, "450 millivolts at vee out");
+    await page.locator(".vl-card").waitFor();
+    ok("unavailable: typed mV works", /450 mV \(0\.45 V\)/.test(await page.locator(".vl-card").innerText()));
+    await shot(page, "mobile-08-typed-mode-unavailable", ".vl-card");
+    await ctx.close();
+  }
+} finally {
+  await browser.close();
+  console.log(results.join("\n"));
+  fs.writeFileSync(path.join(OUT, "results.txt"), results.join("\n"));
+}

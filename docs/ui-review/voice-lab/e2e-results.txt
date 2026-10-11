@@ -1,0 +1,34 @@
+PASS desktop: input disabled before circuit confirmed
+PASS desktop: proposal card shows value/unit/node
+PASS desktop: nothing recorded before confirm
+PASS desktop: divider grounded reply — OHMNI Recorded 0.45 V at VOUT. Your circuit predicts 2.5 volts at VOUT. That reading doesn't match. Leading hypothesis from the solver, not a confirmed fault: R2 may be 1 kΩ instead of 10 kΩ. Remainin
+PASS desktop: hypotheses shown
+PASS desktop: 'four five' asks to clarify
+PASS desktop: missing unit asks V or mV
+PASS desktop: unknown node rejected
+PASS desktop: typed 'yes' in main input does NOT commit
+PASS desktop: Esc cancels proposal
+PASS desktop: 45 V flagged check your range
+PASS desktop: live explain returned (grounded flag shown or error surfaced) — Grounded: every number matches the solver This circuit uses a 5 V DC source and two 10 kΩ resistors to form a voltage divider, resulting in an expected 2.5 V at VOUT. However, a measured voltage of 0.
+PASS desktop: switching circuit clears confirmation
+PASS desktop: ladder next = A highlighted
+PASS desktop: ladder conclusion — OHMNI Recorded 5 V at A. Your circuit predicts 3.33 volts at A. That reading doesn't match. Most likely: R2 open / not connected (100%). This is a hypothesis, not a confirmed fault. Speak again
+PASS desktop: no node highlighted after conclusion
+PASS desktop: no page errors
+PASS mobile: input disabled before circuit confirmed
+PASS mobile: proposal card shows value/unit/node
+PASS mobile: nothing recorded before confirm
+PASS mobile: divider grounded reply — OHMNI Recorded 0.45 V at VOUT. Your circuit predicts 2.5 volts at VOUT. That reading doesn't match. Leading hypothesis from the solver, not a confirmed fault: R2 may be 1 kΩ instead of 10 kΩ. Remainin
+PASS mobile: hypotheses shown
+PASS mobile: switching circuit clears confirmation
+PASS mobile: ladder next = A highlighted
+PASS mobile: ladder conclusion — OHMNI Recorded 5 V at A. Your circuit predicts 3.33 volts at A. That reading doesn't match. Most likely: R2 open / not connected (100%). This is a hypothesis, not a confirmed fault. Speak again
+PASS mobile: no node highlighted after conclusion
+PASS mobile: no horizontal scroll — scrollWidth=390
+PASS fake-speech: nothing starts on page load
+PASS fake-speech: Space starts listening (aria-pressed=true)
+PASS fake-speech: transcript -> proposal
+PASS fake-speech: spoken 'yes' from the card's own button commits
+PASS fake-speech: mic denied -> message + typed focus
+PASS unavailable: typed mode note, no talk button
+PASS unavailable: typed mV works
