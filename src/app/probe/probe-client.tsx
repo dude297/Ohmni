@@ -8,7 +8,10 @@ import { CircuitView } from "../../components/ohmni/circuit-view";
 import type { FaultHypothesis, ProbeStep } from "../../lib/probe";
 import type { ModelTraceEvent } from "../../lib/circuit/types";
 import { CIRCUITS, Obs, addObservation, apiErrorMessage, fmtPct, fmtV, parseVolts } from "./helpers";
-import s from "./probe.module.css";
+import "./probe.css";
+
+// Classes are prefixed "pg-" in probe.css (see note there); s.foo -> "pg-foo".
+const s = new Proxy({} as Record<string, string>, { get: (_, k) => `pg-${String(k)}` });
 
 type ProbeResult = ProbeStep & { trace?: ModelTraceEvent[] };
 type Explain = {
@@ -273,7 +276,7 @@ export function ProbeClient() {
             <div className={s.explain}>
               {exp.grounded ? (
                 <div className={s.okBadge}><CheckCircle2 size={15} /> Every number checked against the solver</div>
-              ) : (
+              ) : exp.explanation && (
                 <div className={s.warn}><AlertTriangle size={16} /> Some numbers could not be verified{exp.ungroundedNumbers?.length ? `: ${exp.ungroundedNumbers.join(", ")}` : ""}</div>
               )}
               {exp.explanation ? (

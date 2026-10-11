@@ -1,0 +1,58 @@
+/* ponytail: plain CSS, not a CSS module — next.config turbopack rule "*.css" (as "*.css") strips module semantics, so .module.css classes came out undefined in prod. */
+.pg-main { max-width: 1280px; margin: 0 auto; padding: 32px 24px 56px; }
+.pg-title h1 { font-size: 34px; font-weight: 500; letter-spacing: -1.2px; }
+.pg-title p { color: var(--ohmni-muted); margin-top: 6px; max-width: 640px; }
+.pg-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 17px; margin: 24px 0 17px; align-items: start; }
+.pg-panel { padding: 22px; }
+.pg-tutor { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.pg-h2 { font-size: 18px; font-weight: 600; margin-bottom: 12px !important; display: flex; align-items: center; gap: 8px; }
+.pg-h3 { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ohmni-muted); margin: 20px 0 8px !important; }
+.pg-muted { color: var(--ohmni-muted); font-size: 13px; }
+.pg-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.pg-pick { border: 1px solid var(--ohmni-border); background: transparent; border-radius: 999px; padding: 8px 14px; font-size: 13px; }
+.pg-pickOn { background: var(--ohmni-ink); color: #fff; border-color: var(--ohmni-ink); }
+.pg-chips { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.pg-chip { display: inline-flex; align-items: center; gap: 8px; background: #eaf0eb; border-radius: 999px; padding: 6px 8px 6px 14px; font-size: 14px; }
+.pg-chip button { border: 0; background: #fff; border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; }
+.pg-form label { display: block; font-size: 13px; margin: 14px 0 6px; }
+.pg-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.pg-row input { flex: 1 1 140px; min-width: 0; min-height: 49px; border: 1px solid #c7d2cc; border-radius: 5px; padding: 0 14px; font-size: 16px; background: #fff; }
+.pg-probeCard { border: 2px solid var(--ohmni-accent); background: #fffaf0; border-radius: 8px; padding: 18px; }
+.pg-eyebrow { font-size: 10px; letter-spacing: 1.6px; color: var(--ohmni-accent-ink); font-weight: 700; }
+.pg-big { font-size: 28px; font-weight: 500; letter-spacing: -0.8px; margin: 4px 0 8px; }
+.pg-big span { background: var(--ohmni-accent); padding: 0 10px; border-radius: 5px; }
+.pg-outcomes { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.pg-outcomes li { display: grid; grid-template-columns: 90px 1fr auto; gap: 12px; align-items: center; background: #fff; border: 1px solid var(--ohmni-border); border-radius: 6px; padding: 10px 12px; }
+.pg-outV { font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
+.pg-outWhy { font-size: 13px; }
+.pg-outP { font-weight: 700; color: var(--ohmni-accent-ink); }
+.pg-bars { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.pg-barTop { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 4px; }
+.pg-track { height: 8px; background: #e6ece8; border-radius: 4px; overflow: hidden; }
+.pg-fill { height: 100%; background: var(--ohmni-ink); border-radius: 4px; transition: width 0.3s; }
+.pg-done { display: flex; gap: 12px; background: #e8f3ee; color: var(--ohmni-success); border-radius: 8px; padding: 16px; margin-bottom: 8px; }
+.pg-done p { color: var(--ohmni-ink); font-size: 17px; margin-top: 4px; }
+.pg-warn { display: flex; gap: 8px; align-items: flex-start; background: #fff3d6; color: #6b4a10; border: 1px solid #e6c36d; border-radius: 6px; padding: 10px 12px; font-size: 13px; margin: 8px 0; }
+.pg-errorBox { display: flex; gap: 8px; align-items: flex-start; background: #fbe9e5; color: var(--ohmni-danger); border-radius: 6px; padding: 10px 12px; font-size: 13px; margin: 8px 0; }
+.pg-okBadge { display: inline-flex; gap: 6px; align-items: center; background: #e8f3ee; color: var(--ohmni-success); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; }
+.pg-safety { font-size: 11px; color: var(--ohmni-muted); margin-top: 16px; }
+.pg-how { margin-top: 12px; font-size: 12px; color: var(--ohmni-muted); }
+.pg-how p { margin: 6px 0; }
+.pg-trace { padding-left: 18px; margin: 6px 0 0; }
+.pg-explain { width: 100%; display: grid; gap: 10px; }
+.pg-summary { font-size: 16px; }
+.pg-steps { padding-left: 20px; margin: 0; display: grid; gap: 10px; }
+.pg-steps p { color: var(--ohmni-muted); font-size: 14px; }
+.pg-facts { padding-left: 18px; margin: 0; }
+.pg-spin { animation: pg-spin-kf 1s linear infinite; }
+@keyframes pg-spin-kf { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pg-spin { animation: none; } .pg-fill { transition: none; } }
+@media (max-width: 900px) { .pg-grid { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .pg-main { padding: 20px 16px 40px; }
+  .pg-title h1 { font-size: 26px; }
+  .pg-outcomes li { grid-template-columns: 1fr auto; }
+  .pg-outV { grid-column: 1; }
+  .pg-outP { grid-column: 2; grid-row: 1; }
+  .pg-outWhy { grid-column: 1 / -1; }
+}
