@@ -112,6 +112,7 @@ export function CircuitView({
           <>
             <path
               className="circuit-wire"
+              pathLength="1"
               d="M110 175 V55 H260 V90 M260 140 V195 M260 195 V240 M260 290 V345 H110 V225 M260 195 H355"
             />
             {graph.components.map((c) =>
@@ -181,6 +182,7 @@ export function CircuitView({
             {node("GND", 260, 345)}
             <path
               className="circuit-wire"
+              pathLength="1"
               d="M260 345 V360 M242 360 H278 M248 367 H272 M255 374 H265"
             />
           </>
@@ -253,7 +255,7 @@ export function CircuitView({
         <span className="tiny-dot" />
         {uncertain
           ? "Candidate topology · needs your review"
-          : controls ? "Select a component to edit · select a node to measure" : "Electrical connections · select a component"}
+          : controls ? "Select a component to edit · select a node to measure" : onSelect ? "Electrical connections · select a component" : "Electrical connections"}
       </div>
     </div>
   );
