@@ -5,6 +5,7 @@ import { POST } from '../../src/app/api/solve/route';
 import {
   DIVIDER_10K_10K,
   DIVIDER_10K_1K,
+  SERIES_PARALLEL_12V,
   MALFORMED_FLOATING,
   MALFORMED_NO_GND,
   MALFORMED_UNKNOWN_KIND,
@@ -33,6 +34,12 @@ describe('solveDC', () => {
     const s = solveDC(DIVIDER_10K_1K);
     expect(s.voltages.VOUT).toBeCloseTo(5 / 11, 6);
     expect(s.currents.R1).toBeCloseTo(5 / 11000, 9);
+  });
+  it('showcase network fixture validates and solves at 72/11V', () => {
+    expect(validateGraph(SERIES_PARALLEL_12V).ok).toBe(true);
+    const s = solveDC(SERIES_PARALLEL_12V);
+    expect(s.voltages.MID).toBeCloseTo(72 / 11, 6);
+    expect(s.currents.R1).toBeCloseTo(s.currents.R2 + s.currents.R3, 9);
   });
   it('series/parallel: 12V, R1=100 series with (R2=200 || R3=300)', () => {
     const s = solveDC(

@@ -14,6 +14,11 @@
 - Ambiguous crossing, missing ground, 429/timeout/malformed JSON and unconfigured second provider => user clarification/error, never fake successful solve.
 - No raw keys or sensitive image bodies in browser logs; size/type/timeouts enforced.
 
+### Schematic-first showcase acceptance
+- Divider link loads 2.500 V fixture; series/parallel link loads real backend fixture expected 72/11 V; no local divider fallback for non-divider graphs.
+- Third demo is a real upload prompt with honest unconfigured/provider-error states, not a fake Jev decision.
+- Homepage roadmap labels only limited DC scope available and future phases as planned, research or exploration; mobile cards do not overflow.
+
 ### E2E demo + usability
 - Hosted incognito URL, GET /api/health, upload, graph correction/confirmation, solve, measured 0.45V and supported next-step hypothesis.
 - Desktop/mobile responsive; keyboard navigation/reduced-motion; sample CTA functions without registration.
