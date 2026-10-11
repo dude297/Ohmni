@@ -12,7 +12,9 @@ const rules = (pathname: string): Rule[] =>
       ]
     : pathname === '/api/solve'
       ? [{ name: 'solve-min', max: num('RATE_SOLVE_PER_MIN', 60), windowMs: 60_000 }]
-      : [];
+      : pathname === '/api/explain'
+        ? [{ name: 'explain-min', max: num('RATE_EXPLAIN_PER_MIN', 10), windowMs: 60_000 }]
+        : [];
 
 const hits = new Map<string, { count: number; resetAt: number }>();
 
@@ -22,7 +24,7 @@ export function clientIp(h: Headers): string {
 
 export type Block = { status: 429 | 413; code: 'RATE_LIMITED' | 'TOO_LARGE'; message: string; retryAfter?: number };
 
-/** Returns a Block if the request must be rejected, else null. Only POST /api/extract and /api/solve are guarded. */
+/** Returns a Block if the request must be rejected, else null. Only POST /api/extract, /api/solve and /api/explain are guarded. */
 export function check(method: string, pathname: string, headers: Headers, now = Date.now()): Block | null {
   if (method !== 'POST') return null;
   const rs = rules(pathname);
