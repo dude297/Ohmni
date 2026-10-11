@@ -34,3 +34,38 @@
 | Public E2E smoke | pending | pending | not run | UNVERIFIED |
 
 Do not mark PASS without actual action/output tied to a commit.
+
+## Smoke results
+
+Run with `npm run smoke` (add `-- --live` for one real extract call; `SMOKE_IMAGE=<png>` overrides the image).
+
+**2026-10-11 11:48-11:49 PDT**, target https://multimodal-hackathon-sage.vercel.app (health reports `build=dev`, no providers block).
+
+Non-live: 11/11 PASS (latencies 91-325 ms).
+
+Live (`--live`, image `fixtures/circuits/01_divider_5v_10k_10k.png`): HTTP 200 and contract shape valid, so the check passes, but **both model providers failed**:
+
+```
+      route: ask_user
+      graph: null
+      warnings: Extraction failed; enter the circuit manually.
+      trace: extract provider=google model=gemini-3.5-flash status=error durationMs=2914 usage=null note=Gemini request failed
+      trace: route provider=beatapi model=jev-1.13-free status=error durationMs=605 usage=null note=Jev rate limited (429), retry after 60s; defaulting to ask_user
+```
+
+Findings: (1) production Gemini extraction FAILS ("Gemini request failed", 2.9 s) on a clean fixture, so the real-image path currently yields no graph; cause unknown (key, model id, or quota), needs a Vercel log check. (2) Jev 429 here is partly self-inflicted: an earlier live run about 1 min before (output not captured) used the free-tier call, so Jev routing is still unproven.
+
+| Check | Result | ms |
+|---|---|---|
+| GET / is 200 and contains "Ohmni" | PASS | 325 |
+| GET /lab is 200 | PASS | 179 |
+| GET /api/health status ok | PASS | 184 |
+| solve 10k/10k -> VOUT = 2.5 | PASS | 286 |
+| solve 10k/1k -> VOUT = 0.454545 | PASS | 114 |
+| diagnose measured 0.45V -> top hypothesis R2 / 1 kΩ | PASS | 115 |
+| negative: userConfirmed false -> 422 NOT_CONFIRMED | PASS | 125 |
+| negative: floating graph -> 422 | PASS | 102 |
+| negative: bad JSON -> 400 | PASS | 95 |
+| negative: /api/extract text/plain file -> 400 | PASS | 131 |
+| negative: /api/extract no image -> 400 | PASS | 91 |
+| LIVE /api/extract (1 model call) | PASS (shape only; route ask_user) | 3696 |
