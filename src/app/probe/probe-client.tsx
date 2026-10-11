@@ -57,7 +57,7 @@ export function ProbeClient() {
   const [guideOpen, setGuideOpen] = useState(true);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const closeGuide = useCallback(() => {
-    if (document.activeElement?.closest(".pg-guide")) toggleRef.current?.focus();
+    toggleRef.current?.focus(); // toggle stays mounted while the guide closes
     setGuideOpen(false);
   }, []);
 
