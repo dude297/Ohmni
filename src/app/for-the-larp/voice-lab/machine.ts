@@ -58,13 +58,15 @@ export function reducer(s: VLState, a: Action): VLState {
     case "cancel":
       return { ...s, phase: "idle", proposal: null, message: s.proposal ? "Discarded. Nothing was recorded." : s.message };
     case "commit_start": {
+      if (s.phase === "processing") return s; // double-tap Confirm is idempotent
       const block = commitBlocker(s);
       return block ? { ...s, phase: "error", proposal: s.proposal?.revision === s.revision ? s.proposal : null, message: block } : { ...s, phase: "processing" };
     }
     case "commit_done":
       return { ...s, phase: "committed", proposal: null, observations: a.observations, message: a.message };
     case "fail":
-      return { ...s, phase: "error", message: a.message };
+      // an armed proposal must stay visible/confirmable: never leave a hidden pending reading
+      return { ...s, phase: s.proposal ? "confirming" : "error", message: a.message };
   }
 }
 

@@ -20,7 +20,7 @@ const TEENS: Record<string, number> = { ten: 10, eleven: 11, twelve: 12, thirtee
 const TENS: Record<string, number> = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
 // STT homophones for digits ("to"/"for" are deliberately NOT mapped: "point to B" would become a number).
 const HOMOPHONES: Record<string, string> = { won: "one", tree: "three", fife: "five", niner: "nine", nought: "zero", naught: "zero" };
-const isNumWord = (w: string) => w in UNITS || w in TEENS || w in TENS || w === "hundred" || w === "point";
+const isNumWord = (w: string) => w in UNITS || w in TEENS || w in TENS || w === "hundred" || w === "thousand" || w === "point";
 const isDigits = (w: string) => /^\d*\.?\d+$/.test(w);
 
 export const volts = (i: { value: number; unit: "V" | "mV" }) => (i.unit === "mV" ? i.value / 1000 : i.value);
@@ -38,28 +38,35 @@ export const maxSupply = (g: CircuitGraph) =>
 
 /** Integer from number words; null = ambiguous ("four five", "twenty thirty"). */
 function wordsToInt(ws: string[]): number | null {
-  let total = 0;
-  let last: "unit" | "teen" | "tens" | "hundred" | null = null;
+  let total = 0; // completed thousands
+  let cur = 0; // current group (< 1000, or "twenty five hundred" style up to 9900)
+  let last: "unit" | "teen" | "tens" | "hundred" | "thousand" | null = null;
+  const open = () => last === null || last === "hundred" || last === "thousand";
   for (const w of ws) {
     if (w in UNITS) {
       if (last === "unit" || last === "teen") return null;
-      total += UNITS[w];
+      cur += UNITS[w];
       last = "unit";
     } else if (w in TEENS) {
-      if (last && last !== "hundred") return null;
-      total += TEENS[w];
+      if (!open()) return null;
+      cur += TEENS[w];
       last = "teen";
     } else if (w in TENS) {
-      if (last && last !== "hundred") return null;
-      total += TENS[w];
+      if (!open()) return null;
+      cur += TENS[w];
       last = "tens";
     } else if (w === "hundred") {
-      if (last === "hundred" || total >= 100) return null;
-      total = (total || 1) * 100;
+      if (last === "hundred" || cur >= 100) return null;
+      cur = (cur || 1) * 100;
       last = "hundred";
+    } else if (w === "thousand") {
+      if (total > 0 || cur >= 1000 || last === "thousand") return null;
+      total = (cur || 1) * 1000;
+      cur = 0;
+      last = "thousand";
     } else return null;
   }
-  return ws.length ? total : null;
+  return ws.length ? total + cur : null;
 }
 
 /** One spoken number span -> value; null = ambiguous. */
@@ -88,6 +95,10 @@ function normalize(text: string): string {
   return (
     text
       .toLowerCase()
+      // STT splits/mangles "mV": "m v", "em vee", "millie volts", "mili volts" -> millivolts (never plain V)
+      .replace(/\b(?:m|em)\s+(?:v|vee|volts?)\b/g, " millivolts ")
+      .replace(/\b(?:millie|milly|mili|milli|mille)\s*(?:volts?|vee)\b/g, " millivolts ")
+      .replace(/\b(hundred|thousand)\s+and\b/g, "$1")
       .replace(/(\d),(\d{3})\b/g, "$1$2")
       .replace(/(\d)\s*(millivolts?|mv|volts?|v)\b/g, "$1 $2")
       .replace(/[^a-z0-9.\s-]/g, " ")
@@ -149,6 +160,12 @@ export function parseCommand(text: string, graph: CircuitGraph): Parsed {
     return unknown(`I don't see a node "${unknownNode}" in this circuit. Which node: ${nodeList}?`);
   if (distinct.length > 1) return unknown(`I heard more than one node (${distinct.join(", ")}). Give one reading at a time.`);
   const node = distinct[0];
+
+  // Never silently drop number words: fractions and "to/too/for point" (STT for "two/four point") must be clarified.
+  if (/\b(half|halves|quarter|third)\b/.test(t))
+    return unknown(`Fractions like "and a half" are ambiguous. Say it like "two point five volts".`);
+  const pi = words.findIndex((w, i) => w === "point" && /^(to|too|tu|for)$/.test(words[i - 1] ?? ""));
+  if (pi > 0) return unknown(`I heard "${words[pi - 1]} point", which could be "two point" or "four point". Say the whole number again, e.g. "two point five volts".`);
 
   // --- number ---
   const nodeIdx = new Set(found.map((f) => f.idx));

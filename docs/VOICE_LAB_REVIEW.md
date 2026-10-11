@@ -77,6 +77,27 @@ Playwright (390 px, fake recognizer, `/api/explain` mocked): about 37 assertions
 6. Press talk and stay silent: expect the "didn't hear anything" message. Deny the mic in site settings and retry: expect the "denied" note.
 7. Record what Chrome/Edge actually transcribed. Mark the result VERIFIED only if you did this with a real mic.
 
+## Fixes applied (follow-up commit)
+
+Fixed, with the matching `it.fails` flipped to `it` (checks: typecheck, lint, build pass; `npm test` 20 files, 256 passed + 7 expected-fail; Playwright 38 pass, only F12 fails):
+
+| ID | Fix |
+|---|---|
+| F1 | `normalize` rewrites "m v", "em vee", "millie/milly/mili/milli/mille volts" to `millivolts`. |
+| F2 | `wordsToInt` now supports `thousand` ("five thousand millivolts" = 5000 mV, "two thousand five hundred" = 2500) and "hundred and fifty". Digits plus `thousand` ("5 thousand volts") clarify. Also fixes F8d. |
+| F3 | `half/halves/quarter/third` anywhere returns a clarification, never a number. |
+| F4 | `to/too/tu/for` immediately before `point` returns "could be two point or four point, say the whole number again". Plain "two/four point five" still parse. |
+| F9 | `commit_start` returns the state unchanged while `processing`. |
+| F10 | `fail` keeps `phase: "confirming"` while a proposal exists, so a card-mic error or a failed `/api/solve` shows the message and leaves the card visible and retryable. No hidden armed reading (Playwright: card count 1). |
+| F13 | `runExplain` drops the result (and error) if the revision changed (Playwright: old-circuit text no longer shown). |
+| F14 | Explanations are spoken only when `grounded === true`; otherwise they stay on screen under the amber "Not grounded" badge (Playwright: nothing spoken). |
+
+Still open: F5, F6, F7, F8a-c, F11, F12 (Playwright still fails Esc-discards-card), F15 (all P2, expected-fail tests kept).
+**Real microphone / real STT remains UNVERIFIED**: all voice evidence still uses the fake recognizer. The parser fixes are based on typical Chrome STT mis-hears, not on recorded real transcripts.
+
 ## What must be fixed before showing it
+
+(Superseded for F1-F4, F9, F10, F13, F14 by the section above; remaining items are P2.)
+
 
 Must (about 1 hour total): F1, F2, F3, F4 (parser clarify-instead-of-drop), F10 (one-line `fail` reducer change), F13 (revision check in `runExplain`), F14 (speak only when `grounded`). Should: F6, F7, F11. Defer: F5, F8, F9, F12, F15. Fixes were not applied; the feature was not rewritten.

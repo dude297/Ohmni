@@ -57,7 +57,6 @@ describe("adversarial: refusals that are correct (clarify, never guess)", () => 
     ["vout is naught point four five"],
     ["vout is four fifty millivolts"],
     ["vout is three three volts"],
-    ["vout is two thousand five hundred millivolts"],
     ["vout is 1e3 volts"],
     ["vout is 1.2.3 volts"],
     ["vout is 2.5 volts and the supply is 5 volts"],
@@ -97,22 +96,22 @@ describe("adversarial: node 'a' vs the article 'a'", () => {
   });
 });
 
-describe("KNOWN BUGS: parser silently drops words and mis-scales (F1-F6)", () => {
+describe("FIXED (was known bugs F1-F4) and still-open F5-F7", () => {
   // F1 P1: STT often splits "mV" as "m v" / "millie volts": unit silently becomes V = 1000x error.
-  it.fails("F1a '0.45 m v' must not become 0.45 V", () => expect(reading("vout is 0.45 m v")?.unit).not.toBe("V"));
-  it.fails("F1b '450 millie volts' must not become 450 V", () => expect(reading("vout is 450 millie volts")?.unit).not.toBe("V"));
-  it.fails("F1c '450 mili volts' must not become 450 V", () => expect(reading("vout is 450 mili volts")?.unit).not.toBe("V"));
+  it("F1a '0.45 m v' must not become 0.45 V", () => expect(reading("vout is 0.45 m v")?.unit).not.toBe("V"));
+  it("F1b '450 millie volts' must not become 450 V", () => expect(reading("vout is 450 millie volts")?.unit).not.toBe("V"));
+  it("F1c '450 mili volts' must not become 450 V", () => expect(reading("vout is 450 mili volts")?.unit).not.toBe("V"));
   // F2 P1: "thousand" is dropped. 5000 mV (= 5 V) is recorded as 5 mV.
-  it.fails("F2 'five thousand millivolts' must be 5000 mV or a clarification", () => {
+  it("F2 'five thousand millivolts' must be 5000 mV or a clarification", () => {
     const r = reading("vout is five thousand millivolts");
     expect(r === null || r.value === 5000).toBe(true);
   });
   // F3 P1: "and a half" dropped: 2.5 V recorded as 2 V.
-  it.fails("F3 'two and a half volts' must not become 2 V", () => expect(reading("vout is two and a half volts")?.value).not.toBe(2));
-  it.fails("F3b 'six and a half volts' must not become 6 V", () => expect(reading("vout is six and a half volts")?.value).not.toBe(6));
+  it("F3 'two and a half volts' must not become 2 V", () => expect(reading("vout is two and a half volts")?.value).not.toBe(2));
+  it("F3b 'six and a half volts' must not become 6 V", () => expect(reading("vout is six and a half volts")?.value).not.toBe(6));
   // F4 P1: STT hears "two point five" as "to/too/for point five"; stop-word "to" is dropped: 2.5 -> 0.5.
-  it.fails("F4a 'to point five volts' must not become 0.5 V", () => expect(reading("vout is to point five volts")?.value).not.toBe(0.5));
-  it.fails("F4b 'for point five volts' must not become 0.5 V", () => expect(reading("vout is for point five volts")?.value).not.toBe(0.5));
+  it("F4a 'to point five volts' must not become 0.5 V", () => expect(reading("vout is to point five volts")?.value).not.toBe(0.5));
+  it("F4b 'for point five volts' must not become 0.5 V", () => expect(reading("vout is for point five volts")?.value).not.toBe(0.5));
   // F5 P2: negation/sign words after the number are ignored.
   it.fails("F5a 'not 2 volts' must not record +2 V", () => expect(reading("vout is not 2 volts")?.value).not.toBe(2));
   it.fails("F5b '0.3 volts negative' must not record +0.3 V", () => expect(reading("vout is 0.3 volts negative")?.value).not.toBe(0.3));
@@ -126,10 +125,39 @@ describe("KNOWN GAPS (usability, safe failure): confirmation / navigation phrase
   it.fails("F8a 'yeah that's right' confirms", () => expect(intent("yeah that's right").type).toBe("confirm"));
   it.fails("F8b 'yes please' confirms", () => expect(intent("yes please").type).toBe("confirm"));
   it.fails("F8c 'what's next' is next_probe", () => expect(intent("what's next").type).toBe("next_probe"));
-  it.fails("F8d 'four hundred and fifty millivolts' is 450 mV", () => expect(reading("vout is four hundred and fifty millivolts")).toMatchObject({ value: 450, unit: "mV" }));
+  it("F8d 'four hundred and fifty millivolts' is 450 mV", () => expect(reading("vout is four hundred and fifty millivolts")).toMatchObject({ value: 450, unit: "mV" }));
 });
 
-const reading0 = (node: string, value: number): Reading => ({ type: "record_measurement", node, value, unit: "V" });
+describe("fixes: positive behaviour", () => {
+  it.each([
+    ["vout is 0.45 m v", 0.45], ["vout is 450 millie volts", 450], ["vout is 450 mili volts", 450], ["vout is 450 em vee", 450], ["vout is 450 milli volts", 450],
+  ])("%s -> mV", (t, value) => expect(reading(t)).toMatchObject({ unit: "mV", value }));
+  it.each([
+    ["vout is five thousand millivolts", 5000, "mV"], ["vout is two thousand five hundred millivolts", 2500, "mV"],
+    ["vout is one thousand millivolts", 1000, "mV"], ["vout is four hundred and fifty millivolts", 450, "mV"], ["vout is twenty five hundred millivolts", 2500, "mV"],
+  ])("%s -> %d %s", (t, value, unit) => expect(reading(t)).toMatchObject({ value, unit }));
+  it("thousand/half/to-point clarify and never record", () => {
+    for (const t of ["vout is 5 thousand volts", "vout is two and a half volts", "vout is half a volt", "vout is to point five volts", "vout is for point five volts", "vout is too point five volts", "vout is two thousand thousand volts"])
+      expect(intent(t).type).toBe("unknown");
+    expect((intent("vout is to point five volts") as { reason: string }).reason).toMatch(/two point|whole number/);
+  });
+  it("legit 'two/four point five' still parse; real 1000x mV values stay exact", () => {
+    expect(reading("vout is two point five volts")?.value).toBe(2.5);
+    expect(reading("vout is four point five volts")?.value).toBe(4.5);
+    expect(reading("vout is 5000 mv")?.volts).toBe(5);
+  });
+  it("fail() with a proposal keeps it confirmable; commit_start is idempotent while processing", () => {
+    const p = reducer(confirmed, { type: "propose", proposal: { reading: reading0("VOUT", 2.5), revision: confirmed.revision, transcript: "t" } });
+    const failed = reducer(reducer(p, { type: "commit_start" }), { type: "fail", message: "API down. Nothing was recorded." });
+    expect(failed).toMatchObject({ phase: "confirming", observations: [] });
+    expect(failed.proposal).not.toBeNull();
+    expect(reducer(failed, { type: "commit_start" }).phase).toBe("processing"); // retry works
+    expect(reducer(reducer(failed, { type: "commit_start" }), { type: "fail", message: "x" }).proposal).not.toBeNull();
+    expect(reducer(confirmed, { type: "fail", message: "mic" }).phase).toBe("error"); // no proposal -> plain error
+  });
+});
+
+const reading0 =(node: string, value: number): Reading => ({ type: "record_measurement", node, value, unit: "V" });
 const prop = (s: { revision: number }, r: Reading): Proposal => ({ reading: r, revision: s.revision, transcript: "t" });
 const confirmed = reducer(initialState, { type: "confirm_circuit" });
 
@@ -158,7 +186,7 @@ describe("adversarial: state machine", () => {
     expect(s).toMatchObject({ proposal: null, circuitConfirmed: false, observations: [], phase: "idle" });
   });
   // F9 P2: a duplicate commit_start (double click) flips an in-flight 'processing' to 'error'.
-  it.fails("F9 duplicate commit_start keeps phase 'processing'", () => {
+  it("F9 duplicate commit_start keeps phase 'processing'", () => {
     const p = reducer(confirmed, { type: "propose", proposal: prop(confirmed, reading0("VOUT", 2.5)) });
     const once = reducer(p, { type: "commit_start" });
     expect(reducer(once, { type: "commit_start" }).phase).toBe("processing");
@@ -166,7 +194,7 @@ describe("adversarial: state machine", () => {
   // F10 P1: the card renders only for phase confirming|listening. A speech error ('no-speech' on the
   // card mic) dispatches `fail` -> phase 'error' while the proposal survives, so the card disappears
   // but the pending proposal is still armed. Expected: phase stays 'confirming' while a proposal exists.
-  it.fails("F10 fail() with a pending proposal keeps the card visible (phase confirming)", () => {
+  it("F10 fail() with a pending proposal keeps the card visible (phase confirming)", () => {
     const p = reducer(confirmed, { type: "propose", proposal: prop(confirmed, reading0("VOUT", 2.5)) });
     expect(reducer(p, { type: "fail", message: "no-speech" }).phase).toBe("confirming");
   });

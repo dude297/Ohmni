@@ -137,9 +137,12 @@ export function VoiceLab() {
     try {
       const measured = s.observations.find((o) => o.node === graph.measureNode)?.volts;
       const r = await postJSON<Explain>((u, i) => fetch(u, i), "/api/explain", { graph, userConfirmed: true, ...(measured !== undefined ? { measuredVoltage: measured } : {}) });
+      if (stateRef.current.revision !== s.revision) return; // circuit changed mid-flight: drop the result
       setExp(r);
-      if (r.explanation) speak(r.explanation.summary);
+      // speak only verified text; an ungrounded explanation stays on screen under the amber badge
+      if (r.explanation && r.grounded === true) speak(r.explanation.summary);
     } catch (e) {
+      if (stateRef.current.revision !== s.revision) return;
       setExpErr(e instanceof Error ? e.message : "Explain is unavailable right now.");
     } finally {
       setExpBusy(false);
@@ -257,6 +260,7 @@ export function VoiceLab() {
     setProbe(null);
     setSolveHyp([]);
     setExp(null);
+    setExpErr("");
     setTranscript("");
     dispatch({ type: "select_circuit" });
   }
