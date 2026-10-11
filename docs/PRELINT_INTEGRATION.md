@@ -1,8 +1,8 @@
 # Prelint integration
 
-Status: config merged-ready; **GitHub App NOT installed** (BLOCKED - OWNER ACTION REQUIRED).
+Status (2026-10-11 13:45 PDT): **GitHub App installed** on dude297/Ohmni by the owner; `trigger_mode: auto` verified — Prelint reviewed PR #51 on @prelint and again automatically on the next push (see Evidence).
 
-## Install (owner, interactive OAuth - cannot be done by an agent)
+## Install (owner, interactive OAuth - cannot be done by an agent; completed 2026-10-11)
 
 1. Open https://app.prelint.com and Sign in with GitHub.
 2. Install the Prelint GitHub App on the `dude297` account.
@@ -60,6 +60,7 @@ How these reconcile: the $1-per-review credit charge applies to **private** repo
 
 - Installation confirmed: owner installed the Prelint GitHub App on dude297/Ohmni (2026-10-11); Prelint check runs and a review appear on PR #51.
 - First Prelint review (PR #51, commit a5b607a, 2026-10-11 20:39 UTC = 13:39 PDT): https://github.com/dude297/ohmni/pull/51#pullrequestreview-5484868357 — 1 finding (WARNING, `docs/PRELINT_INTEGRATION.md:50`): pricing quotes not reconciled. Valid; fixed in the following commit by the "How these reconcile" paragraph above.
+- Second, automatic review (trigger_mode auto, commit 4390c5f): https://github.com/dude297/ohmni/pull/51#pullrequestreview-5484888002 — 1 finding: stale "NOT installed" status lines; valid, fixed in the next commit.
 - Prelint check runs on a5b607a: "Prelint" success https://github.com/dude297/ohmni/runs/114569525836 ; "Prelint: Decision Review" success https://github.com/dude297/ohmni/runs/114569527153
 - MCP: registered at project scope (`.mcp.json`); OAuth sign-in pending owner (`/mcp` in Claude Code).
 - Checked 2026-10-11: `gh api repos/dude297/Ohmni/commits/main/check-runs` shows only `github-actions`; no Prelint check runs. `gh api repos/dude297/Ohmni/installation` returned 401 (needs app JWT), so install state was inferred only from the absence of check runs.
@@ -73,6 +74,6 @@ How these reconcile: the $1-per-review credit charge applies to **private** repo
 
 ## Outstanding blockers
 
-1. Owner must install the GitHub App (steps above) - BLOCKED.
-2. Owner must disable auto-recharge.
-3. Optional: owner OAuth sign-in for MCP; coordinator adds `.mcp.json`.
+1. ~~Install the GitHub App~~ - done.
+2. Owner to confirm auto-recharge is OFF and the credit balance is unchanged after reviews (not verifiable by an agent).
+3. Optional: owner OAuth sign-in for the MCP server (`/mcp` in Claude Code); `.mcp.json` is committed.
