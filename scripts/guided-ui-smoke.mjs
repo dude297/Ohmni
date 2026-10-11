@@ -15,7 +15,7 @@ const check=(label,value)=>{assert.ok(value,label);checks.push(label);};
 const next=()=>frame().getByRole('button',{name:'Next step'}).click();
 async function stage(name){await page.waitForFunction(n=>document.querySelector('.guided-steps [aria-current="step"] strong')?.textContent===n,name);check(`Only ${name} frame displayed`,await page.locator('.guided-frame:visible').count()===1);}
 async function noOverflow(label){check(label,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
-async function readySample(kind){await page.goto(`${base}/lab?sample=${kind}`);await stage('Capture');await next();await stage('Review');await page.getByRole('checkbox',{name:'I verified values, terminals and ground'}).check();await next();await stage('Compare');}
+async function readySample(kind){await page.goto(`${base}/lab?sample=${kind}`);await stage('Review');await page.getByRole('checkbox',{name:'I verified values, terminals and ground'}).check();await next();await stage('Compare');}
 async function solve(reading){if(reading!==undefined)await page.locator('#measured-vout').fill(reading);await frame().locator('.solve-button').click();await page.waitForSelector('.voltage-result');}
 mkdirSync(output,{recursive:true});
 try {

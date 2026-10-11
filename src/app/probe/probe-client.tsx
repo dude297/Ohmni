@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, GraduationCap, Loader2, Undo2, X } from "lucide-react";
 import { Brand } from "../../components/ohmni/brand";
-import { CircuitView } from "../../components/ohmni/circuit-view";
 import type { FaultHypothesis, ProbeStep } from "../../lib/probe";
 import type { ModelTraceEvent } from "../../lib/circuit/types";
 import { CIRCUITS, Obs, addObservation, apiErrorMessage, fmtPct, fmtV, parseVolts } from "./helpers";
@@ -158,9 +157,6 @@ export function ProbeClient() {
               ))}
             </div>
             <p className={s.muted}>{circuit.blurb}</p>
-            <div className="circuit-canvas">
-              <CircuitView graph={graph} />
-            </div>
             <ProbeSchematic graph={graph} highlight={result ? (result.done ? null : result.next?.node ?? null) : graph.measureNode} />
             {result && !result.done && result.next && (
               <>
@@ -194,8 +190,8 @@ export function ProbeClient() {
             )}
           </section>
 
-          <section className={`workspace-panel ${s.panel}`} aria-labelledby="probe-h" aria-live="polite">
-            <h2 id="probe-h" className={s.h2}>2. {result?.done ? "Conclusion" : "Next probe"}</h2>
+          <section className={`workspace-panel ${s.panel}`} aria-labelledby="probe-h">
+            <h2 id="probe-h" className={s.h2} aria-live="polite">2. {result?.done ? "Conclusion" : result?.next ? `Next probe: ${result.next.node}` : "Next probe"}</h2>
 
             {error && (
               <div className={s.errorBox} role="alert">
@@ -254,7 +250,7 @@ export function ProbeClient() {
             )}
 
             {result?.done && (
-              <div className={s.done}>
+              <div className={s.done} role="status">
                 <CheckCircle2 size={22} />
                 <div>
                   <b>Diagnosis</b>

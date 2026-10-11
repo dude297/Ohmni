@@ -46,7 +46,8 @@ const stages: Stage[] = ["capture", "review", "compare", "investigate"];
 
 export function LabWorkspace() {
   const params = useSearchParams();
-  const [stage, setStage] = useState<Stage>("capture");
+  const [stage, setStage] = useState<Stage>(params.has("sample") ? "review" : "capture");
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const frameRef = useRef<HTMLDivElement>(null);
   const stagesRef = useRef<HTMLElement>(null);
   const moveFocus = useRef(false);
@@ -85,6 +86,7 @@ export function LabWorkspace() {
   const statusRef = useRef<HTMLDivElement>(null);
   const investigationStatusRef = useRef<HTMLDivElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+  const revealedResult = useRef<Result | null>(null);
   const pending = phase !== "review";
   const measured = measurement.trim() ? Number(measurement) : undefined;
   const validMeasured = measured === undefined || Number.isFinite(measured);
@@ -137,6 +139,7 @@ export function LabWorkspace() {
             : imageUrl ? "Review needs attention" : null;
   function goTo(next: Stage) {
     if (pending || !canEnter[next]) return;
+    setDirection(stages.indexOf(next) < stageIndex ? "back" : "forward");
     if (next === "investigate") setInvestigateReading(measurement);
     moveFocus.current = true;
     setStage(next);
@@ -152,6 +155,13 @@ export function LabWorkspace() {
   useEffect(() => {
     if (error) errorRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [error]);
+  useEffect(() => {
+    if (!result || pending || revealedResult.current === result) return;
+    revealedResult.current = result;
+    const answer = stage === "investigate" ? investigationStatusRef.current : statusRef.current;
+    answer?.focus({ preventScroll: true });
+    answer?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  }, [result, pending, stage]);
   const allNodes = graph ? [...new Set(graph.components.flatMap((c) => [c.positiveNode, c.negativeNode]))] : [];
 
   useEffect(
@@ -371,7 +381,7 @@ export function LabWorkspace() {
         {sourceLabel && <p className="investigation-context"><span>{sourceLabel}</span>{result && <span>{resultSource === "local" ? "Local divider calculation" : "Backend circuit solver"}</span>}</p>}
         {error && <div className="error-card guided-error" role="alert" ref={errorRef}><CircleAlert size={18} /><div><strong>The investigation needs attention</strong><p>{error}</p><span>{stage === "capture" ? "Your source remains available. Try another image or a manual graph." : "Your circuit edits remain available. Retry this step or review its connections."}</span></div></div>}
         <div className="guided-layout">
-        <div className="workspace-grid guided-frames" ref={frameRef}>
+        <div className="workspace-grid guided-frames" ref={frameRef} data-direction={direction}>
           <section
             className="workspace-panel capture-panel guided-frame"
             hidden={stage !== "capture"}
@@ -832,11 +842,13 @@ export function LabWorkspace() {
               {result ? (
                 <>
                   <div className="result-card">
+                    {delta !== undefined ? <MeasurementComparison expected={expected!} measured={measured!} node={graph!.measureNode} /> : <>
                     <div className="eyebrow">EXPECTED {graph?.measureNode}</div>
                     <div className="voltage-result">
                       {expected?.toFixed(3)}
                       <small> V</small>
                     </div>
+                    </>}
                     <span className="result-origin">
                       {resultSource === "local"
                         ? "LOCAL SAMPLE CALCULATION"
@@ -851,9 +863,6 @@ export function LabWorkspace() {
                       ))}
                     </div>
                   </div>
-                  {delta !== undefined && (
-                    <MeasurementComparison expected={expected!} measured={measured!} node={graph!.measureNode} />
-                  )}
                   {delta !== undefined && (
                     <div
                       className={`mismatch-card ${mismatch ? "" : "matched"}`}
