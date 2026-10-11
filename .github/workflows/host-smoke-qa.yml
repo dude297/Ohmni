@@ -1,0 +1,47 @@
+name: Hosted smoke verification (temporary QA branch)
+on:
+  push:
+    branches:
+      - qa/host-e2e-20261011
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-model-host-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Vercel public fallback - deterministic API checks (NO model calls)
+        run: node scripts/smoke.mjs https://multimodal-hackathon-sage.vercel.app
+      - name: Vercel additional page routes
+        run: |
+          node --input-type=module <<'EOF'
+          const base = "https://multimodal-hackathon-sage.vercel.app";
+          for(const path of ["/probe", "/for-the-larp"]) {
+            const res = await fetch(base+path, {signal:AbortSignal.timeout(20000)});
+            console.log(path, res.status, res.url);
+            if(res.status!==200) process.exitCode=1;
+          }
+          EOF
+      - name: Anbaric - anonymous access behavior (login expected; NO model calls)
+        run: |
+          node --input-type=module <<'EOF'
+          const u="https://ohmni.cloud.anbaric.ai/api/health";
+          const r=await fetch(u,{redirect:"manual",signal:AbortSignal.timeout(20000)});
+          const location=r.headers.get("location")||"";
+          console.log("status",r.status,"redirect host",location ? new URL(location,u).host : "none");
+          // It is deliberately auth-gated. 200 or 302 are both reachable, but 200 only means access if JSON is validated.
+          if(r.status===200){
+            const data=await r.json().catch(()=>null);
+            console.log("health",data?.status||"invalid");
+            if(data?.status!=="ok")process.exitCode=1;
+          }else if(![301,302,303,307,308,401,403].includes(r.status)){
+            process.exitCode=1;
+          }
+          EOF
