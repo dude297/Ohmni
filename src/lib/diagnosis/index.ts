@@ -34,7 +34,8 @@ function fmtOhm(r: number): string {
   if (r >= 1e3) return `${+(r / 1e3).toPrecision(3)} kΩ`;
   return `${+r.toPrecision(3)} Ω`;
 }
-const fmtV = (v: number) => `${+v.toPrecision(3)} V`;
+// Solver residue (e.g. 5e-8 V for an open branch) reads as 0 V to a student.
+const fmtV = (v: number) => `${Math.abs(v) < 1e-6 ? 0 : +v.toPrecision(3)} V`;
 
 function withValue(g: CircuitGraph, id: string, value: number): CircuitGraph {
   return { ...g, components: g.components.map((c) => (c.id === id ? { ...c, value } : c)) };

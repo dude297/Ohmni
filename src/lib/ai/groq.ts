@@ -55,7 +55,7 @@ export async function callGroq(step: string, instruction: string, image: Uint8Ar
             content: [
               {
                 type: 'text',
-                text: `${EXTRACTION_PROMPT}\nRespond with a single JSON object (no prose) matching this JSON schema:\n${JSON.stringify(responseJsonSchema)}`,
+                text: `${instruction}\nRespond with a single JSON object (no prose) matching this JSON schema:\n${JSON.stringify(responseJsonSchema)}`,
               },
               { type: 'image_url', image_url: { url: `data:${mimeType};base64,${Buffer.from(image).toString('base64')}` } },
             ],
