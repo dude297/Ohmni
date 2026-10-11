@@ -2,14 +2,14 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Component, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
+import { Component, useEffect, useMemo, useReducer, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Brand } from "../../components/ohmni/brand";
 import { solveDC } from "../../lib/circuit/solve";
 import { resistorBands } from "./_bands";
 import { CORRECT_PRESET, INTENDED, MISTAKE_PRESET } from "./_examples";
 import type { View } from "./_geometry";
-import { diffAgainstIntended, netHoles as netHolesOf, toCircuitGraph } from "./_model";
+import { diffAgainstIntended, netHoles as netHolesOf, nodeNameOfHole, toCircuitGraph } from "./_model";
 import { initState, selectedHoles, studioReducer } from "./_state";
 import { fmtOhm, fmtV, useReducedMotion } from "./_view";
 import { Board2D } from "./board2d";
@@ -45,17 +45,13 @@ const INTENDED_V = solveDC(INTENDED).voltages; // local deterministic solve of t
 export function StudioClient() {
   const [state, dispatch] = useReducer(studioReducer, undefined, () => initState(MISTAKE_PRESET()));
   const reduced = useReducedMotion();
-  const [mode, setMode] = useState<null | "3d" | "2d">(null);
-  const [mode2dReason, setReason] = useState("");
+  const gl = useSyncExternalStore(() => () => {}, hasWebGL, () => null as boolean | null);
+  const [choice, setMode] = useState<null | "3d" | "2d">(null);
+  const [failed, setFailed] = useState(false);
+  const mode = failed ? "2d" : (choice ?? (gl === null ? null : gl ? "3d" : "2d"));
+  const mode2dReason = failed ? "The 3D view failed to start, showing the 2D top view." : gl === false ? "WebGL is unavailable, showing the 2D top view." : "";
   const [view, setView] = useState<{ name: View; nonce: number }>({ name: "iso", nonce: 0 });
 
-  useEffect(() => {
-    if (hasWebGL()) setMode("3d");
-    else {
-      setMode("2d");
-      setReason("WebGL is unavailable, showing the 2D top view.");
-    }
-  }, []);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && dispatch({ type: "cancelTool" });
     window.addEventListener("keydown", k);
@@ -100,7 +96,7 @@ export function StudioClient() {
       ...build.jumpers.flatMap((j) => (["a", "b"] as const).filter((e) => set.has(j[e])).map((e) => `${j.id}.${e.toUpperCase()} (${j[e]})`)),
     ];
   };
-  const netLabel = (h: string) => built.nets.find((n) => n.holes.includes(h))?.label ?? "unconnected";
+  const netLabel = (h: string) => nodeNameOfHole(build, h) ?? "unconnected";
 
   let inspector: ReactNode = <p className="st-hint">Click a part, hole, jumper or schematic node. Holes highlight their whole net (strips + jumpers).</p>;
   if (sel?.kind === "component") {
@@ -206,7 +202,7 @@ export function StudioClient() {
             {mode === null && <div className="st-hint" style={{ padding: 16 }}>Checking WebGL…</div>}
             {mode === "3d" && (
               <div className="st-board3d" data-testid="board3d">
-                <Boundary onError={() => { setMode("2d"); setReason("The 3D view failed to start, showing the 2D top view."); }}>
+                <Boundary onError={() => setFailed(true)}>
                   <Scene3D {...boardProps} />
                 </Boundary>
               </div>
@@ -252,7 +248,7 @@ export function StudioClient() {
                   </li>
                 ))}
                 {diff.componentDiffs.map((d) => (
-                  <li key={d.componentId + d.problem}>{d.detail}</li>
+                  <li key={d.componentId + d.issue}>{d.componentId}: {d.issue.replace("_", " ")}{d.intended ? ` (intended ${d.intended.value})` : ""}{d.observed ? ` (built ${d.observed.value})` : ""}</li>
                 ))}
                 {diff.uncertainties.map((u) => (
                   <li key={u}>Cannot analyse: {u}</li>

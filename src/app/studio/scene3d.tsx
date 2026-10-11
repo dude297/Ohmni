@@ -224,6 +224,10 @@ function DebugHook() {
   return null;
 }
 
+function setPulse(m: THREE.MeshStandardMaterial, v: number) {
+  m.emissiveIntensity = v;
+}
+
 function Scene({ state, dispatch, netHoles, faultHoles, reduced, view }: BoardProps) {
   const { invalidate } = useThree();
   const { build, selection: sel, tool } = state;
@@ -233,7 +237,7 @@ function Scene({ state, dispatch, netHoles, faultHoles, reduced, view }: BoardPr
   const cx = (BOARD_BOUNDS.minX + BOARD_BOUNDS.maxX) / 2;
   const cz = (BOARD_BOUNDS.minZ + BOARD_BOUNDS.maxZ) / 2;
   useFrame(({ clock }) => {
-    faultMat.emissiveIntensity = reduced ? 1 : 0.55 + 0.45 * Math.sin(clock.elapsedTime * 5);
+    setPulse(faultMat, reduced ? 1 : 0.55 + 0.45 * Math.sin(clock.elapsedTime * 5));
   });
   useEffect(() => {
     if (reduced || !faultHoles.length) {

@@ -1,5 +1,5 @@
 // Pure studio state: selection sync, constrained wiring edits, revision/confirmation/solve invalidation.
-import { netHoles, toCircuitGraph, type BuildState, type HoleId } from './_model';
+import { holesOfNode, netHoles, type BuildState, type HoleId } from './_model';
 
 export type Selection =
   | { kind: 'component'; id: string }
@@ -118,6 +118,5 @@ export function selectedHoles(s: StudioState): HoleId[] {
     const j = s.build.jumpers.find((x) => x.id === sel.id);
     return j ? [j.a, j.b] : [];
   }
-  const net = toCircuitGraph(s.build).nets.find((n) => n.label === sel.name);
-  return net?.holes ?? [];
+  return holesOfNode(s.build, sel.name);
 }

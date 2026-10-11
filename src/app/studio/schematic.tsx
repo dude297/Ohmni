@@ -72,7 +72,7 @@ export function Schematic({ selection, dispatch, diffs, intended, builtCurrents,
         <circle key={k} className="st-ring st-pulse" cx={x} cy={y} r={9} data-testid={`fault-${k}`} />
       ))}
       {[...splitNodes].map((n) => (
-        <text key={n} x={305} y={182} fontSize={12} fontWeight={700} fill="#943e2c">{n} split in build</text>
+        <text key={n} x={355} y={182} textAnchor="end" fontSize={12} fontWeight={700} fill="#943e2c">{n} split in build</text>
       ))}
     </svg>
   );
