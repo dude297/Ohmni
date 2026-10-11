@@ -49,7 +49,7 @@ describe('POST /api/extract', () => {
     vi.mocked(extractCircuit).mockResolvedValue({ extraction, event: { step: 'extract', provider: 'gemini', durationMs: 1, status: 'ok' } } as never);
     vi.mocked(routeExtraction).mockResolvedValue({
       route: 'review_extraction',
-      event: { step: 'route', provider: 'typesafe', durationMs: 1, status: 'ok', chosenRoute: 'review_extraction' },
+      event: { step: 'route', provider: 'beatapi', durationMs: 1, status: 'ok', chosenRoute: 'review_extraction' },
     });
     const j = await (await post(png())).json();
     expect(j.route).toBe('review_extraction');
