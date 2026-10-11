@@ -113,7 +113,7 @@ export function probeStep(graph: CircuitGraph, observations: Observation[] = [])
   const base = { hypotheses, fitWarning, safety: SAFETY };
   if (!best) return { ...base, next: null, done: true, reason: 'Circuit could not be solved.' };
   if (best.probability >= DONE_P)
-    return { ...base, next: null, done: true, reason: `Most likely: ${best.title} (${Math.round(best.probability * 100)} %).` };
+    return { ...base, next: null, done: true, reason: `Most likely: ${best.title} (${Math.round(best.probability * 100)}%).` };
 
   const measured = new Set(obs.map((o) => o.node));
   const H = entropy(hypotheses.map((h) => h.probability));

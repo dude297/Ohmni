@@ -111,3 +111,17 @@ describe('extractWithGroq', () => {
     expect(r.event.note).toMatch(/timed out/);
   });
 });
+
+describe('callGroq sends the caller instruction', () => {
+  it('uses the verify instruction, not the extraction prompt', async () => {
+    const { callGroq } = await import('@/lib/ai/groq');
+    process.env.GROQ_API_KEY = 'q-key';
+    const f = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ choices: [{ message: { content: '{}' } }] }), { status: 200 }));
+    vi.stubGlobal('fetch', f);
+    await callGroq('verify_topology', 'VERIFY-THIS-FIRST-PASS', new Uint8Array([1]), 'image/png');
+    const body = JSON.parse(f.mock.calls[0][1].body);
+    const text = body.messages[0].content.find((p: { type: string }) => p.type === 'text').text as string;
+    expect(text.startsWith('VERIFY-THIS-FIRST-PASS')).toBe(true);
+    vi.unstubAllGlobals();
+  });
+});

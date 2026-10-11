@@ -16,3 +16,9 @@ describe('diagnose with real MNA solver', () => {
     expect(diagnose(DIVIDER_10K_10K, 0).map((h) => h.title).join(' ')).toMatch(/short|open/i);
   });
 });
+
+describe('diagnosis text formatting', () => {
+  it('never prints solver residue like 5e-8 V', () => {
+    for (const m of [0, 5]) for (const h of diagnose(DIVIDER_10K_10K, m)) expect(h.rationale).not.toMatch(/\de-\d/);
+  });
+});
