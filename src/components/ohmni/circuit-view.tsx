@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Maximize, Minus, Plus } from "lucide-react";
 import { Component, Graph, Result, formatValue, isDivider } from "./api";
 
 export function CircuitView({
@@ -8,13 +10,20 @@ export function CircuitView({
   onSelect,
   result,
   uncertain = false,
+  onMeasureNode,
+  controls = false,
+  highlightedNode,
 }: {
   graph: Graph;
   selected?: string;
   onSelect?: (id: string) => void;
   result?: Result | null;
   uncertain?: boolean;
+  onMeasureNode?: (node: string) => void;
+  controls?: boolean;
+  highlightedNode?: string;
 }) {
+  const [zoom, setZoom] = useState(1);
   const divider = isDivider(graph);
   const nodes = [
     ...new Set(
@@ -50,14 +59,27 @@ export function CircuitView({
   const node = (name: string, x: number, y: number, dx = 15, dy = -13) => (
     <g
       key={name}
+      {...(onMeasureNode ? {
+        role: "button" as const,
+        tabIndex: 0,
+        "aria-label": `Measure ${name}`,
+        "aria-pressed": graph.measureNode === name,
+        onClick: () => onMeasureNode(name),
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onMeasureNode(name); }
+        },
+      } : {})}
       className={
-        activeNodes &&
+        `circuit-node ${highlightedNode === name ? "suggested-probe" : ""} ${graph.measureNode === name && controls ? "measure-target" : ""} ${activeNodes &&
         [activeNodes.positiveNode, activeNodes.negativeNode].includes(name)
-          ? "circuit-node selected-node"
-          : "circuit-node"
+          ? "selected-node"
+          : ""}`
       }
     >
+      {onMeasureNode && <circle className="node-hit-area" cx={x} cy={y} r="17" />}
+      {controls && graph.measureNode === name && <circle className="measure-ring" cx={x} cy={y} r="11" />}
       <circle cx={x} cy={y} r="5" />
+      {highlightedNode === name && <circle className="suggested-ring" cx={x} cy={y} r="15" />}
       <text x={x + dx} y={y + dy}>
         {name}
       </text>
@@ -70,8 +92,15 @@ export function CircuitView({
   );
   return (
     <div className={`circuit-canvas ${uncertain ? "uncertain-canvas" : ""}`}>
+      {controls && <div className="graph-controls" aria-label="Graph view controls">
+        <span>Probe: {graph.measureNode}</span>
+        <button type="button" aria-label="Zoom out graph" disabled={zoom <= 0.75} onClick={() => setZoom((z) => Math.max(0.75, z - 0.25))}><Minus size={14} /></button>
+        <output aria-label="Graph zoom">{Math.round(zoom * 100)}%</output>
+        <button type="button" aria-label="Zoom in graph" disabled={zoom >= 2} onClick={() => setZoom((z) => Math.min(2, z + 0.25))}><Plus size={14} /></button>
+        <button type="button" aria-label="Fit graph" onClick={() => setZoom(1)}><Maximize size={14} /></button>
+      </div>}
       <svg
-        viewBox="0 0 460 390"
+        viewBox={`${230 - 230 / zoom} ${195 - 195 / zoom} ${460 / zoom} ${390 / zoom}`}
         aria-label={
           divider
             ? "Voltage divider: VIN through R1 to VOUT, through R2 to ground; V1 supplies VIN relative to ground"
@@ -224,7 +253,7 @@ export function CircuitView({
         <span className="tiny-dot" />
         {uncertain
           ? "Candidate topology · needs your review"
-          : "Electrical connections · select a component"}
+          : controls ? "Select a component to edit · select a node to measure" : "Electrical connections · select a component"}
       </div>
     </div>
   );

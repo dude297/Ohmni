@@ -18,9 +18,12 @@ import {
   ScanLine,
   Upload,
   Zap,
+  Download,
 } from "lucide-react";
 import { Brand } from "./brand";
 import { CircuitView } from "./circuit-view";
+import { ProbeGuide } from "./probe-guide";
+import { MeasurementComparison } from "./measurement-comparison";
 import {
   Extraction,
   Graph,
@@ -42,15 +45,17 @@ type Phase = "review" | "extracting" | "solving";
 
 export function LabWorkspace() {
   const params = useSearchParams();
+  const initialSample: SampleKind = params.get("sample") === "network" ? "network" : params.get("sample") === "ladder" ? "ladder" : "divider";
+  const [probeTarget, setProbeTarget] = useState<string>();
   const [mode, setMode] = useState<Mode>(
     params.has("sample") ? "sample" : "empty",
   );
   const [sampleKind, setSampleKind] = useState<SampleKind>(
-    params.get("sample") === "network" ? "network" : "divider",
+    initialSample,
   );
   const [graph, setGraph] = useState<Graph | null>(
     params.has("sample")
-      ? sampleGraph(params.get("sample") === "network" ? "network" : "divider")
+      ? sampleGraph(initialSample)
       : null,
   );
   const [selected, setSelected] = useState("R2");
@@ -96,6 +101,8 @@ export function LabWorkspace() {
   const mismatch =
     delta !== undefined &&
     Math.abs(delta) > Math.max(0.05, Math.abs(expected!) * 0.05);
+  const events = [...trace, ...(result?.trace ?? [])];
+  const allNodes = graph ? [...new Set(graph.components.flatMap((c) => [c.positiveNode, c.negativeNode]))] : [];
 
   useEffect(
     () => () => {
@@ -113,7 +120,7 @@ export function LabWorkspace() {
     setGraph(sampleGraph(variant));
     setSelected("R2");
     setConfirmed(false);
-    setResult(null);
+    setResult(null); setProbeTarget(undefined);
     setMeasurement("");
     setError("");
     setExtraction(null);
@@ -130,7 +137,7 @@ export function LabWorkspace() {
     setGraph(next);
     if (!isDivider(next)) setUseBackend(true);
     setConfirmed(false);
-    setResult(null);
+    setResult(null); setProbeTarget(undefined);
     setError("");
     setAcknowledged([]);
   }
@@ -161,7 +168,7 @@ export function LabWorkspace() {
     setMode("upload");
     setGraph(null);
     setConfirmed(false);
-    setResult(null);
+    setResult(null); setProbeTarget(undefined);
     setError("");
     setExtraction(null);
     setRoute(null);
@@ -197,11 +204,34 @@ export function LabWorkspace() {
       setPhase("review");
     }
   }
+  async function loadDemoImage(name: string) {
+    setPhase("extracting");
+    setError("");
+    try {
+      const response = await fetch(`/samples/${name}.png`, { signal: AbortSignal.timeout(15000) });
+      if (!response.ok) throw new Error("The demo image could not load. Upload your own schematic instead.");
+      await upload(new File([await response.blob()], `${name}.png`, { type: "image/png" }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "The demo image could not load.");
+    } finally {
+      setPhase("review");
+    }
+  }
+  function exportEvidence() {
+    if (!graph || !result) return;
+    const file = new Blob([JSON.stringify({ schemaVersion: 1, capturedAt: new Date().toISOString(), graph, userConfirmed: confirmed, measuredVoltage: measured ?? null, resultSource, extraction, route, extractionTrace: trace, result, note: "User-entered measurement; predictions and hypotheses are not a verified physical diagnosis. Original image bytes are not included." }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ohmni-investigation.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   async function solve() {
     if (!confirmed || !graph || !reviewReady || !validMeasured) return;
     setPhase("solving");
     setError("");
-    setResult(null);
+    setResult(null); setProbeTarget(undefined);
     try {
       const next = useBackend
         ? parseResult(
@@ -280,7 +310,7 @@ export function LabWorkspace() {
             <span className="tiny-dot" />
             <strong>
               {mode === "sample"
-                ? sampleKind === "network" ? "SERIES + PARALLEL / DEMO" : "VOLTAGE DIVIDER / DEMO"
+                ? sampleKind === "network" ? "SERIES + PARALLEL / DEMO" : sampleKind === "ladder" ? "FAULT ISOLATION / DEMO" : "VOLTAGE DIVIDER / DEMO"
                 : mode === "manual"
                   ? "MANUAL DIVIDER"
                   : mode === "upload"
@@ -308,6 +338,13 @@ export function LabWorkspace() {
             </button>
           )}
         </div>
+        <nav className="investigation-steps" aria-label="Investigation progress">
+          {[
+            { href: "#capture-title", title: "Capture", complete: !!graph || !!imageUrl, state: phase === "extracting" ? "Waiting for extraction" : graph ? "Graph loaded" : imageUrl ? "Image loaded" : "Choose a starting point" },
+            { href: "#review-title", title: "Review", complete: confirmed, state: confirmed ? "Confirmed by you" : graph ? "Check values and terminals" : "Awaiting a graph" },
+            { href: "#analyze-title", title: "Understand", complete: !!result, state: phase === "solving" ? "Waiting for solver" : result ? resultSource === "backend" ? "Actual backend result" : "Local fallback result" : "Compare a measurement" },
+          ].map((step, i) => <a href={step.href} key={step.title} className={step.complete ? "step-complete" : ""} aria-current={phase === "extracting" && i === 0 || phase === "solving" && i === 2 || phase === "review" && !result && i === 1 && !!graph ? "step" : undefined}><span>{step.complete ? <Check size={14} /> : `0${i + 1}`}</span><div><strong>{step.title}</strong><small>{step.state}</small></div><ArrowRight size={14} /></a>)}
+        </nav>
         <div className="workspace-grid">
           <section
             className="workspace-panel capture-panel"
@@ -340,11 +377,17 @@ export function LabWorkspace() {
                 Choose image <ArrowRight size={13} />
               </span>
             </label>
+            <div className="demo-image-picker">
+              <span className="eyebrow">OR SEND A DEMO IMAGE</span>
+              <p>These images use the real extraction endpoint. Model responses and limits apply.</p>
+              <div>{[{ id: "clear-divider", label: "Clear divider" }, { id: "ambiguous-junction", label: "Unclear junction" }, { id: "ambiguous-smudged", label: "Smudged value" }].map((demo) => <button key={demo.id} disabled={pending} onClick={() => void loadDemoImage(demo.id)}><ScanLine size={13} />{demo.label}</button>)}</div>
+            </div>
             {imageUrl ? (
               <div className="image-preview">
                 {/* Browser-local preview without server upload or optimization. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={imageUrl} alt={`Uploaded circuit: ${fileName}`} />
+                <a className="source-open" href={imageUrl} target="_blank" rel="noopener noreferrer">Inspect original image ↗</a>
                 <span>
                   <FileImage size={14} />
                   {fileName}
@@ -356,23 +399,17 @@ export function LabWorkspace() {
                   SCHEMATIC-FIRST · REVIEW BEFORE SOLVING
                 </div>
                 <div className="mini-netlist">
-                  <span>5 V</span>
-                  <i />
-                  <span>R1</span>
-                  <i />
-                  <span>VOUT</span>
-                  <i />
-                  <span>R2</span>
-                  <i />
-                  <span>GND</span>
+                  <span>{graph?.components.find(c => c.kind === "dc_voltage")?.value ?? 5} V source</span><i />
+                  <span>{graph?.components.filter(c => c.kind === "resistor").length ?? 2} resistors</span><i />
+                  <span>Measure {graph?.measureNode ?? "VOUT"}</span>
                 </div>
-                <h3>{sampleKind === "network" ? "What should MID read?" : "Why am I reading 0.45 V?"}</h3>
+                <h3>{sampleKind === "network" ? "What should MID read?" : sampleKind === "ladder" ? "Where did the connection fail?" : "Why am I reading 0.45 V?"}</h3>
                 <p>
                   {sampleKind === "network"
                     ? "A 12 V series/parallel network should give 6.545 V at MID. Use the server solver to verify."
-                    : "A two-resistor divider should give 2.50 V. Follow a mismatch to a testable hypothesis."}
+                    : sampleKind === "ladder" ? "Node B should read 1.667 V. Try a 0 V observation, then let the guide choose your next measurement." : "A two-resistor divider should give 2.50 V. Follow a mismatch to a testable hypothesis."}
                 </p>
-                <div className="sample-choices">
+                <div className="sample-choices"><button className="text-button" disabled={pending} onClick={() => reset("sample", "ladder")}>Try probe ladder <ArrowRight size={15} /></button>
                   <button className="text-button" disabled={pending} onClick={() => reset("sample", "divider")}>Try divider <ArrowRight size={15} /></button>
                   <button className="text-button" disabled={pending} onClick={() => reset("sample", "network")}>Try network <ArrowRight size={15} /></button>
                 </div>
@@ -451,6 +488,14 @@ export function LabWorkspace() {
                   onSelect={pending ? undefined : setSelected}
                   result={result}
                   uncertain={!!extraction && !confirmed}
+                  controls
+                  highlightedNode={result ? probeTarget : undefined}
+                  onMeasureNode={pending ? undefined : (node) => {
+                    if (node !== graph.measureNode) {
+                      editGraph({ ...graph, measureNode: node });
+                      setMeasurement("");
+                    }
+                  }}
                 />
                 <div className="component-editor">
                   <div className="editor-heading">
@@ -554,16 +599,17 @@ export function LabWorkspace() {
                 </div>
                 <label className="measure-node">
                   Measure node{" "}
-                  <input
+                  <select
+                    aria-label="Measurement node"
                     value={graph.measureNode}
                     disabled={pending}
                     onChange={(e) =>
-                      editGraph({
+                      { editGraph({
                         ...graph,
-                        measureNode: e.target.value.trim(),
-                      })
+                        measureNode: e.target.value,
+                      }); setMeasurement(""); }
                     }
-                  />
+                  >{!allNodes.includes(graph.measureNode) && <option value={graph.measureNode}>{graph.measureNode || "Select a valid node"}</option>}{allNodes.map((node) => <option key={node} value={node}>{node}</option>)}</select>
                 </label>
                 {extraction && (
                   <div className="review-warnings">
@@ -590,7 +636,7 @@ export function LabWorkspace() {
                                 : a.filter((k) => k !== String(i)),
                             );
                             setConfirmed(false);
-                            setResult(null);
+                            setResult(null); setProbeTarget(undefined);
                           }}
                         />
                         <span>I corrected or verified: {issue}</span>
@@ -613,7 +659,7 @@ export function LabWorkspace() {
                     disabled={pending || !reviewReady}
                     onChange={(e) => {
                       setConfirmed(e.target.checked);
-                      setResult(null);
+                      setResult(null); setProbeTarget(undefined);
                     }}
                   />
                   <span>
@@ -682,7 +728,7 @@ export function LabWorkspace() {
                   disabled={pending}
                   onChange={(e) => {
                     setMeasurement(e.target.value);
-                    setResult(null);
+                    setResult(null); setProbeTarget(undefined);
                   }}
                 />
                 <span>V</span>
@@ -691,11 +737,11 @@ export function LabWorkspace() {
                 className="text-button"
                 disabled={pending || !graph}
                 onClick={() => {
-                  setMeasurement(mode === "sample" && sampleKind === "network" ? "4.8" : "0.45");
-                  setResult(null);
+                  setMeasurement(mode === "sample" && sampleKind === "network" ? "4.8" : mode === "sample" && sampleKind === "ladder" ? "0" : "0.45");
+                  setResult(null); setProbeTarget(undefined);
                 }}
               >
-                Use demo reading: {mode === "sample" && sampleKind === "network" ? "4.8 V" : "0.45 V"}
+                Use demo reading: {mode === "sample" && sampleKind === "network" ? "4.8 V" : mode === "sample" && sampleKind === "ladder" ? "0 V" : "0.45 V"}
               </button>
               {!validMeasured && (
                 <p className="inline-error">Enter a finite voltage.</p>
@@ -709,7 +755,7 @@ export function LabWorkspace() {
                   checked={useBackend}
                   onChange={(e) => {
                     setUseBackend(e.target.checked);
-                    setResult(null);
+                    setResult(null); setProbeTarget(undefined);
                   }}
                 />
                 <span>{isDivider(graph) ? "Use backend solver" : "Backend MNA required for this network"}</span>
@@ -784,6 +830,9 @@ export function LabWorkspace() {
                     </div>
                   </div>
                   {delta !== undefined && (
+                    <MeasurementComparison expected={expected!} measured={measured!} node={graph!.measureNode} />
+                  )}
+                  {delta !== undefined && (
                     <div
                       className={`mismatch-card ${mismatch ? "" : "matched"}`}
                     >
@@ -852,6 +901,8 @@ export function LabWorkspace() {
                       negative terminal in the graph.
                     </p>
                   </details>
+                  {useBackend && mismatch && graph && measured !== undefined && Number.isFinite(measured) && <ProbeGuide key={JSON.stringify(graph) + measured} graph={graph} initialVoltage={measured} onTarget={setProbeTarget} />}
+                  <button className="evidence-export" onClick={exportEvidence}><Download size={15} /> Download investigation evidence</button>
                 </>
               ) : (
                 !error && (
@@ -868,6 +919,7 @@ export function LabWorkspace() {
             </div>
           </section>
         </div>
+        {events.length > 0 && <div className="evidence-strip" aria-label="Returned execution evidence"><span><Activity size={14} /> {events.length} returned events</span><span>{events.filter((event) => event.status === "ok").length} succeeded</span><span>{events.reduce((sum, event) => sum + event.durationMs, 0).toLocaleString()} ms reported step time</span>{events.some((event) => event.status !== "ok") && <strong>Review errors / skipped steps below</strong>}</div>}
         <details className="trace-panel">
           <summary>
             <div>
@@ -883,7 +935,7 @@ export function LabWorkspace() {
           </summary>
           <div className="trace-content">
             <p>
-              Gemini extraction → Jev routing → optional specialist → human
+              Vision extraction → Jev routing → optional specialist → human
               review → deterministic solve. Only events returned by the backend
               are shown below.
             </p>
@@ -903,7 +955,7 @@ export function LabWorkspace() {
                 {mode === "sample" || mode === "manual"
                   ? useBackend
                     ? "No model providers have run. Confirm the sample to use the backend MNA solver. Uncheck Use backend solver for a labeled local fallback."
-                    : "Sample / manual mode uses a local divider formula. Gemini, Jev and specialist verification have not run."
+                    : "Sample / manual mode uses a local divider formula. AI extraction, Jev and specialist verification have not run."
                   : "Upload a circuit to request backend extraction. No model calls or confidence scores are simulated."}
               </div>
             )}

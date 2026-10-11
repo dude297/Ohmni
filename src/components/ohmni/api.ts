@@ -9,8 +9,17 @@ import type {
 } from "../../lib/circuit/types";
 export type { Component, Graph, Route, Trace, Extraction, Result };
 import { DIVIDER_10K_10K, SERIES_PARALLEL_12V } from "../../lib/circuit/fixtures";
-export type SampleKind = "divider" | "network";
+export type SampleKind = "divider" | "network" | "ladder";
 export const sampleGraph = (kind: SampleKind = "divider"): Graph => {
+  if (kind === "ladder") return {
+    schemaVersion: 1, groundNode: "GND", measureNode: "B",
+    components: [
+      { id: "V1", kind: "dc_voltage", value: 5, positiveNode: "VIN", negativeNode: "GND" },
+      { id: "R1", kind: "resistor", value: 10000, positiveNode: "VIN", negativeNode: "A" },
+      { id: "R2", kind: "resistor", value: 10000, positiveNode: "A", negativeNode: "B" },
+      { id: "R3", kind: "resistor", value: 10000, positiveNode: "B", negativeNode: "GND" },
+    ],
+  };
   const fixture = kind === "network" ? SERIES_PARALLEL_12V : DIVIDER_10K_10K;
   return { ...fixture, components: fixture.components.map((c) => ({ ...c })) };
 };
@@ -52,7 +61,7 @@ export function isGraph(v: unknown): v is Graph {
     return true;
   });
 }
-function isTrace(v: unknown): v is Trace[] {
+export function isTrace(v: unknown): v is Trace[] {
   return (
     Array.isArray(v) &&
     v.every(
@@ -148,7 +157,9 @@ export async function request(
   body: FormData | object,
 ): Promise<unknown> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
+  // Extraction can include primary vision, a fallback and one routing/verification pass.
+  const timeoutMs = path === "/api/extract" ? 75000 : 30000;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(path, {
       method: "POST",
@@ -160,6 +171,12 @@ export async function request(
       signal: controller.signal,
     });
     if (!response.ok) {
+      if (response.status === 429) {
+        const retry = Number(response.headers.get("Retry-After"));
+        throw new Error(`Request limit reached.${Number.isFinite(retry) && retry > 0 ? ` Try again in ${Math.ceil(retry)} seconds.` : " Please wait before trying again."} Your circuit is preserved; manual review is still available.`);
+      }
+      if (response.status === 413)
+        throw new Error("The image is too large. Choose a PNG, JPEG or WebP up to 5 MB.");
       if (response.status === 404 || response.status === 503)
         throw new Error(
           "The backend is unavailable. Try the labeled sample or build a manual divider.",
@@ -176,7 +193,7 @@ export async function request(
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError")
       throw new Error(
-        "Analysis timed out after 30 seconds. Your circuit is preserved; try again or review manually.",
+        `Analysis timed out after ${timeoutMs / 1000} seconds. Your circuit is preserved; try again or review manually.`,
       );
     throw e;
   } finally {
