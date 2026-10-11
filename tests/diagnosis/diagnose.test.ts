@@ -67,7 +67,9 @@ describe('diagnoseWith', () => {
   it('demo: 0.45V points to R2 ~1k first', () => {
     const h = run(0.45);
     expect(h).toHaveLength(3);
-    expect(h[0].title).toMatch(/^R2 may be (989 Ω|1 kΩ)/);
+    expect(h[0].title).toContain('R2');
+    expect(h[0].title).toContain('1 kΩ');
+    expect(h[0].rationale).toContain('exact fit 989 Ω');
     expect(h[0].rationale).toMatch(/hypothesis/i);
   });
   it('matching measurement gives one hypothesis', () => {

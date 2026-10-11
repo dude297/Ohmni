@@ -22,6 +22,13 @@ function e24Dist(v: number): number {
   return Math.min(...[...E24, 10].map((e) => Math.abs(log10(m / e))));
 }
 
+function nearestE24(v: number): number {
+  const d = 10 ** Math.floor(log10(v));
+  return [...E24, 10]
+    .map((e) => e * d)
+    .reduce((a, b) => (Math.abs(log10(v / b)) < Math.abs(log10(v / a)) ? b : a));
+}
+
 function fmtOhm(r: number): string {
   if (r >= 1e6) return `${+(r / 1e6).toPrecision(3)} MΩ`;
   if (r >= 1e3) return `${+(r / 1e3).toPrecision(3)} kΩ`;
@@ -100,10 +107,14 @@ export function diagnoseWith(graph: CircuitGraph, measured: number, solve: Solve
       } else {
         // ponytail: ties between equal-magnitude changes prefer a decrease (misread band, e.g. 10k read as 1k)
         const score = Math.abs(log10(r / c.value)) + 5 * e24Dist(r) + (r > c.value ? 0.05 : 0);
+        const std = nearestE24(r);
+        const near = Math.abs(r / std - 1) <= 0.05;
+        const shown = near ? std : r;
+        const fit = near ? ` (exact fit ${fmtOhm(r)})` : '';
         found.push({
           score,
-          title: `${c.id} may be ${fmtOhm(r)} instead of ${fmtOhm(c.value)}`,
-          rationale: `${obs} Hypothesis: if ${c.id} were about ${fmtOhm(r)} instead of ${fmtOhm(c.value)}, the circuit would give about ${fmtV(f(r))}. A wrong resistor value or misread color band is one possible explanation. ${HEDGE}`,
+          title: `${c.id} may be ${fmtOhm(shown)} instead of ${fmtOhm(c.value)}`,
+          rationale: `${obs} Hypothesis: a ${fmtOhm(shown)} ${c.id} would give ${fmtV(f(shown))}${fit}, instead of the ${fmtOhm(c.value)} in the diagram. A wrong resistor value or misread color band is one possible explanation. ${HEDGE}`,
           nextMeasurement: `Disconnect power first, then measure ${c.id}'s resistance with a multimeter and compare to ${fmtOhm(c.value)}.`,
         });
       }
