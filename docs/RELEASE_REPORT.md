@@ -1,5 +1,7 @@
 # Ohmni Release QA Report
 
+> **Historical (2026-10-11 afternoon audits).** Not the current state. Since then: primary host is Anbaric (https://ohmni.cloud.anbaric.ai, build `89251fd` (release candidate, redeployed 15:20 PDT), login required); the Vercel fallback is frozen at `d5a0035` (daily deploy allowance exhausted), so "production", "known-good build" and "Build SHA == main" below refer to the Vercel host at the audited SHA only. Backup video is now `docs/demo/ohmni-demo-guided.webm`. Prelint is `tag_only` since #60. Submission is not declared complete by this report.
+
 **Overall: AMBER** (no P0 regression found). Prepared ~12:45 PM PDT, 2026-10-11, against main `a9f6360600be0f755aeb614f9085f30308488b16` and production https://multimodal-hackathon-sage.vercel.app.
 
 AMBER reasons (FREEZE_CHECKLIST.md): the three-minute desktop/mobile rehearsal and backup recording are not verified by this report; latency/cost data are observed-only (free plan, unit economics unmeasured); `verify_topology` has not been reproduced on the current Groq-primary stack; parallel serverless instances count rate limits separately. Everything else checked here passed.
@@ -46,7 +48,7 @@ Method: zero `/api/extract` calls (Groq/Jev quota preserved), 1 `/api/explain` c
 | Probe Guide | CLOSED | Live `/api/probe`, ladder: B=0 V -> next A (1.50 bits) with outcomes (0 V -> V1 dead/R1 open 50%; 2.5 V -> R3 short; 5 V -> R2 open); B=0 + A=5 -> done, "Most likely: R2 open / not connected (100%)". Model-free (trace: local mna-dc). Re-record at bdf035f in docs/demo. |
 | Tutor (Gemini) | CLOSED | 1 call now on divider with 0.45 V: `grounded: true`, `ungroundedNumbers: []`, gemini-3.5-flash-lite 1372 ms, hypotheses incl. R2 1 kΩ, readable numbers (no long floats). Earlier 947eb06 ~1:10 PDT on ladder: "0.167 mA", "3.33 V", "1.67 V". |
 | Browser QA | CLOSED | Playwright on PRODUCTION, `/`, `/lab`, `/probe` at 1440x900 and 390x844: 0 console errors, 0 px horizontal overflow, Tab reaches Upload / Load sample / sample picker / Guide controls / Explain with visible focus. Minor (not P0): SVG schematic nodes are tabbable without a distinct focus ring; on `/probe` the Guide me/Submit buttons were not within the first 10 tabs (disabled until a reading is typed). Screenshots in %TEMP%\ohmni-e2e-d (not committed). Earlier clean pass at d1096b7 (PR #38, docs/demo/README.md). |
-| Recording | CLOSED | docs/demo/ohmni-demo-backup.webm (d1096b7) plus /probe re-record (bdf035f). Must be labeled RECORDED. |
+| Recording | CLOSED (superseded) | Then: ohmni-demo-backup.webm (d1096b7) plus /probe re-record (bdf035f). Now: docs/demo/ohmni-demo-guided.webm (2:35, guided UI, c27807c). Must be labeled RECORDED. |
 | Submission copy | CLOSED | SUBMISSION.md and DEMO_SCRIPT.md corrected: 4-minute script, core-value sentence, model roles (Groq extraction; Jev structured routing and ambiguity escalation; Gemini = vision fallback AND separate tutor role; local MNA = mathematical authority), tutor beat + Probe Guide in the demo, >= 65 s Jev spacing or RECORDED clip, verify_topology historical only. |
 | Rollback | CLOSED | Known-good SHA `947eb06` (current main, prod, CI green). Command (NOT executed): `vercel rollback <previous-good-deployment-url-or-id>` or `vercel promote <947eb06-deployment-url>`; or `git revert` and redeploy. |
 
