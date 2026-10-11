@@ -1,34 +1,31 @@
 # Ohmni — Freeze Gate
 
-**Documentation freeze** means roadmap, ownership, architecture, contracts and prompts agree. **Product freeze** means the real deployed software meets tested P0 criteria. Never conflate them.
+**Documentation freeze** = roadmap, ownership, architecture, contract, model policy and prompts internally aligned and approved. **Product freeze** = real deployed software meets ALL P0 gates. They are different.
 
-### P0 checks (all need evidence)
-- [ ] Correct main build SHA, relevant reviewed/merged PR links; no unresolved P0.
-- [ ] Public hosted URL works in incognito; /api/health responds from server.
-- [ ] Actual image→Gemini candidate extraction, with tested free-tier model ID.
-- [ ] Actual Jev decision controls route; contrasting routes evidenced. If unavailable, essential multimodel demonstration NOT proven.
-- [ ] Explicit netlist review/edit followed by numerically verified solver.
+### P0 release checklist (actual evidence required)
+- [ ] Main SHA/PRs reviewed/merged; no unresolved critical defects; CI or local test evidence.
+- [ ] Verified public deployment and /api/health from the actual build SHA.
+- [ ] Real schematic→Gemini candidate image/JSON with tested free-tier ID.
+- [ ] Actual Jev conditional decision changes downstream action; demonstrate contrasting outcome. Without live Jev, multimodel proof incomplete.
+- [ ] User edit/confirmation reaches deterministic solver.
 - [ ] 2.500000V and 0.454545V tests plus floating/invalid rejection passed.
-- [ ] Observed 0.45V mismatch produces only hypothesis and next safe measurement.
-- [ ] Errors/quotas, secrets, upload limits, no fake model trace tested.
-- [ ] Mobile/desktop and 3-minute demo tested; backup recorded and labeled.
-- [ ] Actual latency/usage measured, economics source-known or labeled unknown; submission limitations explicit.
+- [ ] Observed 0.45V mismatch yields hypothesis and safe next measurement, not asserted fault.
+- [ ] Quota/error cases, credentials, limits, truthful traces and data privacy checked.
+- [ ] Desktop/mobile and three-minute live demo rehearsed; backup recorded/labeled.
+- [ ] Actual latency/usage recorded, costs sourced or marked unknown, known limitations stated.
 
-### Decision
-RED = core live proof absent, app unavailable, or P0 broken. AMBER = hosted but any judging/demo gate missing, explicitly qualified. GREEN = all P0 proven with artifact links, lead signs off SHA.
+### Verdict and freeze
+RED = core implementation/runtime evidence missing, P0 broken or no hosted demo. AMBER = hosted but some gate incomplete (list precisely). GREEN = all P0 verified with links and release lead signs off SHA. At T+150 stop feature PRs; only P0 fixes/retests after freeze.
 
-**Audit 2026-10-11: RED / NOT PRODUCT FREEZE-READY (docs-only repo).**
+**Observed 2026-10-11: RED / NOT PRODUCT FREEZE-READY — scaffold with unimplemented solver/model adapters.**
 
-### Freeze notification template
-OHMNI FREEZE STATUS: [RED/AMBER/GREEN]
-Commit and URL: [actual SHA / verified URL]
-PRs/review/checks: [links/outcomes]
-Gemini + Jev: [actual tested IDs/route evidence]
-Solver/negative tests: [actual output]
-Demo/incognito/mobile: [actual result]
-Latency and marginal cost: [measured/estimate/unknown]
-P0 blockers: [explicit]
-Deferred P1/P2: [explicit]
-Owner/date and next permissible actions: [explicit]
-
-At ROADMAP T+150, stop feature work. Only P0 fixes with evidence and redeploy after feature freeze.
+### Notification format
+OHMNI FREEZE STATUS: [RED / AMBER / GREEN]
+SHA and verified production URL:
+PR review / CI / tests:
+Gemini model/real image call and Jev route evidence:
+Solver known tests and negative cases:
+Incognito/mobile/three-minute demo:
+Latency/cost data (observed/estimated/unknown):
+Remaining P0 / deferred P1/P2:
+Freeze owner/time/approved next actions:
