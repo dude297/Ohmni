@@ -1,34 +1,27 @@
 # Ohmni — Current Verified State (Evidence Ledger)
 
-**Audit date:** 2026-10-11. Repo: https://github.com/dude297/Ohmni.
-**Initial docs-only baseline main:** bcb1e41806f62177498bac61f7e0e89a58de9eda.
-**Subsequent observed main scaffold:** PR #1 (Next.js 16, shared circuit types, health route, CI) and PR #2 (backend adapter stubs) merged; main HEAD observed **b315da3c293b479897602129faf2778f71151778** on second audit.
+Repo: https://github.com/dude297/Ohmni. Production: https://multimodal-hackathon-sage.vercel.app (Vercel project "ohmni"; URL unchanged). Hard deadline: 5:30 PM PDT, October 11, 2026.
 
-### Observed at second audit
-- Next.js package.json and lockfile; CI workflow; AGENTS.md generated Next.js rules; src/app/api/health/route.ts; src/lib/circuit/{types,validate,solve}; src/lib/ai/{gemini,jev,secondary}; diagnosis stub; tests/health.test.ts.
-- **validateGraph, solveDC, extractCircuit, routeExtraction are still stubs** returning placeholder failure or throwing "not implemented". These do NOT demonstrate functionality.
-- PR #3 is the documentation baseline; review/merge still required at second audit.
-- Actual working Gemini image+JSON: UNVERIFIED. Jev decision: UNVERIFIED. Secondary vision: UNVERIFIED. Production URL: UNVERIFIED.
-- CI runs may have begun after audit; check current GitHub before reporting green.
-- Package name remained "circuitscout" in scaffold; renaming package metadata is an implementation/chore PR, not a claim docs were inconsistent.
+## Current state (main at d7e38f5, 2026-10-11)
+- **Merged to main** (see `git log`): scaffold and stubs (#1, #2), docs and north star (#3, #5, #17), UI (#4, #19), solver and `/api/solve` (#8), Gemini extraction (#6), Jev routing (#10, #15, #16), measurement-driven diagnosis (#7, #13), docs/README/demo script (#18, #20, #21), smoke script (#22), demo samples (#23), per-IP abuse guard (#24), Probe Guide backend (#25), Groq vision fallback and verifier (#26), single-source model defaults (#27).
+- **Pipeline (all real, none stubbed):** Gemini `gemini-3.5-flash` reads the image; on 429/quota/503/timeout/5xx/not configured/malformed output Groq `qwen/qwen3.8-27b` reads it instead; Zod + structural validation; Jev `jev-1.13-free` (BeatAPI only, paid ids refused, paced 1 call/min, `Retry-After` honoured) picks `review_extraction` / `verify_topology` / `ask_user`; `verify_topology` runs the Groq verifier; user confirms; local MNA solver; measured-voltage diagnosis. OpenAI and the TypeSafe direct path are removed.
+- **Endpoints:** `POST /api/extract`, `POST /api/solve`, `POST /api/probe` (Probe Guide, backend only), `GET /api/health` (build + `providers {gemini, groq, jev}` configured/model). Wire shapes in API_CONTRACT.md.
+- **Abuse guard (src/proxy.ts):** per IP, extract 6/min and 40/h, solve 60/min, request bodies over 6 MB get 413.
+- **Demo samples (`public/samples/`):** `clear-divider.png` -> `review_extraction`, `ambiguous-junction.png` -> `verify_topology`, `ambiguous-smudged.png` -> `ask_user`; live-observed once each (DEMO_CASES.md).
+- **Verification:** `npm run smoke` (non-live) and `npm run smoke -- --live` against production. Latest live smoke at 8fad171: 12/12 PASS. The live trace was gemini `quota_exhausted` (429) -> Groq ok 710 ms -> Jev ok 718 ms `review_extraction`.
 
-### Open evidence to add (do not invent)
-Current main SHA and open PRs: [verify fresh]
-CI/build/tests (SHA, command, outcome): [unverified]
-Provider image model IDs/HTTP and Jev route: [unverified]
-Public host URL/deployed SHA: [unverified]
-Solver fixtures A/B/negative and browser smoke: [unverified]
-Measured latency/usage/estimate: [unknown]
-P0 blockers: complete actual backend, UI integration, verified model/route and public E2E.
-**Release status: RED / NOT PRODUCT FREEZE-READY.**
+## Known risks
+- **Gemini free quota / 503s:** the quota on this key was exhausted (429) by evaluation runs today, and Gemini models returned intermittent 503s earlier; the Groq fallback covers this.
+- **Free-tier rate limits:** Groq free plan about 8K tokens/min (roughly 3 extractions/min); Jev 1 successful call/min (extra calls are skipped with an honest trace); the per-IP guard adds its own limits. Do not run back-to-back extractions during the demo.
+- **Groq `qwen/qwen3.8-27b` is a Preview model** and may change or disappear.
+- **Probe UI not wired:** `/api/probe` works, but the lab UI does not call it yet (UI owner: ChatGPT Work; spec in MOONSHOT.md).
+- **Fixtures and samples are synthetic clean renders:** accuracy on real photos is not measured; the 10-fixture comparison is not a benchmark (VISION_FALLBACK.md).
+- Per-instance in-memory rate limiting and Jev pacing: parallel serverless instances count separately.
+- Unit economics are not measured; free-plan $0 is not a production cost (UNIT_ECONOMICS.md).
 
-Update dated state transitions with links and proof. Do not replace observed history with desired results.
+## Release status
+Product freeze verdict is issued per FREEZE_CHECKLIST.md with exact SHA, URL and links; this page is a dated snapshot, so verify the live repository, CI and `/api/health` before reporting current progress.
 
-
-## Post-documentation-merge verification (2026-10-11)
-- **PR #3 merged**: https://github.com/dude297/Ohmni/pull/3 ; squash merge SHA **2b2fbce1644d64b02505dbaa929fe6c5f452c1f4**. Both CI runs on final PR head c8007d051f40824d6620692fd8017c8f94806f57 completed successfully.
-- North star now on main: https://github.com/dude297/Ohmni/blob/main/docs/ROADMAP.md . This is a **documentation-level freeze**.
-- **Frontend PR #4 remains open at audit**: https://github.com/dude297/Ohmni/pull/4 . Its inspected head dd931ad5710759a5b1f2e0b7bcad62e08f38894b had two CI failures at npm run typecheck; npm test and npm run build were skipped in those runs. Newer commits/runs must be checked before any merge decision.
-- Solver, Gemini and Jev implementations remained unverified stubs on main as of audit. No public deployment or live E2E model/solver test was verified.
-- **Formal freeze notification: DOCS READY / PRODUCT RED (NOT RELEASE FREEZE READY).** Required next evidence: real solver fixtures; Gemini image call; Jev route divergence; frontend typecheck/build; deployment URL and three-minute E2E smoke.
-- This record is time-scoped and may become stale as autonomous agents commit more work; verify live repository/CI before reporting current progress.
+## History (superseded, kept for audit trail)
+- Initial docs-only baseline main: bcb1e41806f62177498bac61f7e0e89a58de9eda. At the second audit (main b315da3) `validateGraph`, `solveDC`, `extractCircuit` and `routeExtraction` were stubs and Gemini, Jev, secondary vision and the production URL were UNVERIFIED; release status was RED.
+- PR #3 (docs) merged as 2b2fbce1644d64b02505dbaa929fe6c5f452c1f4; documentation freeze only, product RED at that time. PR #4 (frontend) was then open with typecheck failures; it has since merged.

@@ -11,5 +11,6 @@ Endpoint: `POST https://multimodal-hackathon-sage.vercel.app/api/extract`, 2026-
 Notes
 - `ambiguous-junction.png` = divider with R2's lower node wire running up through the VOUT wire with no junction dot, plus loose stubs; R2 value legible. This is the preferred verify_topology demo.
 - `ambiguous-smudged.png` = same plus R2 value smudged ("1?k"). Gives the ask_user outcome (no graph).
-- On the verify_topology run the trace showed an extra step `verify_topology` (openai gpt-5.6-terra), `status: skipped`, note "OPENAI_API_KEY not configured". So the route is chosen live by Jev, but the downstream verifier did not execute in that deployment.
+- Historical (observed before Groq was merged): on the verify_topology run the trace showed an extra step `verify_topology` with a since-removed OpenAI verifier, `status: skipped` (key not configured). The route was chosen live by Jev, but no verifier executed in that deployment. The verifier is now Groq `qwen/qwen3.8-27b` (src/lib/ai/secondary.ts); a live verify_topology run with Groq has not been recorded in this table.
+- The samples are in `public/samples/`; routes above are single observations, and Gemini free-quota exhaustion (429) now falls back to Groq for extraction, so the extraction column may show Groq in later runs.
 - 3 live calls used, each ~70 s apart; each result observed once (not repeated), so routing stability across reruns is not established.

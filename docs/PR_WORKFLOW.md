@@ -15,4 +15,4 @@
 Actual lint, typecheck, unit tests and build where application exists; if CI absent, say so and show verified local output. Check two known voltage cases, malformed/floating errors, no unsupported topology solved, honest Jev traces, no client keys. Do not treat Prelint approval as functional proof. Prelint/sponsor integrations are optional/nonblocking and may incur cost.
 
 ## Freeze
-At ROADMAP T+150 stop feature PRs. Only P0 fixes after freeze, with regression and hosted verification. Release sign-off follows FREEZE_CHECKLIST only.
+At the ROADMAP feature freeze (3:30 PM PDT, October 11) stop feature PRs. Only P0 fixes after freeze, with regression and hosted verification. Release sign-off follows FREEZE_CHECKLIST only.

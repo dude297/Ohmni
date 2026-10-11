@@ -23,6 +23,8 @@ The canonical graph is mathematical truth after user review; breadboard coordina
 
 ## Absolute-time execution and go/no-go gates — October 11 (PDT)
 
+*Status note: the plan below is the original schedule. Frontend PR #4, the live Gemini/Jev wiring, the Groq fallback/verifier (#26), abuse guard (#24), demo samples (#23), smoke script (#22) and Probe Guide backend (#25) have since merged; see CURRENT_STATE.md for the current state.*
+
 **Corrected deadline: 5:30 PM PDT.** Around 11:30 AM PDT there were approximately six hours remaining; these are wall-clock *targets* and must not be treated as evidence of feature completion. This schedule overrides the earlier T+65 / T+110 / T+150 / T+180 / T+210 gates.
 
 | Time (PDT) | Owner / priorities | Required exit evidence |

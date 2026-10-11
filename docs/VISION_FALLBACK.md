@@ -22,7 +22,7 @@ Confirmed from console.groq.com/docs/vision: `qwen/qwen3.8-27b` is the only Groq
 
 The model returns `kind: "vsource"` for the source; the normaliser maps vsource/voltage_source/battery etc. to `dc_voltage`.
 
-Groq is also the secondary topology verifier (`verifyTopology` in secondary.ts, replaces OpenAI) when Jev picks `verify_topology`. Two models agreeing is NOT proof the circuit was read correctly; the trace note and a warning say so, and `requiresHumanReview` stays true.
+Groq is also the secondary topology verifier (`verifyTopology` in secondary.ts; the former OpenAI verifier is removed) when Jev picks `verify_topology`. Two models agreeing is NOT proof the circuit was read correctly; the trace note and a warning say so, and `requiresHumanReview` stays true.
 
 ## Live comparison (10 fixtures in fixtures/circuits, measured 2026-10-11)
 `node scripts/vision-compare.mjs --env <.env.local>`; sequential, one attempt per call, no Jev. Accuracy and latency are over calls that returned a response; API errors are counted separately. Not an exhaustive benchmark: the fixtures are clean synthetic renders.

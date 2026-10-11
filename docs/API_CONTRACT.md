@@ -45,10 +45,11 @@ export type SolveResponse = {
 };
 ~~~
 
-## Planned endpoint contracts (not implemented by scaffolding)
-- **POST /api/extract** multipart image JPEG/PNG/WebP <=5 MB -> { extraction: CandidateExtraction, route: RouteChoice, trace: ModelTraceEvent[] }. Every candidate requires user review. Typed 400/413/415/503 and manual fallback.
-- **POST /api/solve** JSON { graph: CircuitGraph, userConfirmed: true, measuredVoltage?: number } -> { result: SolveResponse }; 422 invalid or 409 missing confirmation.
-- **GET /api/health** -> { status:"ok", build?:string }, checks server availability, NOT providers.
+## Endpoint contracts (implemented)
+- **POST /api/extract** multipart `image` JPEG/PNG/WebP <=5 MB -> { extraction: CandidateExtraction, route: RouteChoice, trace: ModelTraceEvent[] }. Every candidate requires user review. Typed errors: 400 (`INVALID_FORM`, `MISSING_IMAGE`, `UNSUPPORTED_TYPE`), 413 `TOO_LARGE`, 429 `RATE_LIMITED` (per-IP guard in src/proxy.ts: 6/min, 40/h; bodies >6 MB get 413 there). If all providers fail the response is still 200 with `graph: null` and route `ask_user` (manual fallback).
+- **POST /api/solve** JSON { graph: CircuitGraph, userConfirmed: true, measuredVoltage?: number } -> { result: SolveResponse }; 400 `BAD_JSON`, 422 `NOT_CONFIRMED` (missing confirmation), `INVALID_GRAPH` or `UNSOLVABLE`; 429 above 60/min per IP.
+- **POST /api/probe** JSON { graph, userConfirmed: true, observations?: { node, volts }[] } -> { result: { hypotheses, next, done, reason, fitWarning?, safety, trace } }; same error codes as /api/solve. Probe Guide, no model calls; spec in MOONSHOT.md.
+- **GET /api/health** -> { status:"ok", build, providers: { gemini, groq, jev } } where each provider is { configured: boolean, model: string }. Reports env presence only, never key values, and does not call providers.
 
 ## Invariants
 Unique component IDs, finite values, positive resistances, valid nodes/ground/measure node; preserve signed independent voltage-source orientation. Reject floating/singular/conflicting networks and unresolved candidate topology. Invalid Jev output or outage → explicit ask_user, trace actual error. Never treat visual recognition or a successful solver output as proof the photograph was perfectly parsed.
