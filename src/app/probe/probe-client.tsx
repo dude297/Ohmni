@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AlertTriangle, ArrowLeft, CheckCircle2, GraduationCap, Loader2, Undo2, X } from "lucide-react";
 import { Brand } from "../../components/ohmni/brand";
 import { CircuitView } from "../../components/ohmni/circuit-view";
 import type { FaultHypothesis, ProbeStep } from "../../lib/probe";
 import type { ModelTraceEvent } from "../../lib/circuit/types";
 import { CIRCUITS, Obs, addObservation, apiErrorMessage, fmtPct, fmtV, parseVolts } from "./helpers";
+import { GuidePanel, ProbeSchematic } from "./guide-overlay";
 import "./probe.css";
 
 // Classes are prefixed "pg-" in probe.css (see note there); s.foo -> "pg-foo".
@@ -52,6 +53,13 @@ export function ProbeClient() {
   const [exp, setExp] = useState<Explain | null>(null);
   const [expLoading, setExpLoading] = useState(false);
   const [expError, setExpError] = useState("");
+
+  const [guideOpen, setGuideOpen] = useState(true);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const closeGuide = useCallback(() => {
+    if (document.activeElement?.closest(".pg-guide")) toggleRef.current?.focus();
+    setGuideOpen(false);
+  }, []);
 
   const node = result?.next?.node ?? graph.measureNode;
   const value = parseVolts(input);
@@ -153,6 +161,21 @@ export function ProbeClient() {
             <div className="circuit-canvas">
               <CircuitView graph={graph} />
             </div>
+            <ProbeSchematic graph={graph} highlight={result ? (result.done ? null : result.next?.node ?? null) : graph.measureNode} />
+            {result && !result.done && result.next && (
+              <>
+                <button ref={toggleRef} type="button" className={`button secondary ${s.toggle}`} aria-expanded={guideOpen} onClick={() => (guideOpen ? closeGuide() : setGuideOpen(true))}>
+                  {guideOpen ? "Hide guide" : "Show guide"}
+                </button>
+                <GuidePanel
+                  step={result}
+                  open={guideOpen}
+                  onClose={closeGuide}
+                  titleOf={titleOf}
+                  onEnter={() => document.getElementById("v1")?.focus()}
+                />
+              </>
+            )}
 
             <h3 className={s.h3}>Your readings</h3>
             {obs.length === 0 ? (

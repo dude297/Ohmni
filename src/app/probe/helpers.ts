@@ -49,3 +49,37 @@ export function apiErrorMessage(status: number, body: unknown, retryAfterHeader?
   if (e?.message) return e.details?.length ? `${e.message}: ${e.details.join("; ")}` : e.message;
   return `Request failed (HTTP ${status}).`;
 }
+
+/** Schematic layout: nodes in a column (ground last), each component a labelled bracket on its own lane. */
+export type SchemNode = { name: string; x: number; y: number };
+export type SchemPart = { id: string; kind: string; a: SchemNode; b: SchemNode; laneX: number };
+export function schematicLayout(graph: CircuitGraph): { nodes: SchemNode[]; parts: SchemPart[]; width: number; height: number } {
+  const names: string[] = [];
+  for (const c of graph.components) for (const n of [c.positiveNode, c.negativeNode]) if (!names.includes(n)) names.push(n);
+  const ordered = [...names.filter((n) => n !== graph.groundNode), ...(names.includes(graph.groundNode) ? [graph.groundNode] : [])];
+  const nodes = ordered.map((name, i) => ({ name, x: 70, y: 52 + i * 80 }));
+  const at = (n: string) => nodes.find((x) => x.name === n)!;
+  const spans: [number, number][] = [];
+  const parts = graph.components.map((c) => {
+    const a = at(c.positiveNode), b = at(c.negativeNode);
+    const lo = Math.min(a.y, b.y), hi = Math.max(a.y, b.y);
+    const lane = spans.filter(([l, h]) => l < hi && h > lo).length;
+    spans.push([lo, hi]);
+    return { id: c.id, kind: c.kind, a, b, laneX: 150 + lane * 56 };
+  });
+  const lanes = Math.max(0, ...parts.map((p) => (p.laneX - 150) / 56)) + 1;
+  return { nodes, parts, width: Math.max(290, 150 + lanes * 56 + 40), height: 52 + Math.max(0, nodes.length - 1) * 80 + 36 };
+}
+
+/** "≈ 0 V → V1 dead or R1 open (50%)" */
+export function outcomePhrase(volts: number, titles: string[], probability: number): string {
+  const more = titles.length > 3 ? ` +${titles.length - 3} more` : "";
+  return `≈ ${fmtV(volts)} → ${titles.slice(0, 3).join(" or ")}${more} (${fmtPct(probability)})`;
+}
+
+/** Plain-words reading of expectedBits. */
+export function bitsPhrase(bits: number): string {
+  if (bits >= 0.9) return "this reading splits the remaining suspects about in half, the best possible check";
+  if (bits >= 0.4) return "this reading splits the remaining suspects best";
+  return "this reading narrows the suspects a little, but it is the most useful one left";
+}
