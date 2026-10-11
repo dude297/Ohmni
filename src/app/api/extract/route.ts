@@ -1,4 +1,4 @@
-import { extractCircuit } from '@/lib/ai/gemini';
+import { extractWithFallback } from '@/lib/ai/vision';
 import { routeExtraction } from '@/lib/ai/jev';
 import { verifyTopology } from '@/lib/ai/secondary';
 import { validateGraph } from '@/lib/circuit/validate';
@@ -25,24 +25,13 @@ export async function POST(req: Request) {
   const trace: ModelTraceEvent[] = [];
   let extraction: CandidateExtraction;
 
-  try {
-    const r = await extractCircuit(bytes, file.type);
-    extraction = r.extraction;
-    trace.push(r.event);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'unknown error';
-    trace.push({ step: 'extract', provider: 'gemini', durationMs: 0, status: 'error', note: msg });
-    return Response.json({
-      extraction: {
-        inputKind: 'unknown',
-        graph: null,
-        warnings: [`Vision extraction unavailable: ${msg}`],
-        unresolvedConnections: [],
-        requiresHumanReview: true,
-      } satisfies CandidateExtraction,
-      route: 'ask_user' satisfies RouteChoice,
-      trace,
-    });
+  const r = await extractWithFallback(bytes, file.type);
+  extraction = r.extraction;
+  trace.push(...r.events);
+  if (!r.ok) {
+    // Every provider failed: skip Jev (nothing to route) and say so honestly in the trace.
+    trace.push({ step: 'route', provider: 'jev', durationMs: 0, status: 'skipped', note: 'no extraction available', chosenRoute: 'ask_user' });
+    return Response.json({ extraction, route: 'ask_user' satisfies RouteChoice, trace });
   }
 
   let validationErrors: string[] = [];

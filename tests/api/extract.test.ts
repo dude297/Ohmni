@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/ai/gemini', () => ({ extractCircuit: vi.fn() }));
+vi.mock('@/lib/ai/vision', () => ({ extractWithFallback: vi.fn() }));
 vi.mock('@/lib/ai/jev', () => ({ routeExtraction: vi.fn() }));
 vi.mock('@/lib/ai/secondary', () => ({ verifyTopology: vi.fn() }));
 vi.mock('@/lib/circuit/validate', () => ({ validateGraph: vi.fn(() => ({ ok: true })) }));
 
 import { POST } from '@/app/api/extract/route';
-import { extractCircuit } from '@/lib/ai/gemini';
+import { extractWithFallback } from '@/lib/ai/vision';
 import { routeExtraction } from '@/lib/ai/jev';
 
 const post = (file?: File) => {
@@ -33,20 +33,40 @@ describe('POST /api/extract', () => {
     expect((await post(new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'a.png', { type: 'image/png' }))).status).toBe(413);
   });
 
-  it('falls back to ask_user when extraction throws', async () => {
-    vi.mocked(extractCircuit).mockRejectedValue(new Error('GEMINI_NOT_CONFIGURED'));
+  it('ask_user without calling Jev when every provider fails', async () => {
+    const extraction = {
+      inputKind: 'unknown',
+      graph: null,
+      warnings: ['Automated extraction unavailable (gemini rate_limited, groq not_configured); enter the circuit manually.'],
+      unresolvedConnections: [],
+      requiresHumanReview: true,
+    };
+    vi.mocked(extractWithFallback).mockResolvedValue({
+      extraction,
+      events: [
+        { step: 'extract', provider: 'google', durationMs: 1, status: 'error' },
+        { step: 'extract', provider: 'groq', durationMs: 0, status: 'skipped' },
+      ],
+      ok: false,
+    } as never);
     const r = await post(png());
     const j = await r.json();
     expect(r.status).toBe(200);
     expect(j.route).toBe('ask_user');
     expect(j.extraction.graph).toBeNull();
-    expect(j.extraction.warnings[0]).toMatch(/Vision extraction unavailable/);
-    expect(j.trace[0].status).toBe('error');
+    expect(j.extraction.warnings[0]).toMatch(/Automated extraction unavailable/);
+    expect(j.trace.map((t: { provider: string }) => t.provider)).toEqual(['google', 'groq', 'jev']);
+    expect(j.trace[2].status).toBe('skipped');
+    expect(routeExtraction).not.toHaveBeenCalled();
   });
 
-  it('happy path returns route and 2+ trace events', async () => {
+  it('happy path returns route and 2+ trace events; Jev runs after successful extraction', async () => {
     const extraction = { inputKind: 'schematic', graph: null, warnings: [], unresolvedConnections: [], requiresHumanReview: true };
-    vi.mocked(extractCircuit).mockResolvedValue({ extraction, event: { step: 'extract', provider: 'gemini', durationMs: 1, status: 'ok' } } as never);
+    vi.mocked(extractWithFallback).mockResolvedValue({
+      extraction,
+      events: [{ step: 'extract', provider: 'google', durationMs: 1, status: 'ok' }],
+      ok: true,
+    } as never);
     vi.mocked(routeExtraction).mockResolvedValue({
       route: 'review_extraction',
       event: { step: 'route', provider: 'beatapi', durationMs: 1, status: 'ok', chosenRoute: 'review_extraction' },
@@ -54,5 +74,6 @@ describe('POST /api/extract', () => {
     const j = await (await post(png())).json();
     expect(j.route).toBe('review_extraction');
     expect(j.trace.length).toBeGreaterThanOrEqual(2);
+    expect(Object.keys(j).sort()).toEqual(['extraction', 'route', 'trace']);
   });
 });

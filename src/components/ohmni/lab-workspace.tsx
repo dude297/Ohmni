@@ -32,7 +32,9 @@ import {
   parseResult,
   request,
   sampleGraph,
+  isDivider,
   solveSample,
+  type SampleKind,
 } from "./api";
 
 type Mode = "empty" | "sample" | "manual" | "upload";
@@ -43,8 +45,13 @@ export function LabWorkspace() {
   const [mode, setMode] = useState<Mode>(
     params.has("sample") ? "sample" : "empty",
   );
+  const [sampleKind, setSampleKind] = useState<SampleKind>(
+    params.get("sample") === "network" ? "network" : "divider",
+  );
   const [graph, setGraph] = useState<Graph | null>(
-    params.has("sample") ? sampleGraph() : null,
+    params.has("sample")
+      ? sampleGraph(params.get("sample") === "network" ? "network" : "divider")
+      : null,
   );
   const [selected, setSelected] = useState("R2");
   const [confirmed, setConfirmed] = useState(false);
@@ -100,9 +107,10 @@ export function LabWorkspace() {
     if (params.has("upload")) inputRef.current?.focus();
   }, [params]);
 
-  function reset(kind: "sample" | "manual") {
+  function reset(kind: "sample" | "manual", variant: SampleKind = "divider") {
     setMode(kind);
-    setGraph(sampleGraph());
+    setSampleKind(variant);
+    setGraph(sampleGraph(variant));
     setSelected("R2");
     setConfirmed(false);
     setResult(null);
@@ -120,6 +128,7 @@ export function LabWorkspace() {
   }
   function editGraph(next: Graph) {
     setGraph(next);
+    if (!isDivider(next)) setUseBackend(true);
     setConfirmed(false);
     setResult(null);
     setError("");
@@ -259,7 +268,7 @@ export function LabWorkspace() {
           <button
             className="button secondary small"
             disabled={pending}
-            onClick={() => reset("sample")}
+            onClick={() => reset("sample", sampleKind)}
           >
             <FlaskConical size={16} /> Load sample
           </button>
@@ -271,7 +280,7 @@ export function LabWorkspace() {
             <span className="tiny-dot" />
             <strong>
               {mode === "sample"
-                ? "SAMPLE / DEMO"
+                ? sampleKind === "network" ? "SERIES + PARALLEL / DEMO" : "VOLTAGE DIVIDER / DEMO"
                 : mode === "manual"
                   ? "MANUAL DIVIDER"
                   : mode === "upload"
@@ -282,7 +291,7 @@ export function LabWorkspace() {
               {mode === "upload"
                 ? "Candidate extraction requires your review. Provider steps appear only when returned by the backend."
                 : mode === "empty"
-                  ? "Try the sample without signing up, or upload a schematic."
+                  ? "Try a DC sample without signing up, or upload a schematic."
                   : useBackend
                     ? "Server solve selected. No simulated provider events."
                     : "Local divider calculation. No AI providers have run."}
@@ -292,8 +301,8 @@ export function LabWorkspace() {
             <button
               className="icon-button"
               disabled={pending}
-              onClick={() => reset(mode === "manual" ? "manual" : "sample")}
-              aria-label="Reset to divider"
+              onClick={() => reset(mode === "manual" ? "manual" : "sample", sampleKind)}
+              aria-label="Reset current sample"
             >
               <RotateCcw size={16} />
             </button>
@@ -344,7 +353,7 @@ export function LabWorkspace() {
             ) : (
               <div className="sample-card">
                 <div className="eyebrow">
-                  A SIMPLE CIRCUIT. A REAL QUESTION.
+                  SCHEMATIC-FIRST · REVIEW BEFORE SOLVING
                 </div>
                 <div className="mini-netlist">
                   <span>5 V</span>
@@ -357,18 +366,16 @@ export function LabWorkspace() {
                   <i />
                   <span>GND</span>
                 </div>
-                <h3>Why am I reading 0.45 V?</h3>
+                <h3>{sampleKind === "network" ? "What should MID read?" : "Why am I reading 0.45 V?"}</h3>
                 <p>
-                  A two-resistor divider should give you 2.50 V. Follow the
-                  discrepancy to a testable hypothesis.
+                  {sampleKind === "network"
+                    ? "A 12 V series/parallel network should give 6.545 V at MID. Use the server solver to verify."
+                    : "A two-resistor divider should give 2.50 V. Follow a mismatch to a testable hypothesis."}
                 </p>
-                <button
-                  className="text-button"
-                  disabled={pending}
-                  onClick={() => reset("sample")}
-                >
-                  Try this sample <ArrowRight size={15} />
-                </button>
+                <div className="sample-choices">
+                  <button className="text-button" disabled={pending} onClick={() => reset("sample", "divider")}>Try divider <ArrowRight size={15} /></button>
+                  <button className="text-button" disabled={pending} onClick={() => reset("sample", "network")}>Try network <ArrowRight size={15} /></button>
+                </div>
               </div>
             )}
             <div className="capture-help">
@@ -684,11 +691,11 @@ export function LabWorkspace() {
                 className="text-button"
                 disabled={pending || !graph}
                 onClick={() => {
-                  setMeasurement("0.45");
+                  setMeasurement(mode === "sample" && sampleKind === "network" ? "4.8" : "0.45");
                   setResult(null);
                 }}
               >
-                Use demo reading: 0.45 V
+                Use demo reading: {mode === "sample" && sampleKind === "network" ? "4.8 V" : "0.45 V"}
               </button>
               {!validMeasured && (
                 <p className="inline-error">Enter a finite voltage.</p>
@@ -698,14 +705,14 @@ export function LabWorkspace() {
               <label className="backend-switch">
                 <input
                   type="checkbox"
-                  disabled={pending}
+                  disabled={pending || !isDivider(graph)}
                   checked={useBackend}
                   onChange={(e) => {
                     setUseBackend(e.target.checked);
                     setResult(null);
                   }}
                 />
-                <span>Use backend solver</span>
+                <span>{isDivider(graph) ? "Use backend solver" : "Backend MNA required for this network"}</span>
               </label>
             )}
             <button

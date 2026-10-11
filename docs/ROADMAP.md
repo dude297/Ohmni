@@ -2,6 +2,9 @@
 
 **Single authoritative plan.** Product: Ohmni. Date: **Sunday, October 11, 2026**. User-confirmed external hard deadline: **5:30 PM Pacific Daylight Time (PDT; America/Los_Angeles)** = **8:30 PM Eastern Daylight Time (EDT)**. The original 210-minute kickoff schedule below is superseded by the absolute-time recovery schedule in this document. **Submit by 5:00 PM PDT**, leaving a 30-minute contingency buffer. Owner: Claude Opus 5.5; frontend owner: ChatGPT Work; target branch: main; PRs only.
 
+## Product expansion vision
+See [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md) and the homepage for honest phase statuses and future use cases. It does **not** authorize new P1/P2 code before the fixed hackathon freeze.
+
 ## The demo promise
 A real, clear low-voltage DC schematic image becomes an editable, user-confirmed **electrical graph**; a real Jev decision changes how it is checked; a deterministic simulator computes expected node voltages; a measured voltage mismatch yields a **testable** fault hypothesis and a suggested next safe measurement. The UI is polished, fast and honest about uncertainty.
 

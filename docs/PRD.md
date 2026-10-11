@@ -3,6 +3,9 @@
 ## Who and why
 Primary user: EE/ECE student or teaching lab diagnosing a simple low-voltage DC circuit. Secondary: hobbyist and hardware prototyping engineer. The user needs to reconcile intended schematic, actual readings and possible component/wiring mistakes without rebuilding every circuit manually in an editor. **Commercial willingness-to-pay and saved time are hypotheses, not validated claims.**
 
+## Honest positioning
+**Ohmni turns readable schematics into verifiable electrical graphs, then helps investigate what is wrong.** Dense diagrams, arbitrary PCB/breadboard extraction and AC/nonlinear components are deferred. The forward-looking homepage product roadmap is [PRODUCT_ROADMAP.md](PRODUCT_ROADMAP.md), distinct from actual delivery gates.
+
 ## Job to be done
 Upload a clean schematic; extract symbols, values and connections; review/correct the representation; compute known expected behavior; enter an external measurement; receive ranked *testable* hypotheses and a safe next measurement, with optional EE explanation.
 
