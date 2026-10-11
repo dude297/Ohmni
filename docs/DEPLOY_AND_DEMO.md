@@ -4,13 +4,16 @@
 **External hard deadline: Sunday October 11, 2026, 5:30 PM PDT = 8:30 PM EDT.** Target submission **5:00 PM PDT**, 30-minute cushion. Feature freeze **3:30 PM PDT**, production verification **3:30–4:30 PM PDT**, rehearsal/submission **4:30–5:00 PM PDT**. See ROADMAP.md; old T+150 schedule superseded.
 
 ### Hosting decision
-Single Node/Next.js deploy. Anbaric Cloud is a **20-minute T0 spike**: verify public frontend, /api/health, POST handling, PORT/start and server-only env variables. If no real result, deploy unchanged app to Vercel immediately. Do not introduce Render free/second FastAPI service.
+Single Node/Next.js app, two hosts (owner decision 2026-10-11, superseding the earlier "20-minute T0 spike" plan):
+- **Primary: Anbaric Cloud** — https://ohmni.cloud.anbaric.ai (app `ohmni`), prebuilt Next.js bundle served in-process; models + solver run on Anbaric (see docs/ANBARIC_DEPLOYMENT.md). Anbaric's managed app proxy is auth-walled by design (every request, incl. /api/health, 302s to Anbaric's Auth0 login; no anonymous mode), so it does **not** satisfy "public URL opens in incognito" — judges need an Anbaric login or organizer-provided access.
+- **Public fallback: Vercel** — https://multimodal-hackathon-sage.vercel.app, same code and live providers; this is the URL that meets checklist item 1 below.
+Do not introduce Render free/second FastAPI service.
 
 ### Credentials and safety
 GEMINI_API_KEY, GEMINI_MODEL (default `gemini-3.5-flash`), BEATAPI_API_KEY, BEATAPI_JEV_MODEL (`jev-1.13-free`), GROQ_API_KEY, GROQ_VISION_MODEL (`qwen/qwen3.8-27b`) are server-only (see .env.example). Production: https://multimodal-hackathon-sage.vercel.app (Vercel project "ohmni"); `GET /api/health` shows the build and which providers are configured; `npm run smoke` checks it. Never NEXT_PUBLIC keys. .env.local excluded. Validate <=5MB file/MIME, timeouts, secrets in bundles/logs, no persistent images.
 
 ### Smoke steps
-1. Public URL opens in incognito, mobile UI responsive.
+1. Public URL opens in incognito (Vercel; Anbaric requires login — see above), mobile UI responsive.
 2. GET /api/health 200 from actual Node runtime.
 3. Real clean schematic → Gemini candidate + Jev choice with trace.
 4. Edit/review → real solver 2.50V, alternate 0.454545V.
