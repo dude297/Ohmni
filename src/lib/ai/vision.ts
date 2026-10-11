@@ -1,5 +1,5 @@
 import type { CandidateExtraction, ModelTraceEvent } from '../circuit/types';
-import { extractCircuit } from './gemini';
+import { extractCircuit, geminiModel } from './gemini';
 import { extractWithGroq, groqModel } from './groq';
 
 export type FailureReason =
@@ -19,7 +19,7 @@ const empty = (): CandidateExtraction => ({ inputKind: 'unknown', graph: null, w
 export const geminiExtractor: VisionExtractor = {
   provider: 'google',
   get model() {
-    return process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+    return geminiModel();
   },
   async extract(image, mime) {
     try {
