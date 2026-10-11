@@ -25,3 +25,6 @@ Product freeze verdict is issued per FREEZE_CHECKLIST.md with exact SHA, URL and
 ## History (superseded, kept for audit trail)
 - Initial docs-only baseline main: bcb1e41806f62177498bac61f7e0e89a58de9eda. At the second audit (main b315da3) `validateGraph`, `solveDC`, `extractCircuit` and `routeExtraction` were stubs and Gemini, Jev, secondary vision and the production URL were UNVERIFIED; release status was RED.
 - PR #3 (docs) merged as 2b2fbce1644d64b02505dbaa929fe6c5f452c1f4; documentation freeze only, product RED at that time. PR #4 (frontend) was then open with typecheck failures; it has since merged.
+
+## Release snapshot 2026-10-11 ~12:45 PM PDT
+Main `a9f6360`, CI green, prod `/api/health` build `a9f6360` (visionPrimary groq by code default; `VISION_PRIMARY` unset in Vercel), non-live smoke 11/11, negatives and rate limit (429 + Retry-After) verified, no secrets in repo or production bundles. Overall AMBER; details and evidence in `docs/RELEASE_REPORT.md`.
