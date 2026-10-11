@@ -1,0 +1,103 @@
+{
+  "phase": "before",
+  "environment": "Local browser / React component harness; real solve and probe route handlers; Next link/navigation adapters; no model calls.",
+  "errors": [],
+  "metrics": [
+    {
+      "width": 320,
+      "route": "home",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 320,
+      "route": "lab",
+      "overflow": false,
+      "comparisonHeight": 167.484375
+    },
+    {
+      "width": 320,
+      "route": "probe",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 320,
+      "route": "architecture",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 390,
+      "route": "home",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 390,
+      "route": "lab",
+      "overflow": false,
+      "comparisonHeight": 194.484375
+    },
+    {
+      "width": 390,
+      "route": "probe",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 390,
+      "route": "architecture",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 768,
+      "route": "home",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 768,
+      "route": "lab",
+      "overflow": false,
+      "comparisonHeight": 173.25
+    },
+    {
+      "width": 768,
+      "route": "probe",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 768,
+      "route": "architecture",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 1440,
+      "route": "home",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 1440,
+      "route": "lab",
+      "overflow": false,
+      "comparisonHeight": 357.390625
+    },
+    {
+      "width": 1440,
+      "route": "probe",
+      "overflow": false,
+      "comparisonHeight": null
+    },
+    {
+      "width": 1440,
+      "route": "architecture",
+      "overflow": false,
+      "comparisonHeight": null
+    }
+  ]
+}

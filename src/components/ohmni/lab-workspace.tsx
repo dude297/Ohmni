@@ -14,7 +14,6 @@ import {
   FlaskConical,
   LoaderCircle,
   Network,
-  RotateCcw,
   ScanLine,
   Upload,
   Zap,
@@ -42,9 +41,16 @@ import {
 
 type Mode = "empty" | "sample" | "manual" | "upload";
 type Phase = "review" | "extracting" | "solving";
+type Stage = "capture" | "review" | "compare" | "investigate";
+const stages: Stage[] = ["capture", "review", "compare", "investigate"];
 
 export function LabWorkspace() {
   const params = useSearchParams();
+  const [stage, setStage] = useState<Stage>(params.has("sample") ? "review" : "capture");
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
+  const frameRef = useRef<HTMLDivElement>(null);
+  const stagesRef = useRef<HTMLElement>(null);
+  const moveFocus = useRef(false);
   const initialSample: SampleKind = params.get("sample") === "network" ? "network" : params.get("sample") === "ladder" ? "ladder" : "divider";
   const [probeTarget, setProbeTarget] = useState<string>();
   const [mode, setMode] = useState<Mode>(
@@ -62,6 +68,7 @@ export function LabWorkspace() {
   const [confirmed, setConfirmed] = useState(false);
   const [phase, setPhase] = useState<Phase>("review");
   const [measurement, setMeasurement] = useState("");
+  const [investigateReading, setInvestigateReading] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [resultSource, setResultSource] = useState<"local" | "backend">(
     "local",
@@ -77,6 +84,9 @@ export function LabWorkspace() {
   const [json, setJson] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+  const investigationStatusRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const revealedResult = useRef<Result | null>(null);
   const pending = phase !== "review";
   const measured = measurement.trim() ? Number(measurement) : undefined;
   const validMeasured = measured === undefined || Number.isFinite(measured);
@@ -102,6 +112,56 @@ export function LabWorkspace() {
     delta !== undefined &&
     Math.abs(delta) > Math.max(0.05, Math.abs(expected!) * 0.05);
   const events = [...trace, ...(result?.trace ?? [])];
+  const stageIndex = stages.indexOf(stage);
+  const sourceLabel = mode === "sample"
+    ? "Prepared circuit · no image AI call"
+    : mode === "manual"
+      ? "Manual circuit · no image AI call"
+      : imageUrl
+        ? "Uploaded schematic · review the returned extraction evidence"
+        : graph ? "Imported circuit graph · no image AI call" : null;
+  const canEnter = {
+    capture: true,
+    review: !!graph,
+    compare: confirmed && reviewReady,
+    investigate: confirmed && reviewReady && !!result,
+  };
+  const status = phase === "extracting"
+    ? "Reading schematic"
+    : phase === "solving"
+      ? "Analyzing circuit"
+      : result
+        ? "Analysis complete"
+        : confirmed
+          ? "Circuit confirmed"
+          : graph
+            ? "Review required"
+            : imageUrl ? "Review needs attention" : null;
+  function goTo(next: Stage) {
+    if (pending || !canEnter[next]) return;
+    setDirection(stages.indexOf(next) < stageIndex ? "back" : "forward");
+    if (next === "investigate") setInvestigateReading(measurement);
+    moveFocus.current = true;
+    setStage(next);
+  }
+  useEffect(() => {
+    if (!moveFocus.current) return;
+    frameRef.current
+      ?.querySelector<HTMLElement>("section:not([hidden]) h2")
+      ?.focus({ preventScroll: true });
+    stagesRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    moveFocus.current = false;
+  }, [stage]);
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, [error]);
+  useEffect(() => {
+    if (!result || pending || revealedResult.current === result) return;
+    revealedResult.current = result;
+    const answer = stage === "investigate" ? investigationStatusRef.current : statusRef.current;
+    answer?.focus({ preventScroll: true });
+    answer?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  }, [result, pending, stage]);
   const allNodes = graph ? [...new Set(graph.components.flatMap((c) => [c.positiveNode, c.negativeNode]))] : [];
 
   useEffect(
@@ -115,6 +175,7 @@ export function LabWorkspace() {
   }, [params]);
 
   function reset(kind: "sample" | "manual", variant: SampleKind = "divider") {
+    setStage("capture");
     setMode(kind);
     setSampleKind(variant);
     setGraph(sampleGraph(variant));
@@ -122,6 +183,7 @@ export function LabWorkspace() {
     setConfirmed(false);
     setResult(null); setProbeTarget(undefined);
     setMeasurement("");
+    setInvestigateReading("");
     setError("");
     setExtraction(null);
     setRoute(null);
@@ -134,6 +196,7 @@ export function LabWorkspace() {
     if (inputRef.current) inputRef.current.value = "";
   }
   function editGraph(next: Graph) {
+    setStage("review");
     setGraph(next);
     if (!isDivider(next)) setUseBackend(true);
     setConfirmed(false);
@@ -165,6 +228,7 @@ export function LabWorkspace() {
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
+    setStage("capture");
     setMode("upload");
     setGraph(null);
     setConfirmed(false);
@@ -188,8 +252,11 @@ export function LabWorkspace() {
       setRoute(response.route);
       setTrace(response.trace);
       setGraph(response.extraction.graph);
-      if (response.extraction.graph)
+      if (response.extraction.graph) {
         setSelected(response.extraction.graph.components[0].id);
+        moveFocus.current = true;
+        setStage("review");
+      }
       else
         setError(
           `${response.extraction.warnings.join(" ")} No supported graph was extracted. Use a manual divider, or paste a reviewed circuit graph below.`.trim(),
@@ -227,8 +294,9 @@ export function LabWorkspace() {
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  async function solve() {
-    if (!confirmed || !graph || !reviewReady || !validMeasured) return;
+  async function solve(voltage = measured, destination: "compare" | "investigate" = "compare") {
+    if (!confirmed || !graph || !reviewReady || (voltage !== undefined && !Number.isFinite(voltage))) return;
+    setStage(destination);
     setPhase("solving");
     setError("");
     setResult(null); setProbeTarget(undefined);
@@ -238,10 +306,10 @@ export function LabWorkspace() {
             await request("/api/solve", {
               graph,
               userConfirmed: true,
-              ...(measured !== undefined ? { measuredVoltage: measured } : {}),
+              ...(voltage !== undefined ? { measuredVoltage: voltage } : {}),
             }),
           )
-        : solveSample(graph, measured);
+        : solveSample(graph, voltage);
       if (next.voltages[graph.measureNode] === undefined)
         throw new Error(
           "Solver response is missing the selected measurement node.",
@@ -252,7 +320,7 @@ export function LabWorkspace() {
       setError(e instanceof Error ? e.message : "Circuit analysis failed.");
     } finally {
       setPhase("review");
-      statusRef.current?.focus();
+      (destination === "investigate" ? investigationStatusRef : statusRef).current?.focus();
     }
   }
   function importGraph() {
@@ -262,6 +330,7 @@ export function LabWorkspace() {
         throw new Error(
           "Use schema version 1, GND, a measureNode, and unique resistor/DC-source components with finite SI values and distinct terminals.",
         );
+      moveFocus.current = true;
       editGraph(next);
       setMode("upload");
       setUseBackend(true);
@@ -292,8 +361,8 @@ export function LabWorkspace() {
         <div className="lab-title">
           <div>
             <div className="eyebrow">FOLLOW THE EVIDENCE</div>
-            <h1>A clearer picture.</h1>
-            <p>Capture, confirm, then compare your circuit with the math.</p>
+            <h1>Circuit investigation</h1>
+            <p>One circuit. Four steps from a schematic to your next useful measurement.</p>
           </div>
           <button
             className="button secondary small"
@@ -303,60 +372,29 @@ export function LabWorkspace() {
             <FlaskConical size={16} /> Load sample
           </button>
         </div>
-        <div
-          className={`session-banner ${mode === "upload" ? "backend-banner" : ""}`}
-        >
-          <div>
-            <span className="tiny-dot" />
-            <strong>
-              {mode === "sample"
-                ? sampleKind === "network" ? "SERIES + PARALLEL / DEMO" : sampleKind === "ladder" ? "FAULT ISOLATION / DEMO" : "VOLTAGE DIVIDER / DEMO"
-                : mode === "manual"
-                  ? "MANUAL DIVIDER"
-                  : mode === "upload"
-                    ? "BACKEND ANALYSIS"
-                    : "READY WHEN YOU ARE"}
-            </strong>
-            <span>
-              {mode === "upload"
-                ? "Candidate extraction requires your review. Provider steps appear only when returned by the backend."
-                : mode === "empty"
-                  ? "Try a DC sample without signing up, or upload a schematic."
-                  : useBackend
-                    ? "Server solve selected. No simulated provider events."
-                    : "Local divider calculation. No AI providers have run."}
-            </span>
-          </div>
-          {mode !== "empty" && (
-            <button
-              className="icon-button"
-              disabled={pending}
-              onClick={() => reset(mode === "manual" ? "manual" : "sample", sampleKind)}
-              aria-label="Reset current sample"
-            >
-              <RotateCcw size={16} />
-            </button>
-          )}
-        </div>
-        <nav className="investigation-steps" aria-label="Investigation progress">
-          {[
-            { href: "#capture-title", title: "Capture", complete: !!graph || !!imageUrl, state: phase === "extracting" ? "Waiting for extraction" : graph ? "Graph loaded" : imageUrl ? "Image loaded" : "Choose a starting point" },
-            { href: "#review-title", title: "Review", complete: confirmed, state: confirmed ? "Confirmed by you" : graph ? "Check values and terminals" : "Awaiting a graph" },
-            { href: "#analyze-title", title: "Understand", complete: !!result, state: phase === "solving" ? "Waiting for solver" : result ? resultSource === "backend" ? "Actual backend result" : "Local fallback result" : "Compare a measurement" },
-          ].map((step, i) => <a href={step.href} key={step.title} className={step.complete ? "step-complete" : ""} aria-current={phase === "extracting" && i === 0 || phase === "solving" && i === 2 || phase === "review" && !result && i === 1 && !!graph ? "step" : undefined}><span>{step.complete ? <Check size={14} /> : `0${i + 1}`}</span><div><strong>{step.title}</strong><small>{step.state}</small></div><ArrowRight size={14} /></a>)}
+        <div className="guided-status"><span>Step {stageIndex + 1} of 4</span>{status && <span className="investigation-status" role="status">{pending && <LoaderCircle size={13} className="spinner" />}{status}</span>}</div>
+        <nav className="guided-steps" ref={stagesRef} aria-label="Investigation stages">
+          {stages.map((item, i) => <button key={item} type="button" disabled={pending || !canEnter[item]} aria-current={stage === item ? "step" : undefined} onClick={() => goTo(item)}>
+            <span>{i + 1}</span><strong>{item[0].toUpperCase() + item.slice(1)}</strong>
+          </button>)}
         </nav>
-        <div className="workspace-grid">
+        {sourceLabel && <p className="investigation-context"><span>{sourceLabel}</span>{result && <span>{resultSource === "local" ? "Local divider calculation" : "Backend circuit solver"}</span>}</p>}
+        {error && <div className="error-card guided-error" role="alert" ref={errorRef}><CircleAlert size={18} /><div><strong>The investigation needs attention</strong><p>{error}</p><span>{stage === "capture" ? "Your source remains available. Try another image or a manual graph." : "Your circuit edits remain available. Retry this step or review its connections."}</span></div></div>}
+        <div className="guided-layout">
+        <div className="workspace-grid guided-frames" ref={frameRef} data-direction={direction}>
           <section
-            className="workspace-panel capture-panel"
+            className="workspace-panel capture-panel guided-frame"
+            hidden={stage !== "capture"}
             aria-labelledby="capture-title"
           >
             <PanelHeader
               number="01"
               icon={<ScanLine size={17} />}
-              title="Capture"
+              title="Start with a circuit."
               id="capture-title"
-              subtitle="Start with what you can see."
+              subtitle="Upload a schematic to analyze its connections, or try a sample to see how Ohmni works."
             />
+            <p className="stage-intro">Choose a readable schematic, a prepared example, or a manual graph. You will review the connections before any calculation.</p>
             <label className={`upload-zone ${pending ? "disabled" : ""}`}>
               <input
                 ref={inputRef}
@@ -451,20 +489,24 @@ export function LabWorkspace() {
                 Load graph for review
               </button>
             </details>
+            <div className="stage-actions"><span>{graph ? "Circuit loaded. Next, review its values and terminals." : "Load a circuit to continue."}</span><button className="button primary small" disabled={pending || !graph} onClick={() => goTo("review")}>Next step <ArrowRight size={16} /></button></div>
           </section>
           <section
-            className="workspace-panel review-panel"
+            className="workspace-panel review-panel guided-frame"
+            hidden={stage !== "review"}
             aria-labelledby="review-title"
           >
             <PanelHeader
               number="02"
               icon={<Network size={17} />}
-              title="Review"
+              title="Check the connections."
               id="review-title"
               subtitle="Your connections. Your confirmation."
             />
             {graph ? (
               <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {imageUrl && <details className="review-source"><summary>Review the original schematic</summary><img src={imageUrl} alt={`Original schematic: ${fileName}`} /><a href={imageUrl} target="_blank" rel="noopener noreferrer">Inspect original image ↗</a></details>}
                 <div className="diagram-toolbar">
                   <span>
                     {graph.components.length} COMPONENTS ·{" "}
@@ -701,17 +743,19 @@ export function LabWorkspace() {
                 </button>
               </div>
             )}
+            <div className="stage-actions"><button className="button secondary small" disabled={pending} onClick={() => goTo("capture")}><ArrowLeft size={16} /> Back</button><button className="button primary small" disabled={pending || !confirmed || !reviewReady} onClick={() => goTo("compare")}>Next step <ArrowRight size={16} /></button></div>
           </section>
           <section
-            className="workspace-panel analyze-panel"
+            className="workspace-panel analyze-panel guided-frame"
+            hidden={stage !== "compare"}
             aria-labelledby="analyze-title"
           >
             <PanelHeader
               number="03"
               icon={<Activity size={17} />}
-              title="Understand"
+              title="Compare prediction and observation."
               id="analyze-title"
-              subtitle="Turn a reading into a next step."
+              subtitle="Run the reviewed circuit, then compare it with your meter reading."
             />
             <div className="measurement-block">
               <label htmlFor="measured-vout">
@@ -795,26 +839,16 @@ export function LabWorkspace() {
               aria-live="polite"
               aria-atomic="true"
             >
-              {error && (
-                <div className="error-card" role="alert">
-                  <CircleAlert size={18} />
-                  <div>
-                    <strong>Analysis needs attention</strong>
-                    <p>{error}</p>
-                    <span>
-                      Your image and edits remain available for review.
-                    </span>
-                  </div>
-                </div>
-              )}
               {result ? (
                 <>
                   <div className="result-card">
+                    {delta !== undefined ? <MeasurementComparison expected={expected!} measured={measured!} node={graph!.measureNode} /> : <>
                     <div className="eyebrow">EXPECTED {graph?.measureNode}</div>
                     <div className="voltage-result">
                       {expected?.toFixed(3)}
                       <small> V</small>
                     </div>
+                    </>}
                     <span className="result-origin">
                       {resultSource === "local"
                         ? "LOCAL SAMPLE CALCULATION"
@@ -829,9 +863,6 @@ export function LabWorkspace() {
                       ))}
                     </div>
                   </div>
-                  {delta !== undefined && (
-                    <MeasurementComparison expected={expected!} measured={measured!} node={graph!.measureNode} />
-                  )}
                   {delta !== undefined && (
                     <div
                       className={`mismatch-card ${mismatch ? "" : "matched"}`}
@@ -862,6 +893,42 @@ export function LabWorkspace() {
                       </div>
                     </div>
                   )}
+
+                </>
+              ) : (
+                !error && (
+                  <div className="analysis-empty">
+                    <Activity size={27} />
+                    <p>The answer starts with a confirmed circuit.</p>
+                    <span>
+                      Expected voltages, currents and measurement insights will
+                      appear here.
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+            <div className="stage-actions"><button className="button secondary small" disabled={pending} onClick={() => goTo("review")}><ArrowLeft size={16} /> Back</button><button className="button primary small" disabled={pending || !result} onClick={() => goTo("investigate")}>Next step <ArrowRight size={16} /></button></div>
+          </section>
+          <section className="workspace-panel investigate-panel guided-frame" hidden={stage !== "investigate"} aria-labelledby="investigate-title">
+            <PanelHeader number="04" icon={<FlaskConical size={17} />} title="Choose your next measurement." id="investigate-title" subtitle="Use the evidence to narrow the possibilities. A hypothesis is a starting point, not a confirmed fault." />
+            <div className="investigate-content">
+              <form className="investigation-reading" onSubmit={(e) => {
+                e.preventDefault();
+                if (!investigateReading.trim() || !Number.isFinite(Number(investigateReading)) || pending) return;
+                setMeasurement(investigateReading);
+                void solve(Number(investigateReading), "investigate");
+              }}>
+                <label htmlFor="investigate-reading">{measured === undefined ? "Add" : "Update"} your measured {graph?.measureNode} (V)</label>
+                <p>Compare this reading to update the investigation.</p>
+                <div>
+                  <input id="investigate-reading" type="number" step="any" value={investigateReading} disabled={pending} onChange={(e) => setInvestigateReading(e.target.value)} placeholder="Enter your meter reading" />
+                  <button className="button primary small" disabled={pending || !investigateReading.trim() || !Number.isFinite(Number(investigateReading))}>{pending ? <LoaderCircle size={15} className="spinner" /> : <Activity size={15} />} Compare reading</button>
+                </div>
+              </form>
+              <div ref={investigationStatusRef} tabIndex={-1} role="status" className="investigation-reading-status">{pending ? "Comparing your reading…" : result ? measured !== undefined ? `Comparison updated: ${measured} V observed, ${expected?.toFixed(3)} V expected.` : "Circuit calculated. Add a meter reading here to investigate a discrepancy." : error ? "Comparison could not complete. Your reading is preserved; retry when ready." : ""}</div>
+              {result && <>
+                {delta !== undefined && !mismatch && <div className="investigation-notice"><strong>Your reading agrees with the prediction.</strong><p>This observation shows no discrepancy within the displayed comparison threshold. It does not prove that every part is correct.</p></div>}
                   {(result.hypotheses ?? []).slice(0, 1).map((h, i) => (
                     <HypothesisCard key={i} hypothesis={h} />
                   ))}
@@ -903,21 +970,15 @@ export function LabWorkspace() {
                   </details>
                   {useBackend && mismatch && graph && measured !== undefined && Number.isFinite(measured) && <ProbeGuide key={JSON.stringify(graph) + measured} graph={graph} initialVoltage={measured} onTarget={setProbeTarget} />}
                   <button className="evidence-export" onClick={exportEvidence}><Download size={15} /> Download investigation evidence</button>
-                </>
-              ) : (
-                !error && (
-                  <div className="analysis-empty">
-                    <Activity size={27} />
-                    <p>The answer starts with a confirmed circuit.</p>
-                    <span>
-                      Expected voltages, currents and measurement insights will
-                      appear here.
-                    </span>
-                  </div>
-                )
-              )}
+              </>}
             </div>
+            <div className="stage-actions"><button className="button secondary small" disabled={pending} onClick={() => goTo("compare")}><ArrowLeft size={16} /> Back</button><button className="button secondary small" disabled={pending} onClick={() => goTo("review")}>Review circuit <ArrowRight size={16} /></button></div>
           </section>
+        </div>
+        <aside className="circuit-preview" aria-label="Circuit preview">
+          <div className="preview-heading"><span className="eyebrow">YOUR CIRCUIT</span><span>{graph ? `${graph.components.length} components` : "No circuit loaded"}</span></div>
+          {graph ? <><CircuitView graph={graph} selected={selected} result={result} uncertain={!!extraction && !confirmed} highlightedNode={result ? probeTarget : undefined} /><div className="preview-summary"><span>Measurement target</span><strong>{graph.measureNode}</strong><span>{confirmed ? "Confirmed by you" : "Review required"}</span></div><button className="text-button" disabled={pending} onClick={() => goTo("review")}>Review values and connections <ArrowRight size={14} /></button></> : <div className="preview-empty"><Network size={32} /><p>Your circuit will stay here while you work through the investigation.</p></div>}
+        </aside>
         </div>
         {events.length > 0 && <div className="evidence-strip" aria-label="Returned execution evidence"><span><Activity size={14} /> {events.length} returned events</span><span>{events.filter((event) => event.status === "ok").length} succeeded</span><span>{events.reduce((sum, event) => sum + event.durationMs, 0).toLocaleString()} ms reported step time</span>{events.some((event) => event.status !== "ok") && <strong>Review errors / skipped steps below</strong>}</div>}
         <details className="trace-panel">
@@ -993,7 +1054,7 @@ function PanelHeader({
       <div className="panel-title">
         <span className="panel-number">{number}</span>
         {icon}
-        <h2 id={id}>{title}</h2>
+        <h2 id={id} tabIndex={-1}>{title}</h2>
       </div>
       <p>{subtitle}</p>
     </div>

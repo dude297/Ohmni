@@ -65,6 +65,8 @@ function edgePath(a: string, b: string) {
   const [bx, by] = POS[b];
   const ac = [ax + W / 2, ay + H / 2];
   const bc = [bx + W / 2, by + H / 2];
+  // The fallback returns around the boxes, leaving Normalize unobscured.
+  if (a === "fallback" && b === "normalize") return "M110 180 V125 H215 V55 H226";
   // exit/enter on the facing sides
   if (ay === by) {
     const dir = bx > ax ? 1 : -1;
@@ -75,6 +77,13 @@ function edgePath(a: string, b: string) {
     return `M${ac[0]},${ac[1] + (dir * H) / 2} L${bc[0]},${bc[1] - (dir * H) / 2 - dir * 4}`;
   }
   return `M${ax + W},${ay + H / 2 + (by > ay ? 20 : -20)} L${bx - 4},${by + H / 2}`;
+}
+
+/** Wrap a node subtitle to at most two lines of ~22 chars (no truncation). */
+function subLines(sub: string): string[] {
+  if (sub.length <= 22) return [sub];
+  const i = sub.lastIndexOf(" ", 22);
+  return i > 0 ? [sub.slice(0, i), sub.slice(i + 1)] : [sub];
 }
 
 function Pipeline() {
@@ -91,6 +100,7 @@ function Pipeline() {
         {EDGES.map(([a, b, style]) => (
           <path key={a + b} d={edgePath(a, b)} className={`ul-edge ${style === "dashed" ? "ul-edgeDash" : ""}`} markerEnd="url(#ul-arrow)" />
         ))}
+        {EDGES.filter(([, b]) => b === sel).map(([a, b]) => <path key={`selected-${a}-${b}`} d={edgePath(a, b)} pathLength="1" className="ul-edge ul-edgeSelected" aria-hidden="true" />)}
         <text x={30} y={140} className="ul-edgeLabel">on failure</text>
         {PIPELINE.map((p) => {
           const [x, y] = POS[p.id];
@@ -116,8 +126,12 @@ function Pipeline() {
               <text x={x + 12} y={y + 28} className="ul-pTitle">
                 {p.title}
               </text>
-              <text x={x + 12} y={y + 50} className="ul-pSub">
-                {p.sub.length > 22 ? p.sub.slice(0, 21) + "…" : p.sub}
+              <text x={x + 12} y={y + 48} className="ul-pSub">
+                {subLines(p.sub).map((l, i) => (
+                  <tspan key={i} x={x + 12} dy={i ? 13 : 0}>
+                    {l}
+                  </tspan>
+                ))}
               </text>
             </g>
           );
@@ -212,6 +226,7 @@ function Traces() {
 
 // ---------- 3-5. Live math on the selected fixture ----------
 function Matrix({ graph }: { graph: CircuitGraph }) {
+  const [cell, setCell] = useState<[number, number]>([0, 0]);
   const m = useMemo(() => buildMNA(graph), [graph]);
   const s = useMemo(() => solveDC(graph), [graph]);
   const n = m.nodes.length;
@@ -219,6 +234,14 @@ function Matrix({ graph }: { graph: CircuitGraph }) {
   const rows = [...m.nodes.map((x) => `KCL @ ${x}`), ...m.sources.map((x) => `${x} equation`)];
   const block = (i: number, j: number) => (i < n ? (j < n ? "G" : "B") : j < n ? "C" : "D");
   const exact = m.nodes.every((x, i) => m.x[i] === s.voltages[x]);
+  const stamp = (i: number, j: number) => {
+    const a = m.nodes[i], b = m.nodes[j];
+    const parts = graph.components.filter((c) => c.kind === "resistor" &&
+      (i === j ? [c.positiveNode, c.negativeNode].includes(a) :
+        [c.positiveNode, c.negativeNode].includes(a) && [c.positiveNode, c.negativeNode].includes(b)));
+    return `G[${a}, ${b}] = ${parts.length ? parts.map((c) => `${i === j ? "" : "−"}1/${c.id}`).join(" + ") : "0"} S`;
+  };
+  const activeCell: [number, number] = [Math.min(cell[0], n - 1), Math.min(cell[1], n - 1)];
   return (
     <>
       <div className="ul-scroll">
@@ -245,7 +268,7 @@ function Matrix({ graph }: { graph: CircuitGraph }) {
                 <th scope="row">{rows[i]}</th>
                 {row.map((v, j) => (
                   <td key={j} className={`ul-b${block(i, j)}`} title={`${block(i, j)} block`}>
-                    {fmtCell(v)}
+                    {i < n && j < n ? <button type="button" className="ul-matrix-cell" aria-label={`${stamp(i, j)}; value ${fmtCell(v)}`} aria-pressed={activeCell[0] === i && activeCell[1] === j} onFocus={() => setCell([i, j])} onMouseEnter={() => setCell([i, j])} onClick={() => setCell([i, j])}>{fmtCell(v)}</button> : fmtCell(v)}
                   </td>
                 ))}
                 <td className="ul-sep">{fmtCell(m.b[i])}</td>
@@ -257,6 +280,7 @@ function Matrix({ graph }: { graph: CircuitGraph }) {
           </tbody>
         </table>
       </div>
+      <p className="ul-stamp-note" role="status">{stamp(...activeCell)}. Select a conductance cell to inspect its resistor contributions.</p>
       <p className="ul-legend">
         <span className="ul-bG">G</span> conductances (S) <span className="ul-bB">B</span>/<span className="ul-bC">C</span> source incidence{" "}
         <span className="ul-bD">D</span> zero for ideal sources. Source current follows MNA sign: current into the + terminal, so a source

@@ -2,7 +2,7 @@
 .ul-main { max-width: 1180px; margin: 0 auto; padding: 32px 24px 72px; }
 .ul-hero h1 { font-size: 40px; font-weight: 500; letter-spacing: -1.4px; line-height: 1.1; margin: 6px 0 12px !important; }
 .ul-hero > p { color: var(--ohmni-muted); max-width: 760px; }
-.ul-eyebrow { font-size: 10px; letter-spacing: 1.8px; font-weight: 700; color: var(--ohmni-accent-ink); margin: 0 !important; }
+.ul-eyebrow { font-size: 11px; letter-spacing: 1.8px; font-weight: 700; color: var(--ohmni-accent-ink); margin: 0 !important; }
 .ul-toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 18px; font-size: 13px; }
 .ul-toc a { text-decoration: underline; text-underline-offset: 3px; color: var(--ohmni-ink); }
 .ul-section { margin-top: 48px; scroll-margin-top: 16px; }
@@ -26,6 +26,14 @@
 .ul-pipeSvg { width: 100%; height: auto; color: var(--ohmni-muted); background: var(--ohmni-paper); border: 1px solid var(--ohmni-border); border-radius: 8px; }
 .ul-edge { fill: none; stroke: currentColor; stroke-width: 2; }
 .ul-edgeDash { stroke-dasharray: 6 5; }
+.ul-edgeSelected { stroke: var(--ohmni-accent-ink); stroke-width: 3; }
+.ul-matrix-cell { font: inherit; color: inherit; border: 1px solid transparent; border-radius: 3px; padding: 5px 7px; background: transparent; cursor: pointer; }
+.ul-matrix-cell[aria-pressed="true"] { border-color: #ad6b20; background: #fff0d2; }
+.ul-stamp-note { font-size: 13px; color: var(--ohmni-ink); margin: 12px 0 !important; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) {
+  .ul-edgeSelected { stroke-dasharray: 1; animation: ul-path-in 240ms cubic-bezier(.2,.8,.2,1); }
+}
+@keyframes ul-path-in { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 .ul-edgeLabel { font-size: 12px; fill: var(--ohmni-muted); }
 .ul-pnode { cursor: pointer; outline: none; }
 .ul-pnode rect { fill: #fff; stroke: var(--ohmni-border); stroke-width: 2; }
@@ -38,7 +46,7 @@
 .ul-pTitle { font-size: 14px; font-weight: 700; fill: var(--ohmni-ink); }
 .ul-pSub { font-size: 11px; fill: var(--ohmni-muted); font-family: var(--font-geist-mono), monospace; }
 .ul-detail h3 { font-size: 20px; }
-.ul-dl dt { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ohmni-muted); margin-top: 12px; font-weight: 700; }
+.ul-dl dt { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ohmni-muted); margin-top: 12px; font-weight: 700; }
 .ul-dl dd { margin: 3px 0 0; font-size: 14px; }
 .ul-file { display: inline-block; background: #f1f3f1; border-radius: 4px; padding: 2px 6px; margin: 2px 6px 2px 0; }
 

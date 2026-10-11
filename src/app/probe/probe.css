@@ -18,7 +18,7 @@
 .pg-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .pg-row input { flex: 1 1 140px; min-width: 0; min-height: 49px; border: 1px solid #c7d2cc; border-radius: 5px; padding: 0 14px; font-size: 16px; background: #fff; }
 .pg-probeCard { border: 2px solid var(--ohmni-accent); background: #fffaf0; border-radius: 8px; padding: 18px; }
-.pg-eyebrow { font-size: 10px; letter-spacing: 1.6px; color: var(--ohmni-accent-ink); font-weight: 700; }
+.pg-eyebrow { font-size: 11px; letter-spacing: 1.6px; color: var(--ohmni-accent-ink); font-weight: 700; }
 .pg-big { font-size: 28px; font-weight: 500; letter-spacing: -0.8px; margin: 4px 0 8px; }
 .pg-big span { background: var(--ohmni-accent); padding: 0 10px; border-radius: 5px; }
 .pg-outcomes { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
@@ -29,7 +29,7 @@
 .pg-bars { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .pg-barTop { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 4px; }
 .pg-track { height: 8px; background: #e6ece8; border-radius: 4px; overflow: hidden; }
-.pg-fill { height: 100%; background: var(--ohmni-ink); border-radius: 4px; transition: width 0.3s; }
+.pg-fill { height: 100%; background: var(--ohmni-ink); border-radius: 4px; }
 .pg-done { display: flex; gap: 12px; background: #e8f3ee; color: var(--ohmni-success); border-radius: 8px; padding: 16px; margin-bottom: 8px; }
 .pg-done p { color: var(--ohmni-ink); font-size: 17px; margin-top: 4px; }
 .pg-warn { display: flex; gap: 8px; align-items: flex-start; background: #fff3d6; color: #6b4a10; border: 1px solid #e6c36d; border-radius: 6px; padding: 10px 12px; font-size: 13px; margin: 8px 0; }
@@ -65,9 +65,17 @@
 .pg-dot { fill: var(--ohmni-ink); }
 .pg-dotOn { fill: var(--ohmni-accent-ink); }
 .pg-ring, .pg-ring2 { fill: none; stroke: var(--ohmni-accent-ink); stroke-width: 3; transform-box: fill-box; transform-origin: center; }
-.pg-ring2 { animation: pg-pulse 1.6s ease-out infinite; opacity: 0.6; }
+.pg-ring2 { opacity: 0; }
 .pg-callout rect { fill: var(--ohmni-accent); stroke: var(--ohmni-accent-ink); }
 .pg-callout text { fill: var(--ohmni-ink); font-weight: 700; font-size: 11.5px; }
+.pg-probe-leader { stroke: var(--ohmni-accent-ink); stroke-width: 2; fill: none; }
+[data-highlighted="true"] .pg-nlabel { fill: var(--ohmni-accent-ink); }
+@media (prefers-reduced-motion: no-preference) {
+  .pg-ring { animation: pg-lock 220ms cubic-bezier(.2,.8,.2,1); }
+  .pg-done { animation: pg-close 200ms cubic-bezier(.2,.8,.2,1); }
+}
+@keyframes pg-lock { from { transform: scale(1.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes pg-close { from { transform: translateY(6px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes pg-pulse { from { transform: scale(1); opacity: 0.7; } to { transform: scale(2); opacity: 0; } }
 .pg-guide { border: 2px solid var(--ohmni-accent-ink); background: #fffaf0; border-radius: 8px; padding: 14px 16px; margin: 8px 0; font-size: 14px; }
 .pg-guide h3 { font-size: 16px; margin: 0 0 6px; }

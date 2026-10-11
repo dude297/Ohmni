@@ -9,7 +9,11 @@ import { bitsPhrase, outcomePhrase, schematicLayout } from "./helpers";
 export function ProbeSchematic({ graph, highlight }: { graph: CircuitGraph; highlight: string | null }) {
   const { nodes, parts, width, height } = schematicLayout(graph);
   return (
-    <svg className="pg-schem" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={highlight ? `Circuit schematic. Probe node ${highlight} next.` : "Circuit schematic"}>
+    <svg className="pg-schem" viewBox={`0 -36 ${width} ${height + 36}`} role="img" aria-label={highlight ? `Circuit schematic. Probe node ${highlight} next.` : "Circuit schematic"}>
+      {highlight && <g className="pg-callout">
+        <rect x={8} y={-28} width={254} height={20} rx={10} />
+        <text x={20} y={-14}>Red probe: {highlight} · black probe: GND</text>
+      </g>}
       {parts.map((p) => {
         const mid = (p.a.y + p.b.y) / 2;
         return (
@@ -23,15 +27,12 @@ export function ProbeSchematic({ graph, highlight }: { graph: CircuitGraph; high
       {nodes.map((n) => {
         const on = n.name === highlight;
         return (
-          <g key={n.name} data-node={n.name} data-highlight={on || undefined}>
+          <g key={n.name} role={on ? "group" : undefined} data-node={n.name} data-highlighted={on ? "true" : undefined} aria-label={on ? `Next measurement: node ${n.name}` : undefined}>
             {on && (
               <>
-                <circle className="pg-ring" cx={n.x} cy={n.y} r={14} />
+                <circle key={highlight} className="pg-ring" cx={n.x} cy={n.y} r={14} />
                 <circle className="pg-ring2" cx={n.x} cy={n.y} r={14} />
-                <g className="pg-callout">
-                  <rect x={8} y={n.y - 28} width={254} height={20} rx={10} />
-                  <text x={20} y={n.y - 14}>Put the red probe here; black probe on GND</text>
-                </g>
+                <path className="pg-probe-leader" d={`M${n.x} ${n.y - 15}V${n.y - 27}`} />
               </>
             )}
             <circle className={on ? "pg-dot pg-dotOn" : "pg-dot"} cx={n.x} cy={n.y} r={on ? 7 : 5} />
