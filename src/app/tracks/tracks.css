@@ -1,0 +1,13 @@
+.tk-shell{min-height:100vh;background:#F6F5F0;color:#142C32;font-family:system-ui,sans-serif;padding:24px 16px 48px}
+.tk-wrap{max-width:1200px;margin:0 auto}
+.tk-wrap h1{font-size:clamp(2rem,5vw,3.2rem);margin:8px 0 24px}
+.tk-three{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.tk-card{display:block;background:#142C32;color:#F6F5F0;border-radius:12px;overflow:hidden;text-decoration:none;border:2px solid #142C32}
+.tk-card:hover{border-color:#F2B45A}
+.tk-card svg{display:block;width:100%;height:auto;padding:16px}
+.tk-info{padding:0 20px 20px;display:grid;gap:8px}
+.tk-info h2{margin:0;font-size:1.5rem}
+.tk-chip{justify-self:start;font-size:.8rem;padding:3px 10px;border-radius:99px;background:#829E98;color:#142C32}
+.tk-chip.tk-live{background:#F2B45A}
+.tk-chip.tk-warn{background:#943E2C;color:#F6F5F0}
+.tk-foot{margin-top:24px;color:#5b6f6a;font-size:.9rem}
