@@ -1,0 +1,313 @@
+{
+ "_note": "Hand-written ground truth for the PNGs here (see generate.py). Node names VIN/VOUT/GND/N1; connectivity is scored up to node renaming.",
+ "circuits": {
+  "01_divider_5v_10k_10k.png": {
+   "description": "clean divider",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 5,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 10000.0,
+     "positiveNode": "VIN",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 10000.0,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "02_divider_9v_4k7_2k2.png": {
+   "description": "clean divider",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 9,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 4700,
+     "positiveNode": "VIN",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 2200,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "03_series_parallel_5v.png": {
+   "description": "R1 series, R2||R3 to GND, dotted junctions",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 5,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 1000,
+     "positiveNode": "VIN",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 2200,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R3",
+     "kind": "resistor",
+     "value": 3300,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "04_divider_12v_1k_3k3.png": {
+   "description": "clean divider",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 12,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 1000,
+     "positiveNode": "VIN",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 3300,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "05_series3_10v.png": {
+   "description": "three resistors in series, labelled N1",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 10,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 1000,
+     "positiveNode": "VIN",
+     "negativeNode": "N1"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 2000,
+     "positiveNode": "N1",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R3",
+     "kind": "resistor",
+     "value": 3000,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "06_series_parallel_5v_470_1k_1k.png": {
+   "description": "R1 series, R2||R3 to GND, dotted junctions",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 5,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 470,
+     "positiveNode": "VIN",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 1000,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R3",
+     "kind": "resistor",
+     "value": 1000,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "07_smudged_divider_3v3.png": {
+   "description": "blurred + noisy, small value text",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 3.3,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 4700,
+     "positiveNode": "VIN",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 1000,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "08_wire_crossing_no_dot.png": {
+   "description": "GND wire crosses VOUT wire WITHOUT a dot (not connected)",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 5,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 2200,
+     "positiveNode": "VIN",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 4700,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "09_lowres_divider_9v.png": {
+   "description": "low resolution + blur",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 9,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 4700,
+     "positiveNode": "VIN",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 2200,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  },
+  "10_series3_6v_220_330_470.png": {
+   "description": "three resistors in series, labelled N1",
+   "measureNode": "VOUT",
+   "groundNode": "GND",
+   "components": [
+    {
+     "id": "V1",
+     "kind": "dc_voltage",
+     "value": 6,
+     "positiveNode": "VIN",
+     "negativeNode": "GND"
+    },
+    {
+     "id": "R1",
+     "kind": "resistor",
+     "value": 220,
+     "positiveNode": "VIN",
+     "negativeNode": "N1"
+    },
+    {
+     "id": "R2",
+     "kind": "resistor",
+     "value": 330,
+     "positiveNode": "N1",
+     "negativeNode": "VOUT"
+    },
+    {
+     "id": "R3",
+     "kind": "resistor",
+     "value": 470,
+     "positiveNode": "VOUT",
+     "negativeNode": "GND"
+    }
+   ]
+  }
+ }
+}

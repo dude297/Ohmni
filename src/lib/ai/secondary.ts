@@ -1,95 +1,46 @@
-import { z } from 'zod';
 import type { CandidateExtraction, ModelTraceEvent } from '../circuit/types';
+import { validateGraph } from '../circuit/validate';
+import { groqModel, callGroq } from './groq';
+import { toCandidateExtraction } from './extractionSchema';
 
-// Owner: Agent C. Optional OpenAI vision verifier, only when Jev picks verify_topology and key exists.
-const Revised = z.object({
-  unresolvedConnections: z.array(z.string()),
-  warnings: z.array(z.string()).optional(),
-  graph: z
-    .object({
-      schemaVersion: z.literal(1),
-      components: z.array(
-        z.object({
-          id: z.string(),
-          kind: z.enum(['resistor', 'dc_voltage']),
-          value: z.number(),
-          positiveNode: z.string(),
-          negativeNode: z.string(),
-          sourceBoundingBox: z.tuple([z.number(), z.number(), z.number(), z.number()]).optional(),
-        }),
-      ),
-      groundNode: z.literal('GND'),
-      measureNode: z.string(),
-    })
-    .nullable(),
-});
+// Secondary topology verifier: Groq vision (free tier), only when Jev picks verify_topology.
+// Output goes through the same zod normaliser + validateGraph as the primary extraction.
+const NOTE = 'Second-opinion model read of the image; agreement between models is not proof the circuit was parsed correctly.';
 
 export async function verifyTopology(
   image: Uint8Array,
   mimeType: string,
   extraction: CandidateExtraction,
 ): Promise<{ extraction?: CandidateExtraction; event: ModelTraceEvent }> {
-  const start = Date.now();
-  const model = process.env.SECONDARY_VISION_MODEL || 'gpt-5.6-terra';
-  const base = { step: 'verify_topology', provider: 'openai', model };
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) {
-    return { event: { ...base, durationMs: 0, status: 'skipped', note: 'OPENAI_API_KEY not configured' } };
+  const base = { step: 'verify_topology', provider: 'groq', model: groqModel() };
+  if (!process.env.GROQ_API_KEY) {
+    return { event: { ...base, durationMs: 0, status: 'skipped', note: 'GROQ_API_KEY not configured' } };
   }
-  const fail = (note: string) => ({ event: { ...base, durationMs: Date.now() - start, status: 'error' as const, note } });
+  const prior = extraction.graph && {
+    components: extraction.graph.components.map((c) => ({ id: c.id, kind: c.kind, value: c.value, positiveNode: c.positiveNode, negativeNode: c.negativeNode })),
+    measureNode: extraction.graph.measureNode,
+  };
+  const instruction =
+    'You are verifying a circuit image. A first pass extracted the circuit below, with some connections unresolved. ' +
+    'Re-read the image independently and return the full circuit. Extract ONLY what is visible; never guess. ' +
+    'Components use kind "resistor" or "dc_voltage" (positiveNode is the + terminal), values as printed, ground node "GND", measureNode only if explicitly labelled VOUT.\n' +
+    'First pass: ' + JSON.stringify({ ...prior, unresolvedConnections: extraction.unresolvedConnections });
+  const r = await callGroq('verify_topology', instruction, image, mimeType);
+  const keep = (note: string) => ({ event: { ...r.event, status: 'error' as const, note } });
+  if (r.failure === 'not_configured') return { event: r.event };
+  if (r.failure) return { event: r.event }; // callGroq already set status 'error' + reason; original extraction kept
 
-  try {
-    const prompt =
-      'You are verifying a circuit image. A first pass extracted this graph with unresolved connections. ' +
-      'Re-read the image and correct ONLY the connections listed in unresolvedConnections; do not change other components. ' +
-      'Return JSON only: {"graph": <same graph shape, schemaVersion 1, groundNode "GND", or null>, "unresolvedConnections": string[] (still-unresolved items), "warnings": string[]}.\n' +
-      JSON.stringify({ graph: extraction.graph, unresolvedConnections: extraction.unresolvedConnections });
-    const res = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model,
-        input: [
-          {
-            role: 'user',
-            content: [
-              { type: 'input_text', text: prompt },
-              { type: 'input_image', image_url: `data:${mimeType};base64,${Buffer.from(image).toString('base64')}` },
-            ],
-          },
-        ],
-        text: { format: { type: 'json_object' } },
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!res.ok) return fail(`OpenAI HTTP ${res.status}`);
-    const body = (await res.json()) as {
-      output_text?: string;
-      output?: { content?: { type?: string; text?: string }[] }[];
-      usage?: { input_tokens?: number; output_tokens?: number };
-    };
-    const text =
-      body.output_text ?? body.output?.flatMap((o) => o.content ?? []).find((c) => c.type === 'output_text')?.text;
-    const parsed = Revised.safeParse(JSON.parse(text ?? ''));
-    if (!parsed.success) return fail('OpenAI output failed schema check; original extraction kept');
-    const r = parsed.data;
-    return {
-      extraction: {
-        ...extraction,
-        graph: r.graph ?? extraction.graph,
-        unresolvedConnections: r.unresolvedConnections,
-        warnings: [...extraction.warnings, ...(r.warnings ?? [])],
-        requiresHumanReview: true,
-      },
-      event: {
-        ...base,
-        durationMs: Date.now() - start,
-        status: 'ok',
-        ...(body.usage && { usage: { inputTokens: body.usage.input_tokens, outputTokens: body.usage.output_tokens } }),
-      },
-    };
-  } catch (err) {
-    const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
-    return fail(timedOut ? 'OpenAI request timed out' : 'OpenAI request failed or returned non-JSON');
-  }
+  const revised = toCandidateExtraction(r.raw);
+  const v = revised.graph ? validateGraph(revised.graph) : null;
+  if (!revised.graph || !v?.ok) return keep('groq output failed normalisation/validation; original extraction kept');
+  return {
+    extraction: {
+      ...extraction,
+      graph: v.graph,
+      unresolvedConnections: revised.unresolvedConnections,
+      warnings: [...extraction.warnings, ...revised.warnings, NOTE],
+      requiresHumanReview: true,
+    },
+    event: { ...r.event, note: NOTE },
+  };
 }

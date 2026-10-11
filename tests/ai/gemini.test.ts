@@ -103,7 +103,7 @@ describe('extractCircuit', () => {
     });
     const { extraction, event } = await extractCircuit(new Uint8Array([1, 2]), 'image/png');
     expect(extraction.graph).toEqual(fixture);
-    expect(event).toMatchObject({ step: 'extract', provider: 'google', model: 'gemini-3.8-flash', status: 'ok', usage: { inputTokens: 100, outputTokens: 50 } });
+    expect(event).toMatchObject({ step: 'extract', provider: 'google', model: 'gemini-3.5-flash', status: 'ok', usage: { inputTokens: 100, outputTokens: 50 } });
     expect(generateContent.mock.calls[0][0].config.temperature).toBe(0);
   });
 
