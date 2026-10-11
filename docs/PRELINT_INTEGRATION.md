@@ -54,13 +54,14 @@ Source https://prelint.com/docs/billing, accessed 2026-10-11:
 - "Every new organization gets $10 in credits, with no credit card required."
 - "Auto-recharge is enabled by default. The system automatically adds $20 when your balance drops below $10 ... or disable auto-recharge entirely through Settings -> Billing."
 
-`gh repo view dude297/Ohmni --json visibility` -> `PUBLIC`. Keep auto-recharge OFF so no charge is possible.
+How these reconcile: the $1-per-review credit charge applies to **private** repositories; the same page states public-repository reviews are free, and `gh repo view dude297/Ohmni --json visibility` -> `PUBLIC`, so Ohmni's reviews are expected to cost $0. The owner should still confirm the credit balance is unchanged after the first reviews (not yet checked by an agent) and keep auto-recharge OFF so no charge is possible if the repo ever became private.
 
-## Evidence (pending owner install)
+## Evidence
 
-- Installation confirmed: pending owner install
-- First Prelint review on this PR: pending owner install (link: _none yet_)
-- Prelint check run on a commit: pending owner install
+- Installation confirmed: owner installed the Prelint GitHub App on dude297/Ohmni (2026-10-11); Prelint check runs and a review appear on PR #51.
+- First Prelint review (PR #51, commit a5b607a, 2026-10-11 20:39 UTC = 13:39 PDT): https://github.com/dude297/ohmni/pull/51#pullrequestreview-5484868357 — 1 finding (WARNING, `docs/PRELINT_INTEGRATION.md:50`): pricing quotes not reconciled. Valid; fixed in the following commit by the "How these reconcile" paragraph above.
+- Prelint check runs on a5b607a: "Prelint" success https://github.com/dude297/ohmni/runs/114569525836 ; "Prelint: Decision Review" success https://github.com/dude297/ohmni/runs/114569527153
+- MCP: registered at project scope (`.mcp.json`); OAuth sign-in pending owner (`/mcp` in Claude Code).
 - Checked 2026-10-11: `gh api repos/dude297/Ohmni/commits/main/check-runs` shows only `github-actions`; no Prelint check runs. `gh api repos/dude297/Ohmni/installation` returned 401 (needs app JWT), so install state was inferred only from the absence of check runs.
 
 ## How agents handle Prelint findings
