@@ -77,6 +77,13 @@ function edgePath(a: string, b: string) {
   return `M${ax + W},${ay + H / 2 + (by > ay ? 20 : -20)} L${bx - 4},${by + H / 2}`;
 }
 
+/** Wrap a node subtitle to at most two lines of ~22 chars (no truncation). */
+function subLines(sub: string): string[] {
+  if (sub.length <= 22) return [sub];
+  const i = sub.lastIndexOf(" ", 22);
+  return i > 0 ? [sub.slice(0, i), sub.slice(i + 1)] : [sub];
+}
+
 function Pipeline() {
   const [sel, setSel] = useState("jev");
   const node = PIPELINE.find((p) => p.id === sel)!;
@@ -116,8 +123,12 @@ function Pipeline() {
               <text x={x + 12} y={y + 28} className="ul-pTitle">
                 {p.title}
               </text>
-              <text x={x + 12} y={y + 50} className="ul-pSub">
-                {p.sub.length > 22 ? p.sub.slice(0, 21) + "…" : p.sub}
+              <text x={x + 12} y={y + 48} className="ul-pSub">
+                {subLines(p.sub).map((l, i) => (
+                  <tspan key={i} x={x + 12} dy={i ? 13 : 0}>
+                    {l}
+                  </tspan>
+                ))}
               </text>
             </g>
           );
