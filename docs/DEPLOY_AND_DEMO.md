@@ -1,5 +1,8 @@
 # Ohmni — Deployment, Smoke Test and Three-Minute Demo
 
+### Corrected deadline and release sequence
+**External hard deadline: Sunday October 11, 2026, 5:30 PM PDT = 8:30 PM EDT.** Target submission **5:00 PM PDT**, 30-minute cushion. Feature freeze **3:30 PM PDT**, production verification **3:30–4:30 PM PDT**, rehearsal/submission **4:30–5:00 PM PDT**. See ROADMAP.md; old T+150 schedule superseded.
+
 ### Hosting decision
 Single Node/Next.js deploy. Anbaric Cloud is a **20-minute T0 spike**: verify public frontend, /api/health, POST handling, PORT/start and server-only env variables. If no real result, deploy unchanged app to Vercel immediately. Do not introduce Render free/second FastAPI service.
 
@@ -21,4 +24,4 @@ GEMINI_API_KEY, GEMINI_MODEL (real tested model), TYPESAFE_API_KEY, optional SEC
 Record backup video but **label it recorded**. Do not show a pre-recorded model trace as live. If real model unavailable, clearly call manual-mode a fallback and mark multimodel judging proof incomplete.
 
 ### Release
-Product only freezes after FREEZE_CHECKLIST all P0 gates supported by real links. At T+150 no new features, only P0 repairs.
+Product only freezes after FREEZE_CHECKLIST all P0 gates supported by real links. At **3:30 PM PDT**, no new features, only P0 repairs; submit **before 5:30 PM PDT** (target 5:00).
