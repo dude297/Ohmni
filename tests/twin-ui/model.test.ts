@@ -1,22 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
-  BRIDGE_NETLIST, applyScenario, diffModel, evidenceBadge, formatValue, graphFromRows, hasBridgeLayout, intendedBadge,
-  junctions, observedBadge, railTaps, parseEvidenceCsv, parseKicadNetlist, parseValue, reroutePath, rowsFromGraph, valueBadge, verifyBadge,
+  applyScenario, bridgeSlots, diffModel, evidenceBadge, formatValue, graphFromRows, importDesign, intendedBadge,
+  junctions, observedBadge, railTaps, parseEvidenceCsv, parseValue, reroutePath, rowsFromGraph, slotOf, valueBadge, verifyBadge,
 } from "../../src/app/twin/model";
+import { api } from "../../src/app/twin/api";
+import { BRIDGE_NETLIST } from "../../src/app/twin/fixture";
 
-const design = parseKicadNetlist(BRIDGE_NETLIST).graph!;
+const design = importDesign(BRIDGE_NETLIST, "VOUT").graph!;
 
 describe("netlist + values", () => {
-  it("parses the bridge fixture", () => {
+  it("imports the bridge fixture with the API's node names", () => {
     expect(design.components).toHaveLength(8);
+    expect(design.measureNode).toBe("VOUT");
     const r6 = design.components.find((c) => c.id === "R6")!;
-    expect(r6).toMatchObject({ kind: "resistor", value: 680, positiveNode: "B", negativeNode: "C" });
+    expect(r6).toMatchObject({ kind: "resistor", value: 680, positiveNode: "B", negativeNode: "VOUT" });
+    expect(design.components.find((c) => c.id === "R1")!.negativeNode).toBe("N1");
     expect(design.components.find((c) => c.id === "V1")).toMatchObject({ kind: "dc_voltage", value: 12, positiveNode: "VIN", negativeNode: "GND" });
-    expect(hasBridgeLayout(design)).toBe(true);
+  });
+  it("derives layout slots from topology, not names", () => {
+    const s = bridgeSlots(design)!;
+    expect(s).toEqual({ VIN: "VIN", A: "N1", B: "B", C: "VOUT", GND: "GND" });
+    expect(slotOf(s, "VOUT")).toBe("C");
+    expect(bridgeSlots({ ...design, components: design.components.slice(1) })).toBeNull();
   });
   it("rejects bad input", () => {
-    expect(parseKicadNetlist("hello").error).toBeTruthy();
-    expect(parseKicadNetlist("x".repeat(70_000)).error).toMatch(/64 KB/);
+    expect(importDesign("hello").error).toBeTruthy();
+    expect(importDesign("x".repeat(70_000)).error).toMatch(/64 KB/);
   });
   it("parses and formats values", () => {
     expect(parseValue("4k7")).toBeCloseTo(4700);
@@ -98,9 +107,28 @@ describe("csv evidence", () => {
   });
 });
 
+describe("api helper", () => {
+  it("maps 404 to unavailable and 422 to a message", async () => {
+    const orig = globalThis.fetch;
+    try {
+      globalThis.fetch = (async () => new Response("nope", { status: 404 })) as typeof fetch;
+      expect(await api("/api/twin", {})).toMatchObject({ ok: false, unavailable: true });
+      globalThis.fetch = (async () => Response.json({ error: { message: "bad", details: ["unknown node \"Z\""] } }, { status: 422 })) as typeof fetch;
+      const r = await api("/api/twin", {});
+      expect(r).toMatchObject({ ok: false });
+      expect(!r.ok && r.error).toContain("unknown node");
+      globalThis.fetch = (async () => Response.json({ result: { a: 1 } })) as typeof fetch;
+      expect(await api("/x", {})).toEqual({ ok: true, data: { a: 1 } });
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+});
+
 describe("badges", () => {
   it("labels provenance honestly", () => {
     expect(intendedBadge("kicad_netlist")).toBe("INTENDED (source: KiCad netlist)");
+    expect(intendedBadge("kicad")).toBe("INTENDED (source: KiCad netlist)");
     expect(observedBadge("human_review")).toBe("OBSERVED (human-reviewed)");
   });
   it("MEASURED only for supplied nodes, never 'live'", () => {

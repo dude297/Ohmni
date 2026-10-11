@@ -5,10 +5,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Brand } from "../../components/ohmni/brand";
 import { Schematic } from "./schematic";
 import {
-  BRIDGE_NETLIST, MAX_NETLIST_BYTES, applyScenario, diffModel, evidenceBadge, formatValue, formatVolts, graphFromRows, hasBridgeLayout,
-  intendedBadge, observedBadge, parseEvidenceCsv, parseKicadNetlist, rowsFromGraph, valueBadge, verifyBadge,
+  MAX_NETLIST_BYTES, applyScenario, bridgeSlots, diffModel, evidenceBadge, formatValue, formatVolts, graphFromRows, importDesign,
+  intendedBadge, observedBadge, parseEvidenceCsv, rowsFromGraph, valueBadge, verifyBadge,
   type Diff, type Graph, type Obs, type Row, type Scenario, type Source,
 } from "./model";
+import { BRIDGE_NETLIST, BRIDGE_MEASURE_NODE } from "./fixture";
+import { api } from "./api";
 import "./twin.css";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- API result is contract-shaped but owned by another branch; read defensively. */
@@ -27,21 +29,9 @@ type TwinResult = {
   repair?: { proposals: any[]; basis?: string; safety?: string };
 };
 type Reading = Obs & { source: Source };
-type Api<T> = { ok: true; data: T } | { ok: false; unavailable?: boolean; error: string };
 
 const STEPS = ["Design", "Reality", "Diff", "Measure", "Fix", "Verify"];
 
-async function api<T>(url: string, payload: unknown): Promise<Api<T>> {
-  try {
-    const res = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(20000) });
-    if (res.status === 404) return { ok: false, unavailable: true, error: "not available on this build" };
-    const body = await res.json().catch(() => null);
-    if (!res.ok || !body?.result) return { ok: false, error: body?.error?.message ?? body?.error ?? `Request failed (${res.status}).` };
-    return { ok: true, data: body.result as T };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Network error." };
-  }
-}
 
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 const Badge = ({ children, tone = "ink" }: { children: React.ReactNode; tone?: "ink" | "fault" | "ok" | "sage" | "copper" }) => <span className={`tw-badge tw-b-${tone}`}>{children}</span>;
@@ -68,12 +58,8 @@ export function TwinClient() {
   const first = useRef(true);
 
   const parsed = useMemo(() => {
-    const p = parseKicadNetlist(netlist);
-    if (p.graph && !p.graph.components.some((c) => c.positiveNode === "C" || c.negativeNode === "C")) {
-      const n = p.graph.components.flatMap((c) => [c.positiveNode, c.negativeNode]).find((x) => x !== "GND");
-      if (n) p.graph.measureNode = n;
-    }
-    return p;
+    const p = importDesign(netlist, BRIDGE_MEASURE_NODE);
+    return p.graph ? p : importDesign(netlist);
   }, [netlist]);
   const design = parsed.graph;
   const obsBuilt = useMemo(() => (design ? graphFromRows(rows, design.measureNode) : { error: "" }), [rows, design]);
@@ -147,24 +133,25 @@ export function TwinClient() {
   }
 
   // ---- hero schematics
-  const layoutOk = design ? hasBridgeLayout(design) : false;
+  const slots = bridgeSlots(result?.intended.graph ?? design ?? ({ components: [], groundNode: "GND" } as unknown as Graph));
+  const layoutOk = !!slots;
   const dm = diffModel(result?.diff);
   const pulse = step === 4 ? result?.probe?.next?.node ?? null : null;
-  const hero = !design ? null : step >= 3 && result ? (
+  const hero = !design || !slots ? null : step >= 3 && result ? (
     <div className="tw-dual">
       <figure className="tw-fig">
         <figcaption><Badge tone="sage">{intendedBadge(result.intended.provenance?.kind)}</Badge></figcaption>
-        <Schematic graph={result.intended.graph ?? design} label="Intended circuit" voltages={result.intendedSolution?.voltages} pulseNode={pulse} />
+        <Schematic slots={slots} graph={result.intended.graph ?? design} label="Intended circuit" voltages={result.intendedSolution?.voltages} pulseNode={pulse} />
       </figure>
       <figure className="tw-fig">
         <figcaption><Badge tone="copper">{observedBadge("human_review")}</Badge></figcaption>
-        <Schematic graph={obsBuilt.graph ?? design} label="Observed circuit" tints={dm.valueTints} reroutes={dm.reroutes} voltages={result.observedSolution?.voltages} pulseNode={pulse} />
+        <Schematic slots={slots} graph={obsBuilt.graph ?? design} label="Observed circuit" tints={dm.valueTints} reroutes={dm.reroutes} voltages={result.observedSolution?.voltages} pulseNode={pulse} />
       </figure>
     </div>
   ) : step === 2 && obsBuilt.graph ? (
-    <figure className="tw-fig"><figcaption><Badge tone="copper">{observedBadge("human_review")}</Badge> <Badge tone="fault">EXAMPLE edits are yours to review</Badge></figcaption><Schematic graph={obsBuilt.graph} label="Observed circuit" /></figure>
+    <figure className="tw-fig"><figcaption><Badge tone="copper">{observedBadge("human_review")}</Badge> <Badge tone="fault">EXAMPLE edits are yours to review</Badge></figcaption><Schematic slots={slots} graph={obsBuilt.graph} label="Observed circuit" /></figure>
   ) : (
-    <figure className="tw-fig"><figcaption><Badge tone="sage">{intendedBadge("kicad_netlist")}</Badge></figcaption><Schematic graph={design} label="Intended circuit" /></figure>
+    <figure className="tw-fig"><figcaption><Badge tone="sage">{intendedBadge("kicad_netlist")}</Badge></figcaption><Schematic slots={slots} graph={design} label="Intended circuit" /></figure>
   );
 
   const nodes = Object.keys(result?.intendedSolution?.voltages ?? {}).filter((n) => n !== "GND");
@@ -306,7 +293,7 @@ export function TwinClient() {
                     </ul>
                   )}
                   {result.probe?.safety && <p className="tw-muted">{result.probe.safety}</p>}
-                  <button type="button" className="tw-go" disabled={!proposal} onClick={() => setStep(5)}>{proposal ? "See the fix" : "Add readings to get a fix"}</button>
+                  <button type="button" className="tw-go" disabled={!proposal} onClick={() => setStep(5)}>{proposal ? "See the fix" : "Take a reading to unlock the fix"}</button>
                 </>
               )}
 

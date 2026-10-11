@@ -1,33 +1,36 @@
-import { BRIDGE_LAYOUT, NODE_POINT, RAIL_Y, formatValue, junctions, railTaps, reroutePath, terminalPoint, type DiffModel, type Graph } from "./model";
+import { BRIDGE_LAYOUT, NODE_POINT, RAIL_Y, formatValue, junctions, railTaps, reroutePath, slotOf, terminalPoint, type DiffModel, type Graph, type Slot } from "./model";
 
 type Props = {
   graph: Graph;
   label: string; // accessible name
+  slots: Record<Slot, string>; // layout slot -> real node name, derived from the intended graph
   tints?: DiffModel["valueTints"];
   reroutes?: DiffModel["reroutes"];
   voltages?: Record<string, number> | null;
   pulseNode?: string | null;
 };
 
-const nodeXY = (n: string): [number, number] | null => (n in RAIL_Y ? [110, RAIL_Y[n as keyof typeof RAIL_Y]] : NODE_POINT[n] ?? null);
+const slotXY = (s: Slot | null): [number, number] | null => (!s ? null : s in RAIL_Y ? [110, RAIL_Y[s as keyof typeof RAIL_Y]] : NODE_POINT[s] ?? null);
 
-export function Schematic({ graph, label, tints = {}, reroutes = [], voltages, pulseNode }: Props) {
-  const leads = reroutes.map((r) => ({ ...r, d: reroutePath(r.componentId, r.terminal, r.to) })).filter((r) => r.d);
+export function Schematic({ graph, label, slots, tints = {}, reroutes = [], voltages, pulseNode }: Props) {
+  const leads = reroutes.map((r) => ({ ...r, d: reroutePath(r.componentId, r.terminal, slotOf(slots, r.to) ?? "") })).filter((r) => r.d);
   const extra = leads.flatMap((l) => {
     const p = terminalPoint(l.componentId, l.terminal);
-    return p && l.to in RAIL_Y ? [[p[0] + 36, RAIL_Y[l.to as keyof typeof RAIL_Y]] as [number, number]] : [];
+    const sl = slotOf(slots, l.to);
+    return p && sl && sl in RAIL_Y ? [[p[0] + 36, RAIL_Y[sl as keyof typeof RAIL_Y]] as [number, number]] : [];
   });
   const taps = railTaps(graph, extra);
-  const pulse = pulseNode ? nodeXY(pulseNode) : null;
-  const volts: [string, number, number][] = [["A", 158, 192], ["B", 308, 192], ["C", 428, 192]];
+  const pulse = pulseNode ? slotXY(slotOf(slots, pulseNode)) : null;
+  const volts: [Slot, number, number][] = [["A", 158, 192], ["B", 308, 192], ["C", 428, 192]];
+  const v = (s: Slot) => voltages?.[slots[s]];
   return (
-    <svg viewBox="0 0 560 330" role="img" aria-label={label} className="tw-svg">
+    <svg viewBox="0 0 640 330" role="img" aria-label={label} className="tw-svg">
       {taps.map((t) => (
         <g key={t.rail}>
           <line x1={t.x1} x2={t.x2} y1={t.y} y2={t.y} className="tw-wire" />
           {t.dots.map((x) => <circle key={x} cx={x} cy={t.y} r={4} className="tw-dot" />)}
-          <text x={t.x2 + 8} y={t.y + 4} className="tw-railtxt">{t.rail}</text>
-          {voltages && t.rail === "VIN" && voltages.VIN !== undefined && <text x={200} y={t.y - 10} className="tw-volt">{voltages.VIN.toFixed(2)} V</text>}
+          <text x={t.x2 + 8} y={t.y + 4} className="tw-railtxt">{slots[t.rail]}</text>
+          {t.rail === "VIN" && v("VIN") !== undefined && <text x={200} y={t.y - 10} className="tw-volt">{v("VIN")!.toFixed(2)} V</text>}
         </g>
       ))}
       {graph.components.map((c) => {
@@ -50,9 +53,9 @@ export function Schematic({ graph, label, tints = {}, reroutes = [], voltages, p
               </>
             ) : (
               <g transform={`translate(${s.x1} ${s.y1}) rotate(${deg})`}>
-                <line x1={0} x2={len / 2 - 22} className="tw-wire tw-lead" />
+                <line x1={0} x2={len / 2 - 22} className="tw-wire" />
                 <rect x={len / 2 - 22} y={-8} width={44} height={16} rx={2} className="tw-res" />
-                <line x1={len / 2 + 22} x2={len} className="tw-wire tw-lead" />
+                <line x1={len / 2 + 22} x2={len} className="tw-wire" />
               </g>
             )}
             <text x={horiz ? mx : mx + (c.kind === "dc_voltage" ? -26 : 16)} y={horiz ? my - 16 : my + 4} textAnchor={horiz ? "middle" : c.kind === "dc_voltage" ? "end" : "start"} className="tw-lbl">
@@ -68,13 +71,13 @@ export function Schematic({ graph, label, tints = {}, reroutes = [], voltages, p
       {leads.map((l) => (
         <g key={`${l.componentId}${l.terminal}`} data-reroute={l.label}>
           <path d={l.d!} className="tw-reroute" />
-          <text x={(terminalPoint(l.componentId, l.terminal)?.[0] ?? 0) + 42} y={235} className="tw-tint">{l.label}</text>
+          <text x={(terminalPoint(l.componentId, l.terminal)?.[0] ?? 0) + 42} y={272} className="tw-tint">{l.label}</text>
         </g>
       ))}
       {Object.entries(NODE_POINT).map(([n, [x, y]]) => (
-        <text key={n} x={x - 12} y={y - 12} textAnchor="end" className="tw-node">{n}</text>
+        <text key={n} x={x - 12} y={y + 22} textAnchor="end" className="tw-node">{slots[n as Slot]}</text>
       ))}
-      {voltages && volts.map(([n, x, y]) => voltages[n] !== undefined && <text key={n} x={x} y={y} className="tw-volt">{voltages[n].toFixed(2)} V</text>)}
+      {volts.map(([n, x, y]) => v(n) !== undefined && <text key={n} x={x} y={y} className="tw-volt">{v(n)!.toFixed(2)} V</text>)}
       {pulse && (
         <g data-next-node={pulseNode}>
           <circle cx={pulse[0]} cy={pulse[1]} r={14} className="tw-pulse" />

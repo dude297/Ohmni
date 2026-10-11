@@ -1,4 +1,5 @@
-// Pure helpers for /twin: netlist parsing, value formatting, layout, CSV, badges, diff model. No fabricated data.
+// Pure helpers for /twin: netlist import, value formatting, layout, CSV, badges, diff model. No fabricated data.
+import { importNetlist } from "../../lib/netlist";
 export type Comp = { id: string; kind: "resistor" | "dc_voltage"; value: number; positiveNode: string; negativeNode: string };
 export type Graph = { schemaVersion: 1; components: Comp[]; groundNode: "GND"; measureNode: string };
 export type Obs = { node: string; volts: number };
@@ -11,27 +12,16 @@ export type CompDiff = {
 };
 export type ConnDiff = { componentId: string; terminal: "positive" | "negative"; intendedNode: string; observedNode: string };
 export type Diff = { componentDiffs: CompDiff[]; connectionDiffs: ConnDiff[]; nodeMap?: unknown; identical: boolean; uncertainties?: unknown };
-
-// ponytail: inline fixture text (same circuit as LOADED_BRIDGE_12V); a pin-1/pin-2 KiCad subset is all the parser handles.
-const NETS: [string, [string, number][]][] = [
-  ["VIN", [["V1", 1], ["R1", 1], ["R3", 1]]],
-  ["A", [["R1", 2], ["R2", 1], ["R5", 1]]],
-  ["B", [["R3", 2], ["R4", 1], ["R5", 2], ["R6", 1]]],
-  ["C", [["R6", 2], ["R7", 1]]],
-  ["GND", [["V1", 2], ["R2", 2], ["R4", 2], ["R7", 2]]],
-];
-const COMPS: [string, string][] = [["V1", "12V"], ["R1", "1k"], ["R2", "2k"], ["R3", "1.5k"], ["R4", "1k"], ["R5", "3.3k"], ["R6", "680"], ["R7", "1.2k"]];
-export const BRIDGE_NETLIST = `(export (version "E")
-  (design (source "loaded_bridge.kicad_sch") (tool "Eeschema"))
-  (components
-${COMPS.map(([r, v]) => `    (comp (ref "${r}") (value "${v}"))`).join("\n")}
-  )
-  (nets
-${NETS.map(([n, pins], i) => `    (net (code "${i + 1}") (name "${n}") ${pins.map(([r, p]) => `(node (ref "${r}") (pin "${p}"))`).join(" ")})`).join("\n")}
-  )
-)
-`;
 export const MAX_NETLIST_BYTES = 64 * 1024;
+
+/** Same importer the API uses, so node names (VIN, N1, B, VOUT) match the server's intended graph exactly. */
+export function importDesign(text: string, measureNode?: string): { graph?: Graph; error?: string } {
+  if (new TextEncoder().encode(text).length > MAX_NETLIST_BYTES) return { error: "Netlist is over the 64 KB limit." };
+  if (!text.trim()) return { error: "Paste a KiCad .net or SPICE netlist." };
+  const r = importNetlist(text, { measureNode });
+  if (r.graph) return { graph: r.graph as Graph };
+  return { error: r.rejected[0] ? `line ${r.rejected[0].line}: ${r.rejected[0].reason}` : r.errors[0] ?? "Could not read that netlist." };
+}
 
 function mult(s: string) {
   if (s === "m") return 1e-3;
@@ -57,36 +47,6 @@ export function formatValue(v: number, kind: string = "resistor"): string {
   return `${trim(v)} Ω`;
 }
 export const formatVolts = (v: number) => `${v.toFixed(3)} V`;
-
-export function parseKicadNetlist(text: string, measureNode = "C"): { graph?: Graph; error?: string } {
-  if (new TextEncoder().encode(text).length > MAX_NETLIST_BYTES) return { error: "Netlist is over the 64 KB limit." };
-  const vals = new Map<string, string>();
-  for (const m of text.matchAll(/\(comp\s+\(ref\s+"?([^")\s]+)"?\)\s*\(value\s+"?([^")]+?)"?\)/g)) vals.set(m[1], m[2]);
-  if (!vals.size) return { error: "No (comp ...) entries found. Paste a KiCad .net export." };
-  const pins = new Map<string, { pos?: string; neg?: string }>();
-  for (const chunk of text.split(/\(net\s+/).slice(1)) {
-    const name = /\(name\s+"?([^")]+?)"?\)/.exec(chunk)?.[1]?.replace(/^\//, "");
-    if (!name) continue;
-    for (const n of chunk.matchAll(/\(node\s+\(ref\s+"?([^")\s]+)"?\)\s*\(pin\s+"?([^")\s]+)"?\)/g)) {
-      const e = pins.get(n[1]) ?? {};
-      if (n[2] === "1") e.pos = name;
-      else if (n[2] === "2") e.neg = name;
-      pins.set(n[1], e);
-    }
-  }
-  const components: Comp[] = [];
-  for (const [id, raw] of vals) {
-    const kind = id[0] === "V" ? "dc_voltage" : id[0] === "R" ? "resistor" : null;
-    if (!kind) return { error: `Unsupported part ${id}: only R and V parts are supported.` };
-    const value = parseValue(raw);
-    const p = pins.get(id);
-    if (value === null) return { error: `Cannot read value "${raw}" for ${id}.` };
-    if (!p?.pos || !p.neg) return { error: `${id} needs pins 1 and 2 on named nets.` };
-    components.push({ id, kind, value, positiveNode: p.pos, negativeNode: p.neg });
-  }
-  if (!components.some((c) => c.positiveNode === "GND" || c.negativeNode === "GND")) return { error: "No net named GND." };
-  return { graph: { schemaVersion: 1, components, groundNode: "GND", measureNode } };
-}
 
 // ---- observed table -> graph
 export type Row = { id: string; kind: Comp["kind"]; value: string; pos: string; neg: string };
@@ -125,10 +85,18 @@ export const BRIDGE_LAYOUT: Record<string, Seg> = {
   R7: { x1: 420, y1: 170, x2: 420, y2: 300 },
 };
 export const NODE_POINT: Record<string, [number, number]> = { A: [150, 170], B: [300, 170], C: [420, 170] };
-export const hasBridgeLayout = (g: Graph) =>
-  g.components.length === 8 &&
-  g.components.every((c) => c.id in BRIDGE_LAYOUT) &&
-  ["VIN", "A", "B", "C"].every((n) => g.components.some((c) => c.positiveNode === n || c.negativeNode === n));
+export type Slot = "VIN" | "A" | "B" | "C" | "GND";
+/** Layout slot -> actual node name, derived from topology (never from hardcoded names); null if the graph is not the bridge. */
+export function bridgeSlots(g: Graph): Record<Slot, string> | null {
+  const get = (id: string) => g.components.find((c) => c.id === id);
+  const [v1, r1, r2, r3, r4, r5, r6, r7] = ["V1", "R1", "R2", "R3", "R4", "R5", "R6", "R7"].map(get);
+  if (g.components.length !== 8 || !v1 || !r1 || !r2 || !r3 || !r4 || !r5 || !r6 || !r7) return null;
+  const s = { VIN: v1.positiveNode, A: r1.negativeNode, B: r3.negativeNode, C: r6.negativeNode, GND: g.groundNode };
+  const ok = r1.positiveNode === s.VIN && r3.positiveNode === s.VIN && r2.positiveNode === s.A && r5.positiveNode === s.A && r4.positiveNode === s.B &&
+    r5.negativeNode === s.B && r6.positiveNode === s.B && r7.positiveNode === s.C && [v1.negativeNode, r2.negativeNode, r4.negativeNode, r7.negativeNode].every((n) => n === s.GND);
+  return ok ? s : null;
+}
+export const slotOf = (slots: Record<Slot, string>, node: string): Slot | null => (Object.keys(slots) as Slot[]).find((k) => slots[k] === node) ?? null;
 export const terminalPoint = (id: string, t: "positive" | "negative"): [number, number] | null => {
   const s = BRIDGE_LAYOUT[id];
   return s ? (t === "positive" ? [s.x1, s.y1] : [s.x2, s.y2]) : null;
@@ -140,7 +108,7 @@ export function reroutePath(id: string, t: "positive" | "negative", node: string
   const [x, y] = from;
   const off = x + 36;
   if (node in RAIL_Y) return `M${x} ${y} H${off} V${RAIL_Y[node as keyof typeof RAIL_Y]}`;
-  const to = NODE_POINT[node];
+  const to = NODE_POINT[node]; // node is a layout slot (VIN/A/B/C/GND)
   return to ? `M${x} ${y} H${off} V${to[1] - 24} H${to[0]} V${to[1]}` : null;
 }
 /** Real junctions: points where 3+ component terminals meet. */
@@ -208,7 +176,7 @@ export function parseEvidenceCsv(text: string): { observations: Obs[]; errors: s
 }
 
 // ---- badges
-export const intendedBadge = (kind?: string) => `INTENDED (source: ${kind === "kicad_netlist" || !kind ? "KiCad netlist" : kind.replace(/_/g, " ")})`;
+export const intendedBadge = (kind?: string) => `INTENDED (source: ${!kind || kind === "kicad" || kind === "kicad_netlist" ? "KiCad netlist" : kind === "spice" ? "SPICE netlist" : kind.replace(/_/g, " ")})`;
 export const observedBadge = (kind: "human_review" | "image_extraction" | "manual" = "human_review") =>
   ({ human_review: "OBSERVED (human-reviewed)", image_extraction: "OBSERVED (image extraction, reviewed)", manual: "OBSERVED (manual entry)" })[kind];
 export type Source = "typed" | "file";
