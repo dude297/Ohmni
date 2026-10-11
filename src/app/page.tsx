@@ -12,6 +12,7 @@ import { HeroCircuit } from "../components/ohmni/hero-circuit";
 import { LaunchShowcase } from "../components/ohmni/launch-showcase";
 import { ScrollExperience } from "../components/ohmni/scroll-experience";
 import { UseCases } from "../components/ohmni/use-cases";
+import { SiteNavigation } from "../components/ohmni/site-navigation";
 
 export const metadata: Metadata = {
   title: "Ohmni | Understand your circuit",
@@ -25,13 +26,7 @@ export default function Home() {
       <ScrollExperience />
       <header className="site-header">
         <Brand />
-        <nav aria-label="Main navigation">
-          <a href="#use-cases">Use cases</a>
-          <a href="#how-it-works">How it works</a>
-          <Link href="/lab" className="nav-cta">
-            Open lab <ArrowUpRight size={15} />
-          </Link>
-        </nav>
+        <SiteNavigation />
       </header>
       <main>
         <section className="hero">
