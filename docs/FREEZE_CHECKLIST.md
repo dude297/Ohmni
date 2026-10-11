@@ -15,9 +15,9 @@
 - [ ] Actual latency/usage recorded, costs sourced or marked unknown, known limitations stated.
 
 ### Verdict and freeze
-RED = core implementation/runtime evidence missing, P0 broken or no hosted demo. AMBER = hosted but some gate incomplete (list precisely). GREEN = all P0 verified with links and release lead signs off SHA. At T+150 stop feature PRs; only P0 fixes/retests after freeze.
+RED = core implementation/runtime evidence missing, P0 broken or no hosted demo. AMBER = hosted but some gate incomplete (list precisely). GREEN = all P0 verified with links and release lead signs off SHA. At **3:30 PM PDT on October 11, 2026**, stop feature PRs; only verified P0 fixes/retests after freeze. **Submit by 5:00 PM PDT**, with a hard external deadline of **5:30 PM PDT**.
 
-**Observed 2026-10-11: RED / NOT PRODUCT FREEZE-READY — scaffold with unimplemented solver/model adapters.**
+**Historical audit:** initially RED while solver/model adapters were stubs. This sentence is historical, NOT a current status claim; verify latest code, PRs, CI and live provider evidence before issuing a new verdict.
 
 ### Notification format
 OHMNI FREEZE STATUS: [RED / AMBER / GREEN]
