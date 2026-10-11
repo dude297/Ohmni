@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "trigger_mode": "auto",
+  "trigger_mode": "tag_only",
   "exclude_authors": ["dependabot[bot]", "renovate[bot]", "github-actions[bot]", "snyk-bot"],
   "include_authors": [],
   "ignore_patterns": [
