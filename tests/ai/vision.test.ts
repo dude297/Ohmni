@@ -34,6 +34,7 @@ beforeEach(() => {
   process.env.GROQ_API_KEY = 'q-key';
   delete process.env.GEMINI_MODEL;
   delete process.env.GROQ_VISION_MODEL;
+  process.env.VISION_PRIMARY = 'gemini'; // existing cases exercise Gemini-first; Groq-first default tested below
 });
 afterEach(() => {
   process.env = { ...OLD };
@@ -134,5 +135,48 @@ describe('extractWithFallback', () => {
     expect(r.extraction.warnings[0]).toBe('Automated extraction unavailable (gemini model_unavailable, groq rate_limited); enter the circuit manually.');
     expect(r.events).toHaveLength(2);
     expect(JSON.stringify(r)).not.toMatch(/g-key|q-key/);
+  });
+});
+
+describe('default order (VISION_PRIMARY unset) is Groq first', () => {
+  beforeEach(() => {
+    delete process.env.VISION_PRIMARY;
+  });
+
+  it('uses Groq and never calls Gemini when Groq succeeds', async () => {
+    fetchMock.mockResolvedValue(groqOk());
+    const r = await run();
+    expect(r.ok).toBe(true);
+    expect(r.events).toHaveLength(1);
+    expect(r.events[0]).toMatchObject({ provider: 'groq', status: 'ok' });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  it('falls back to Gemini once when Groq is rate limited, with an honest note', async () => {
+    fetchMock.mockResolvedValue(new Response('{"error":{"message":"rate limit"}}', { status: 429 }));
+    generateContent.mockResolvedValue({ text: JSON.stringify(good), usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 } });
+    const r = await run();
+    expect(r.ok).toBe(true);
+    expect(r.events.map((e) => e.provider)).toEqual(['groq', 'google']);
+    expect(r.events[0].note).toBe("fallback: groq rate_limited (429)");
+    expect(r.events[1].note).toMatch(/fallback from groq rate_limited/);
+    expect(generateContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('both fail -> manual entry naming both providers', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 503 }));
+    generateContent.mockRejectedValue(apiError(503, 'UNAVAILABLE high demand'));
+    const r = await run();
+    expect(r.ok).toBe(false);
+    expect(r.extraction.graph).toBeNull();
+    expect(r.extraction.warnings[0]).toMatch(/groq .*gemini .*enter the circuit manually/);
+  });
+
+  it('VISION_PRIMARY=gemini restores Gemini first', async () => {
+    process.env.VISION_PRIMARY = 'gemini';
+    generateContent.mockResolvedValue({ text: JSON.stringify(good), usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 } });
+    const r = await run();
+    expect(r.events[0].provider).toBe('google');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

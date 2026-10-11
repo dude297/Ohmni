@@ -43,7 +43,16 @@ export const groqExtractor: VisionExtractor = {
   extract: extractWithGroq,
 };
 
-// Groq is free-tier, so even malformed Gemini output earns a second attempt.
+const label = (x: VisionExtractor) => (x.provider === 'google' ? 'gemini' : x.provider);
+
+// Order is env-configurable. Default = Groq first: on our 10 synthetic fixtures (2026-10-11) Groq was
+// 10/10 exact with 0 API errors at 735 ms median vs gemini-3.5-flash 7/7 with 3/10 503s at 4223 ms
+// (docs/VISION_FALLBACK.md). VISION_PRIMARY=gemini restores Gemini-first without a code change.
+export function visionOrder(): [VisionExtractor, VisionExtractor] {
+  return process.env.VISION_PRIMARY === 'gemini' ? [geminiExtractor, groqExtractor] : [groqExtractor, geminiExtractor];
+}
+
+// Both providers are free-tier, so even malformed primary output earns a second attempt.
 // 'other' (auth/bad request) does not: Groq is unlikely to help and we should not mask a config bug.
 const FALLBACK_ON = new Set<FailureReason>([
   'rate_limited', 'quota_exhausted', 'model_unavailable', 'timeout', 'server_error', 'not_configured', 'malformed_output',
@@ -56,21 +65,22 @@ function manual(reasons: string[]): CandidateExtraction {
   };
 }
 
-/** Gemini first; Groq once if Gemini failed in a fallback-worthy way. `ok` = some provider returned usable output. */
+/** Primary first; backup once if the primary failed in a fallback-worthy way. `ok` = some provider returned usable output. */
 export async function extractWithFallback(
   image: Uint8Array,
   mime: string,
-  primary: VisionExtractor = geminiExtractor,
-  backup: VisionExtractor = groqExtractor,
+  primary: VisionExtractor = visionOrder()[0],
+  backup: VisionExtractor = visionOrder()[1],
 ): Promise<{ extraction: CandidateExtraction; events: ModelTraceEvent[]; ok: boolean }> {
+  const pa = label(primary), pb = label(backup);
   const a = await primary.extract(image, mime);
   if (!a.failure) return { extraction: a.extraction, events: [a.event], ok: true };
-  if (!FALLBACK_ON.has(a.failure)) return { extraction: manual([`gemini ${a.failure}`]), events: [a.event], ok: false };
+  if (!FALLBACK_ON.has(a.failure)) return { extraction: manual([`${pa} ${a.failure}`]), events: [a.event], ok: false };
 
-  const reason = a.event.note?.replace(/^gemini /, '') ?? a.failure; // e.g. "rate_limited (429)"
-  const events: ModelTraceEvent[] = [{ ...a.event, note: `fallback: gemini ${reason}` }];
+  const reason = a.event.note?.startsWith(`${pa} `) ? a.event.note.slice(pa.length + 1) : a.failure; // e.g. "rate_limited (429)"
+  const events: ModelTraceEvent[] = [{ ...a.event, note: `fallback: ${pa} ${reason}` }];
   const b = await backup.extract(image, mime);
-  events.push(b.failure === 'not_configured' ? b.event : { ...b.event, note: [b.event.note, `fallback from gemini ${a.failure}`].filter(Boolean).join('; ') });
+  events.push(b.failure === 'not_configured' ? b.event : { ...b.event, note: [b.event.note, `fallback from ${pa} ${a.failure}`].filter(Boolean).join('; ') });
   if (!b.failure) return { extraction: b.extraction, events, ok: true };
-  return { extraction: manual([`gemini ${a.failure}`, `groq ${b.failure}`]), events, ok: false };
+  return { extraction: manual([`${pa} ${a.failure}`, `${pb} ${b.failure}`]), events, ok: false };
 }
