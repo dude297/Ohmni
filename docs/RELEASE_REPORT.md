@@ -1,6 +1,6 @@
 # Ohmni Release QA Report
 
-> **Historical (2026-10-11 afternoon audits).** Not the current state. Since then: primary host is Anbaric (https://ohmni.cloud.anbaric.ai, build `89251fd` (release candidate, redeployed 15:20 PDT), login required); the Vercel fallback is frozen at `d5a0035` (daily deploy allowance exhausted), so "production", "known-good build" and "Build SHA == main" below refer to the Vercel host at the audited SHA only. Backup video is now `docs/demo/ohmni-demo-guided.webm`. Prelint is `tag_only` since #60. Submission is not declared complete by this report.
+> **Historical (2026-10-11 afternoon audits).** Not the current state. Since then: primary host is Anbaric (https://ohmni.cloud.anbaric.ai, build `d4b97d2` (release candidate #62 + Loaded bridge sample #64, redeployed ~16:00 PDT), login required); the Vercel fallback is frozen at `d5a0035` (daily deploy allowance exhausted), so "production", "known-good build" and "Build SHA == main" below refer to the Vercel host at the audited SHA only. Backup video is now `docs/demo/ohmni-demo-guided.webm`. Prelint is `tag_only` since #60. Submission is not declared complete by this report.
 
 **Overall: AMBER** (no P0 regression found). Prepared ~12:45 PM PDT, 2026-10-11, against main `a9f6360600be0f755aeb614f9085f30308488b16` and production https://multimodal-hackathon-sage.vercel.app.
 

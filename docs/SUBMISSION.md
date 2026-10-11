@@ -2,7 +2,7 @@
 
 **Ohmni turns a circuit schematic and real electrical measurements into an explainable investigation, helping users determine what went wrong and what to measure next.** Intelligent model routing, human oversight, and a deterministic engineering solver.
 
-- **Primary host (Anbaric Cloud):** https://ohmni.cloud.anbaric.ai (app `ohmni`, build `89251fd` (release candidate, redeployed 15:20 PDT)). It requires an Anbaric login, so judges need organizer/Anbaric access ([ANBARIC_DEPLOYMENT.md](ANBARIC_DEPLOYMENT.md)). Includes `/api/topology`.
+- **Primary host (Anbaric Cloud):** https://ohmni.cloud.anbaric.ai (app `ohmni`, build `d4b97d2` (release candidate #62 + Loaded bridge sample #64, redeployed ~16:00 PDT)). It requires an Anbaric login, so judges need organizer/Anbaric access ([ANBARIC_DEPLOYMENT.md](ANBARIC_DEPLOYMENT.md)). Includes `/api/topology`.
 - **Public fallback (Vercel, no signup):** https://multimodal-hackathon-sage.vercel.app, frozen at `d5a0035` because the Vercel daily deploy allowance is exhausted. Same demo flow; it lacks only `/api/topology` (#57) and the newest docs.
   - Lab (guided: Capture, Review, Compare, Investigate; Probe Guide): `/lab`
   - Probe Guide + tutor: `/probe` · Under the Hood: `/for-the-larp`
@@ -10,7 +10,7 @@
 - Repo: https://github.com/dude297/Ohmni
 - 4-minute demo script: [DEMO_SCRIPT.md](DEMO_SCRIPT.md)
 - Backup recording (RECORDED, 2:35, guided lab UI, live traces recorded 2026-10-11 14:05-14:08 PDT on build `c27807c` against the Vercel host): [demo/ohmni-demo-guided.webm](demo/ohmni-demo-guided.webm), details in [demo/README.md](demo/README.md). The older `ohmni-demo-backup.webm` is superseded (old UI).
-- Code review: Prelint (GitHub App) reviewed PRs #51 and #55 with real findings ([PRELINT_INTEGRATION.md](PRELINT_INTEGRATION.md)); it is now `tag_only` (manual, `@prelint`) since #60 while billing is disputed.
+- Code review: Prelint (GitHub App) reviewed PRs #51 and #55 with real findings ([PRELINT_INTEGRATION.md](PRELINT_INTEGRATION.md)); automatic reviews were paused (#60) while credits ran out and re-enabled after the owner restored credits (#65).
 
 ## The problem
 
