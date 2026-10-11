@@ -1,0 +1,28 @@
+{
+  "passed": [
+    "backend MNA selected by default",
+    "real local backend returns 2.500 V",
+    "real diagnosis returns plausible 1 kΩ R2",
+    "actual solver trace rendered",
+    "actual backend recomputes edited 1 kΩ circuit",
+    "actual extract endpoint responds with candidate or explicit failure",
+    "no browser page errors in backend integration"
+  ],
+  "hypotheses": [
+    "R2 may be 1 kΩ instead of 10 kΩ",
+    "R1 may be 100 kΩ instead of 10 kΩ",
+    "Supply V1 may be 0.9 V instead of 5 V"
+  ],
+  "extraction": {
+    "hasCandidate": false,
+    "warnings": [],
+    "error": [
+      "Analysis needs attentionNo supported graph was extracted. Use a manual divider, or paste a reviewed circuit graph below.Your image and edits remain available for review."
+    ],
+    "trace": [
+      "extractgeminiGEMINI_NOT_CONFIGURED0 ms error"
+    ]
+  },
+  "errors": [],
+  "environment": "Local production build, real API handlers; no browser mocks"
+}
