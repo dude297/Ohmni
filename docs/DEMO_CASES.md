@@ -14,3 +14,20 @@ Notes
 - Historical (observed before Groq was merged): on the verify_topology run the trace showed an extra step `verify_topology` with a since-removed OpenAI verifier, `status: skipped` (key not configured). The route was chosen live by Jev, but no verifier executed in that deployment. The verifier is now Groq `qwen/qwen3.8-27b` (src/lib/ai/secondary.ts); a live verify_topology run with Groq has not been recorded in this table.
 - The samples are in `public/samples/`; routes above are single observations, and Gemini free-quota exhaustion (429) now falls back to Groq for extraction, so the extraction column may show Groq in later runs.
 - 3 live calls used, each ~70 s apart; each result observed once (not repeated), so routing stability across reruns is not established.
+
+---
+
+## 2026-10-11 follow-up (PDT 12:23-12:29): Groq-primary pipeline, `ambiguous-junction-groq.png`
+
+Production vision is now Groq `qwen/qwen3.8-27b` (Gemini fallback). The earlier `ambiguous-junction.png` no longer yields verify_topology (coordinator observed Groq reading it cleanly -> review_extraction). Goal: an image where Groq returns warnings + a graph and Jev picks verify_topology. **Result: NOT achieved in 6 live calls.** Observed, in order (all on variants of the same divider, dated 2026-10-11 PDT):
+
+| # | Variant (final script keeps only #6) | Time PDT | Vision | Result | Route |
+|---|---|---|---|---|---|
+| 1 | R2 top lead stops short of VOUT wire; extra L-shaped wire crossing VOUT | 12:23:49 | groq 1111 ms, 1208/276 tok | graph null; warns of "transistor", VOUT not connected | ask_user (Jev 429 rate limited, defaulted, not a real Jev decision) |
+| 2 | same, L-stub removed (plain vertical crossing wire) | 12:25:15 | groq 1150 ms, 1208/243 tok | graph null; warns of unlabelled vertical line, VOUT not connected | ask_user (Jev real: ask_user=1.00) |
+| 3 | R2 top gap + dangling stub off ground rail | 12:26:15 | groq 429 -> gemini-3.5-flash-lite 2500 ms, 1310/206 tok | graph, no warnings | review_extraction (1.00) |
+| 4 | R2 lead continues up through VOUT wire (no dot) + stub | 12:27:12 | groq 886 ms, 1208/211 tok | graph, no warnings | review_extraction (1.00) |
+| 5 | #4 plus stub hanging below VOUT wire | 12:28:04 | groq 889 ms, 1208/211 tok | graph, no warnings | ask_user (Jev 429, defaulted) |
+| 6 | #4 plus plain vertical wire crossing VOUT (committed image) | 12:29:17 | groq 1082 ms, 1208/211 tok | graph, no warnings, no unresolved | review_extraction (1.00) |
+
+Findings: Groq either ignores the dot-less crossings (graph, zero warnings -> review_extraction) or over-reacts and refuses to build a graph (null graph -> ask_user). I never observed the combination warnings+graph from Groq, so verify_topology was never chosen and the `verify_topology` trace step never appeared in any of these runs (its Groq-backed status is therefore unobserved). Jev's free-tier 429 hit on 2 of 6 calls (shared quota). `ambiguous-junction-groq.png` is committed as the last variant tried; it should NOT be relied on for verify_topology. The only live verify_topology result on record is the Gemini-era run above. Variant #2 (graph null) is the reliable real ask_user beat for the current Groq pipeline, though it is not committed as a separate file.

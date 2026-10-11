@@ -39,6 +39,11 @@ describe('rateLimit', () => {
     expect(check('POST', '/api/solve', h('5.5.5.5'), 0)!.code).toBe('RATE_LIMITED');
   });
 
+  it('explain allows 10/min', () => {
+    for (let i = 0; i < 10; i++) expect(check('POST', '/api/explain', h('9.9.9.9'), 0)).toBeNull();
+    expect(check('POST', '/api/explain', h('9.9.9.9'), 0)!.code).toBe('RATE_LIMITED');
+  });
+
   it('413 on large content-length', () => {
     const b = check('POST', '/api/extract', h('6.6.6.6', { 'content-length': String(7 * 1024 * 1024) }))!;
     expect(b.status).toBe(413);

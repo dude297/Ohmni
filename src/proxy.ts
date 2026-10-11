@@ -10,4 +10,4 @@ export function proxy(req: NextRequest) {
   );
 }
 
-export const config = { matcher: ['/api/extract', '/api/solve'] };
+export const config = { matcher: ['/api/extract', '/api/solve', '/api/explain'] };
