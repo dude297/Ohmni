@@ -1,0 +1,181 @@
+import { GoogleGenAI } from '@google/genai';
+import { z } from 'zod';
+import { validateGraph } from '../circuit/validate';
+import { solveDC, SolveError } from '../circuit/solve';
+import { diagnose } from '../diagnosis';
+import type { CircuitGraph, ModelTraceEvent, SolveResponse } from '../circuit/types';
+
+// Owner: Agent T. Solver-grounded tutor: the MNA solver is the only math authority; the LLM only writes prose,
+// and every number in that prose is checked against solver/diagnosis output in code.
+const TIMEOUT_MS = 15_000;
+export const explainModel = () => process.env.EXPLAIN_MODEL || 'gemini-3.5-flash-lite';
+
+export type Explanation = { summary: string; steps: { title: string; text: string }[] };
+export type ExplainResult = {
+  explanation: Explanation | null;
+  grounded: boolean;
+  ungroundedNumbers: string[];
+  facts: { voltages: Record<string, number>; currents: Record<string, number>; hypotheses?: { title: string }[] };
+  trace: ModelTraceEvent[];
+};
+export type ExplainOutcome =
+  | { ok: true; result: ExplainResult }
+  | { ok: false; status: 422; code: 'INVALID_GRAPH' | 'UNSOLVABLE'; message: string; details?: string[] };
+
+// ---- grounding checker ----
+const PREFIX: Record<string, number> = { '': 1, k: 1e3, K: 1e3, M: 1e6, m: 1e-3, u: 1e-6, µ: 1e-6, μ: 1e-6 };
+// number (optionally 10,000-style), then optional prefix+unit. Lookbehind skips ids like R12 / V1.
+const NUM_RE =
+  /(?<![A-Za-z0-9_.])(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|-?\.\d+)\s*(?:(k|K|M|m|u|µ|μ)?(V|A|Ω|ohms?)|(k|K|M)(?![A-Za-z]))?(?![A-Za-z0-9])/g;
+
+export type FoundNumber = { text: string; value: number; scale: number };
+
+export function extractNumbers(text: string): FoundNumber[] {
+  const out: FoundNumber[] = [];
+  for (const m of text.matchAll(NUM_RE)) {
+    const scale = PREFIX[m[2] ?? m[4] ?? ''];
+    out.push({ text: m[0].trim(), value: Number(m[1].replace(/,/g, '')) * scale, scale });
+  }
+  return out;
+}
+
+/** Returns the numbers in `text` not matching any allowed value (1% relative, or 1e-6 in the displayed unit's scale). */
+export function checkGrounding(text: string, allowed: number[]): string[] {
+  const abs = allowed.map(Math.abs);
+  // ponytail: abs tolerance scales with the written prefix so "0.2 µA" can't silently match 0
+  return extractNumbers(text)
+    .filter(({ value, scale }) => !abs.some((a) => Math.abs(Math.abs(value) - a) <= Math.max(0.01 * a, 1e-6 * scale)))
+    .map((n) => n.text);
+}
+
+export function allowedNumbers(
+  graph: CircuitGraph,
+  sol: { voltages: Record<string, number>; currents: Record<string, number> },
+  measured?: number,
+  hyps?: NonNullable<SolveResponse['hypotheses']>,
+): number[] {
+  const set = [...Array(11).keys()]; // 0..10 for step numbering
+  const V = sol.voltages;
+  for (const v of Object.values(V)) set.push(v);
+  for (const i of Object.values(sol.currents)) set.push(Math.abs(i), Math.abs(i) * 1e3);
+  for (const c of graph.components) {
+    set.push(c.value);
+    const i = Math.abs(sol.currents[c.id]);
+    if (c.kind === 'dc_voltage' && i > 0) set.push(c.value / i, c.value / i / 1e3); // total load seen by the source (e.g. 20 kΩ)
+    if (c.kind === 'resistor') set.push(c.value / 1e3, c.value / 1e6, V[c.positiveNode] - V[c.negativeNode]); // kΩ/MΩ forms + drop
+  }
+  if (measured !== undefined) set.push(measured, V[graph.measureNode] - measured);
+  for (const h of hyps ?? []) for (const n of extractNumbers(`${h.title} ${h.rationale} ${h.nextMeasurement}`)) set.push(n.value);
+  return set.filter(Number.isFinite);
+}
+
+// ---- model call ----
+const explanationSchema = z.object({
+  summary: z.string().min(1),
+  steps: z.array(z.object({ title: z.string(), text: z.string() })).min(1).max(5),
+});
+
+const PROMPT = `You are an electrical-engineering tutor. Explain the user's DC circuit to an EE student in plain language.
+The FACTS JSON below was computed by a circuit solver; it is the only source of truth.
+Rules:
+- Use ONLY numbers that appear in FACTS (you may write resistances in kΩ and currents in mA). Never compute or invent new numbers, percentages or ratios.
+- At most 5 steps. Use KVL, KCL, Ohm's law and voltage-divider reasoning where relevant.
+- If a measured voltage and hypotheses are given, explain why the measurement may differ, using the hypotheses only; call them hypotheses, not confirmed faults.
+- Safety: always say to disconnect power before measuring resistance. Give no unsafe advice.
+- Reply with JSON only: {"summary": string, "steps": [{"title": string, "text": string}]}.
+FACTS:
+`;
+
+async function callModel(facts: unknown): Promise<{ explanation: Explanation | null; event: ModelTraceEvent }> {
+  const model = explainModel();
+  const event: ModelTraceEvent = { step: 'explain', provider: 'google', model, durationMs: 0, status: 'ok' };
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { explanation: null, event: { ...event, status: 'skipped', note: 'GEMINI_API_KEY not configured' } };
+
+  const started = Date.now();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    // ponytail: Promise.race because the SDK can hang past abortSignal (same as ai/gemini.ts)
+    const hang = new Promise<never>((_, rej) => ctrl.signal.addEventListener('abort', () => rej(new Error('timeout'))));
+    const res = await Promise.race([
+      hang,
+      new GoogleGenAI({ apiKey }).models.generateContent({
+        model,
+        contents: [{ role: 'user', parts: [{ text: PROMPT + JSON.stringify(facts) }] }],
+        config: { temperature: 0.2, responseMimeType: 'application/json', abortSignal: ctrl.signal },
+      }),
+    ]);
+    const u = res.usageMetadata;
+    if (u) event.usage = { inputTokens: u.promptTokenCount, outputTokens: u.candidatesTokenCount };
+    let raw: unknown;
+    try {
+      raw = JSON.parse(res.text ?? '');
+    } catch {
+      raw = null;
+    }
+    const p = explanationSchema.safeParse(raw);
+    if (!p.success) return { explanation: null, event: { ...event, status: 'error', note: 'gemini malformed_output' } };
+    return { explanation: p.data, event };
+  } catch (e) {
+    const status = (e as { status?: unknown })?.status;
+    // ponytail: SDK error text deliberately not copied into the trace (may echo request details)
+    const note = ctrl.signal.aborted
+      ? `gemini timeout (request timed out after ${TIMEOUT_MS / 1000}s)`
+      : `gemini error${typeof status === 'number' ? ` (${status})` : ''}`;
+    return { explanation: null, event: { ...event, status: 'error', note } };
+  } finally {
+    clearTimeout(timer);
+    event.durationMs = Date.now() - started;
+  }
+}
+
+export async function explain(rawGraph: unknown, measuredVoltage?: number): Promise<ExplainOutcome> {
+  const v = validateGraph(rawGraph);
+  if (!v.ok) return { ok: false, status: 422, code: 'INVALID_GRAPH', message: 'Circuit graph is invalid', details: v.errors };
+  const graph = v.graph;
+  const t0 = performance.now();
+  let sol;
+  try {
+    sol = solveDC(graph);
+  } catch (e) {
+    if (e instanceof SolveError) return { ok: false, status: 422, code: 'UNSOLVABLE', message: e.message };
+    throw e;
+  }
+  const solveEvent: ModelTraceEvent = {
+    step: 'solve',
+    provider: 'local',
+    model: 'mna-dc',
+    durationMs: Math.round(performance.now() - t0),
+    status: 'ok',
+  };
+  const hyps = measuredVoltage !== undefined ? diagnose(graph, measuredVoltage) : undefined;
+  const facts: ExplainResult['facts'] = { voltages: sol.voltages, currents: sol.currents };
+  if (hyps) facts.hypotheses = hyps.map((h) => ({ title: h.title }));
+
+  const promptFacts = {
+    components: graph.components.map(({ id, kind, value, positiveNode, negativeNode }) => ({ id, kind, value, positiveNode, negativeNode })),
+    groundNode: graph.groundNode,
+    measureNode: graph.measureNode,
+    nodeVoltagesV: sol.voltages,
+    componentCurrentsA: sol.currents,
+    ...(measuredVoltage !== undefined && { measuredVoltageV: measuredVoltage, hypotheses: hyps }),
+  };
+  const { explanation, event } = await callModel(promptFacts);
+  const ungroundedNumbers = explanation
+    ? checkGrounding(
+        [explanation.summary, ...explanation.steps.flatMap((s) => [s.title, s.text])].join('\n'),
+        allowedNumbers(graph, sol, measuredVoltage, hyps),
+      )
+    : [];
+  return {
+    ok: true,
+    result: {
+      explanation,
+      grounded: explanation !== null && ungroundedNumbers.length === 0,
+      ungroundedNumbers,
+      facts,
+      trace: [solveEvent, event],
+    },
+  };
+}
