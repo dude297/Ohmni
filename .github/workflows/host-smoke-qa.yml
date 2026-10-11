@@ -45,3 +45,56 @@ jobs:
             process.exitCode=1;
           }
           EOF
+
+      - name: Hosted Chromium UI smoke — desktop and mobile (NO model calls)
+        timeout-minutes: 5
+        run: |
+          npm install --no-save --no-package-lock playwright-core@1.56.0
+          node --input-type=module <<'EOF'
+          import { chromium } from 'playwright-core';
+          const base='https://multimodal-hackathon-sage.vercel.app';
+          const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox']});
+          try {
+            for(const v of [{name:'desktop',width:1440,height:900},{name:'mobile',width:390,height:844}]){
+              const context=await browser.newContext({viewport:{width:v.width,height:v.height},reducedMotion:v.name==='mobile'?'reduce':'no-preference'});
+              const page=await context.newPage();
+              const errs=[];
+              page.on('pageerror',e=>errs.push(e.message));
+              const go=async path=>{const r=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});if(r.status()!==200)throw Error(path+' HTTP '+r.status());await page.waitForLoadState('networkidle',{timeout:15000}).catch(()=>{});};
+              const noOverflow=async route=>{const d=await page.evaluate(()=>({w:document.documentElement.scrollWidth,v:window.innerWidth}));if(d.w>d.v+2)throw Error(v.name+' '+route+' horizontal overflow '+JSON.stringify(d));};
+              await go('/');
+              await page.getByRole('heading',{name:/Your circuit.*has a problem.*Find out why/s}).waitFor({timeout:12000});
+              await noOverflow('home');
+              console.log('PASS',v.name,'homepage heading and viewport');
+              await go('/lab?sample=divider');
+              await page.getByRole('heading',{name:'Circuit investigation'}).waitFor();
+              await page.locator('.capture-panel').getByRole('button',{name:/Next step/}).click();
+              await page.getByRole('heading',{name:'Check the connections.'}).waitFor();
+              await page.locator('.confirmation input[type=checkbox]').check();
+              await page.locator('.review-panel').getByRole('button',{name:/Next step/}).click();
+              await page.getByRole('button',{name:/Use demo reading: 0.45 V/}).click();
+              await page.getByRole('button',{name:/Analyze & compare/}).click();
+              await page.locator('.mismatch-card').waitFor({timeout:25000});
+              const comparison=await page.locator('.analyze-panel').innerText();
+              if(!comparison.includes('2.500')||!comparison.includes('0.450'))throw Error('Comparison missing expected or measured values');
+              await noOverflow('lab');
+              console.log('PASS',v.name,'guided lab confirmed solve: 2.500 vs 0.450 V');
+              await go('/probe');
+              await page.getByRole('button',{name:/Resistor ladder/}).click();
+              await page.locator('#v0').fill('0');
+              await page.getByRole('button',{name:'Guide me'}).click();
+              await page.getByText(/Measure A next/).first().waitFor({timeout:25000});
+              await page.locator('#v1').fill('5');
+              await page.getByRole('button',{name:/Submit reading/}).click();
+              await page.getByText(/R2 open/).first().waitFor({timeout:25000});
+              await noOverflow('probe');
+              console.log('PASS',v.name,'Probe Guide: B=0 -> A -> A=5 -> R2 open');
+              await go('/for-the-larp');
+              await page.getByRole('heading',{name:/Every prediction has a provenance/}).waitFor({timeout:12000});
+              await noOverflow('under-the-hood');
+              if(errs.length)throw Error(v.name+' page JS exceptions: '+errs.join(' | '));
+              console.log('PASS',v.name,'Under the Hood, no runtime exceptions or horizontal overflow');
+              await context.close();
+            }
+          }finally{await browser.close();}
+          EOF
