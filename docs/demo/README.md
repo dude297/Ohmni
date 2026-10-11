@@ -21,11 +21,21 @@
 
 Notes for honest narration:
 - The second route used the Gemini fallback because Groq's free plan rate-limited us (we had made 3 Groq extractions in the previous ~7 minutes during QA). That is the real fallback path, shown as an `error` row plus a `fallback from groq rate_limited` row.
-- `/probe` in this recording is the production build `d1096b7`, where the standalone page rendered **without its stylesheet** (CSS-module bug, fixed in PR #37). The in-lab Probe Guide is styled. If PR #37 is merged before judging, the live `/probe` looks like `qa-probe-fixed-desktop-local.png` (a local `next start` of that branch).
+- **The `/probe` segment of this video (about 1:00 to 1:23) is superseded by `ohmni-probe-segment.webm` (below).** It was recorded on build `d1096b7`, where the standalone page rendered without its stylesheet (CSS-module bug, fixed in PR #37). The in-lab Probe Guide in this video is styled and still valid.
 - `verify_topology` does not appear: it has not been reproduced on the Groq-primary pipeline. It was observed once in the Gemini-primary era (see `docs/DEMO_CASES.md`, dated historical evidence).
 
+## `/probe` re-record: `ohmni-probe-segment.webm` (RECORDED)
+
+- Recorded: 2026-10-11, 13:01:30 to 13:02:04 PDT (about 34 s; 1280x800 video of a 1440x900 browser; Playwright headless Chromium, scripted clicks).
+- Target: production, `/api/health` at start: build `bdf035f`, visionPrimary groq, all three providers configured. Page had 0 `undefined` class names (styles applied).
+- Calls made (all live at recording time): `POST /api/probe` x2 (solver only, no model) and `POST /api/explain` x1 (Gemini tutor). **No `/api/extract` call** (no Groq/Jev quota used).
+- What it shows: resistor ladder, B = 0 V → "Measure A next" (1.50 bits) with outcome previews ≈ 0 V 50% / ≈ 2.5 V 25% / ≈ 5 V 25% → A = 5 V → "Most likely: R2 open / not connected (100%)" → "Explain this circuit".
+- Tutor result in this take: the grounding check flagged one number, **"Some numbers could not be verified: 0.17 mA"**, and the explanation is shown with that amber warning. That is the real output; we did not re-take to get a clean one. Narrate it as the grounding check doing its job.
+- Stills: `10-probe-segment-next.png`, `11-probe-segment-conclusion.png`.
+
 ## Files
+- `ohmni-probe-segment.webm` – RECORDED `/probe` re-record on `bdf035f` (supersedes the `/probe` part of the main backup).
 - `ohmni-demo-backup.webm` – RECORDED backup walkthrough (< 15 MB).
 - `01`–`09*.png` – stills from the same recorded run.
 - `qa-lab-mobile-prod.png` – 390x844 full-page `/lab` (prod d1096b7) after sample solve + Probe Guide.
-- `qa-probe-fixed-desktop-local.png` – `/probe` with the PR #37 fix, local build (not production).
+- `qa-probe-fixed-desktop-local.png` – `/probe` with the PR #37 fix, local build (not production; now superseded by stills 10/11 from production).
