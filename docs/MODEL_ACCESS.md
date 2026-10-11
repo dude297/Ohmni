@@ -15,8 +15,8 @@ Image model extracts candidate; code validates; Jev reads structured summary and
 ## Locked free-plan providers (zero usage-based charges)
 | Role | Provider / model | Key | Free-plan limit | Paid fallback |
 |---|---|---|---|---|
-| Primary vision | Google Gemini `gemini-3.5-flash` (free tier; owner decision 2026-10-11) | GEMINI_API_KEY | per Google free-tier quota | none — never enable billing |
-| Vision fallback + topology verifier | GroqCloud `qwen/qwen3.8-27b` | GROQ_API_KEY | Groq free plan limits | none |
+| Primary vision + topology verifier | GroqCloud `qwen/qwen3.8-27b` (owner decision 2026-10-11 on measured evidence; `VISION_PRIMARY=groq`) | GROQ_API_KEY | Groq free plan ~8K TPM (~3 extractions/min) | none |
+| Vision fallback | Google Gemini (`GEMINI_MODEL`; production today `gemini-3.5-flash-lite`, since `gemini-3.5-flash` free quota was exhausted) | GEMINI_API_KEY | per Google free-tier quota, per model | none — never enable billing |
 | Routing decision | Jev `jev-1.13-free` via BeatAPI | BEATAPI_API_KEY | 1 successful call/min before any top-up | `jev-1.13` is paid → **refused in code** |
 | Electrical math | Local TypeScript MNA | — | — | — |
 

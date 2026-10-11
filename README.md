@@ -13,7 +13,7 @@ Willingness to pay and time saved are hypotheses, not validated claims (see [doc
 ## How it works
 
 1. **Upload** a PNG/JPEG/WebP schematic (up to 5 MB) at `/lab`, or load the built-in divider sample.
-2. **Gemini** (`gemini-3.5-flash`) reads the image and returns a *candidate* circuit graph as JSON. If Gemini is rate-limited, over quota, unavailable, times out, errors, is unconfigured or returns malformed output, Groq `qwen/qwen3.8-27b` reads the image once instead ([docs/VISION_FALLBACK.md](docs/VISION_FALLBACK.md)).
+2. **Groq** (`qwen/qwen3.8-27b`) reads the image and returns a *candidate* circuit graph as JSON. If it is rate-limited, over quota, unavailable, times out, errors, is unconfigured or returns malformed output, **Gemini** (`GEMINI_MODEL`) reads the image once instead. Order is configurable (`VISION_PRIMARY=groq|gemini`); Groq is first because on our 10 synthetic fixtures it was 10/10 exact with 0 API errors at 735 ms median, vs Gemini 3.5 Flash 7/7 with 3/10 503s at 4223 ms ([docs/VISION_FALLBACK.md](docs/VISION_FALLBACK.md)).
 3. **Zod + structural validation** checks the candidate. Hard invalidity always forces correction.
 4. **Jev** (`jev-1.13-free`) receives only the structured summary and picks a route: `review_extraction`, `verify_topology` or `ask_user`.
 5. The app dispatches the route: show it for review, run the Groq topology verifier, or ask the user to clarify.
@@ -23,7 +23,7 @@ Willingness to pay and time saved are hypotheses, not validated claims (see [doc
 
 ```mermaid
 flowchart LR
-  IMG[Schematic image] --> GEM[Gemini vision<br/>Groq fallback]
+  IMG[Schematic image] --> GEM[Groq vision<br/>Gemini fallback]
   GEM --> ZOD[Zod validation]
   ZOD --> JEV{Jev route choice}
   JEV -->|review_extraction| REV[Human review]
@@ -39,9 +39,9 @@ flowchart LR
 
 | Model | Role | Never does |
 |---|---|---|
-| Gemini `gemini-3.5-flash` | Reads pixels, proposes a candidate graph | Decide trust, do the math |
+| Groq `qwen/qwen3.8-27b` | Primary reader and topology verifier (a Preview model on Groq's free plan) | Override hard validation |
 | Jev `jev-1.13-free` (BeatAPI) | Chooses the route from structured state (one decision per analysis) | See pixels, solve equations |
-| Groq `qwen/qwen3.8-27b` | Fallback reader and topology verifier (a Preview model on Groq's free plan) | Override hard validation |
+| Gemini (`GEMINI_MODEL`) | Fallback reader when Groq fails | Decide trust, do the math |
 | Local MNA solver | The only authority for voltages and currents | Trust an image |
 
 Two models agreeing is not proof of electrical correctness, which is why a human confirmation gate sits before the solver. Development-time Claude Code / ChatGPT Work activity is not counted as runtime multimodel.

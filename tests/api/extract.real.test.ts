@@ -23,6 +23,7 @@ const jevReply = (choice: string) =>
 beforeEach(() => {
   __resetJevPacing();
   vi.stubEnv('BEATAPI_API_KEY', 'k');
+  vi.stubEnv('VISION_PRIMARY', 'gemini'); // this suite mocks the Gemini adapter only
 });
 afterEach(() => {
   vi.unstubAllGlobals();
