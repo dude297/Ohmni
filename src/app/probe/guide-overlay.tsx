@@ -23,7 +23,7 @@ export function ProbeSchematic({ graph, highlight }: { graph: CircuitGraph; high
       {nodes.map((n) => {
         const on = n.name === highlight;
         return (
-          <g key={n.name} data-node={n.name} data-highlight={on || undefined}>
+          <g key={n.name} role={on ? "group" : undefined} data-node={n.name} data-highlighted={on ? "true" : undefined} aria-label={on ? `Next measurement: node ${n.name}` : undefined}>
             {on && (
               <>
                 <circle className="pg-ring" cx={n.x} cy={n.y} r={14} />
