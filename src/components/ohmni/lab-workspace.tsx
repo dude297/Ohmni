@@ -67,6 +67,7 @@ export function LabWorkspace() {
   const [confirmed, setConfirmed] = useState(false);
   const [phase, setPhase] = useState<Phase>("review");
   const [measurement, setMeasurement] = useState("");
+  const [investigateReading, setInvestigateReading] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [resultSource, setResultSource] = useState<"local" | "backend">(
     "local",
@@ -82,6 +83,8 @@ export function LabWorkspace() {
   const [json, setJson] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+  const investigationStatusRef = useRef<HTMLDivElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const pending = phase !== "review";
   const measured = measurement.trim() ? Number(measurement) : undefined;
   const validMeasured = measured === undefined || Number.isFinite(measured);
@@ -108,6 +111,13 @@ export function LabWorkspace() {
     Math.abs(delta) > Math.max(0.05, Math.abs(expected!) * 0.05);
   const events = [...trace, ...(result?.trace ?? [])];
   const stageIndex = stages.indexOf(stage);
+  const sourceLabel = mode === "sample"
+    ? "Prepared circuit · no image AI call"
+    : mode === "manual"
+      ? "Manual circuit · no image AI call"
+      : imageUrl
+        ? "Uploaded schematic · review the returned extraction evidence"
+        : graph ? "Imported circuit graph · no image AI call" : null;
   const canEnter = {
     capture: true,
     review: !!graph,
@@ -127,6 +137,7 @@ export function LabWorkspace() {
             : imageUrl ? "Review needs attention" : null;
   function goTo(next: Stage) {
     if (pending || !canEnter[next]) return;
+    if (next === "investigate") setInvestigateReading(measurement);
     moveFocus.current = true;
     setStage(next);
   }
@@ -138,6 +149,9 @@ export function LabWorkspace() {
     stagesRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
     moveFocus.current = false;
   }, [stage]);
+  useEffect(() => {
+    if (error) errorRef.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, [error]);
   const allNodes = graph ? [...new Set(graph.components.flatMap((c) => [c.positiveNode, c.negativeNode]))] : [];
 
   useEffect(
@@ -159,6 +173,7 @@ export function LabWorkspace() {
     setConfirmed(false);
     setResult(null); setProbeTarget(undefined);
     setMeasurement("");
+    setInvestigateReading("");
     setError("");
     setExtraction(null);
     setRoute(null);
@@ -269,9 +284,9 @@ export function LabWorkspace() {
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  async function solve() {
-    if (!confirmed || !graph || !reviewReady || !validMeasured) return;
-    setStage("compare");
+  async function solve(voltage = measured, destination: "compare" | "investigate" = "compare") {
+    if (!confirmed || !graph || !reviewReady || (voltage !== undefined && !Number.isFinite(voltage))) return;
+    setStage(destination);
     setPhase("solving");
     setError("");
     setResult(null); setProbeTarget(undefined);
@@ -281,10 +296,10 @@ export function LabWorkspace() {
             await request("/api/solve", {
               graph,
               userConfirmed: true,
-              ...(measured !== undefined ? { measuredVoltage: measured } : {}),
+              ...(voltage !== undefined ? { measuredVoltage: voltage } : {}),
             }),
           )
-        : solveSample(graph, measured);
+        : solveSample(graph, voltage);
       if (next.voltages[graph.measureNode] === undefined)
         throw new Error(
           "Solver response is missing the selected measurement node.",
@@ -295,7 +310,7 @@ export function LabWorkspace() {
       setError(e instanceof Error ? e.message : "Circuit analysis failed.");
     } finally {
       setPhase("review");
-      statusRef.current?.focus();
+      (destination === "investigate" ? investigationStatusRef : statusRef).current?.focus();
     }
   }
   function importGraph() {
@@ -353,7 +368,8 @@ export function LabWorkspace() {
             <span>{i + 1}</span><strong>{item[0].toUpperCase() + item.slice(1)}</strong>
           </button>)}
         </nav>
-        {error && <div className="error-card guided-error" role="alert"><CircleAlert size={18} /><div><strong>The investigation needs attention</strong><p>{error}</p><span>Your image and circuit edits remain available. Return to Capture to try another image or a manual graph.</span></div></div>}
+        {sourceLabel && <p className="investigation-context"><span>{sourceLabel}</span>{result && <span>{resultSource === "local" ? "Local divider calculation" : "Backend circuit solver"}</span>}</p>}
+        {error && <div className="error-card guided-error" role="alert" ref={errorRef}><CircleAlert size={18} /><div><strong>The investigation needs attention</strong><p>{error}</p><span>{stage === "capture" ? "Your source remains available. Try another image or a manual graph." : "Your circuit edits remain available. Retry this step or review its connections."}</span></div></div>}
         <div className="guided-layout">
         <div className="workspace-grid guided-frames" ref={frameRef}>
           <section
@@ -888,8 +904,21 @@ export function LabWorkspace() {
           <section className="workspace-panel investigate-panel guided-frame" hidden={stage !== "investigate"} aria-labelledby="investigate-title">
             <PanelHeader number="04" icon={<FlaskConical size={17} />} title="Choose your next measurement." id="investigate-title" subtitle="Use the evidence to narrow the possibilities. A hypothesis is a starting point, not a confirmed fault." />
             <div className="investigate-content">
+              <form className="investigation-reading" onSubmit={(e) => {
+                e.preventDefault();
+                if (!investigateReading.trim() || !Number.isFinite(Number(investigateReading)) || pending) return;
+                setMeasurement(investigateReading);
+                void solve(Number(investigateReading), "investigate");
+              }}>
+                <label htmlFor="investigate-reading">{measured === undefined ? "Add" : "Update"} your measured {graph?.measureNode} (V)</label>
+                <p>Compare this reading to update the investigation.</p>
+                <div>
+                  <input id="investigate-reading" type="number" step="any" value={investigateReading} disabled={pending} onChange={(e) => setInvestigateReading(e.target.value)} placeholder="Enter your meter reading" />
+                  <button className="button primary small" disabled={pending || !investigateReading.trim() || !Number.isFinite(Number(investigateReading))}>{pending ? <LoaderCircle size={15} className="spinner" /> : <Activity size={15} />} Compare reading</button>
+                </div>
+              </form>
+              <div ref={investigationStatusRef} tabIndex={-1} role="status" className="investigation-reading-status">{pending ? "Comparing your reading…" : result ? measured !== undefined ? `Comparison updated: ${measured} V observed, ${expected?.toFixed(3)} V expected.` : "Circuit calculated. Add a meter reading here to investigate a discrepancy." : error ? "Comparison could not complete. Your reading is preserved; retry when ready." : ""}</div>
               {result && <>
-                {measured === undefined && <div className="investigation-notice"><strong>Add a reading to investigate a discrepancy.</strong><p>Your circuit has been calculated. Return to Compare to enter your meter reading.</p></div>}
                 {delta !== undefined && !mismatch && <div className="investigation-notice"><strong>Your reading agrees with the prediction.</strong><p>This observation shows no discrepancy within the displayed comparison threshold. It does not prove that every part is correct.</p></div>}
                   {(result.hypotheses ?? []).slice(0, 1).map((h, i) => (
                     <HypothesisCard key={i} hypothesis={h} />

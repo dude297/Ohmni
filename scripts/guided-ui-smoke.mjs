@@ -26,7 +26,15 @@ try {
   check('Two current and two future audience labels',await page.getByText('Current limited use case',{exact:true}).count()===2&&await page.getByText('Future applications',{exact:true}).count()===2);
   await page.evaluate(()=>scrollTo(0,900));
   check('Header remains at viewport top after scrolling',Math.abs((await page.locator('.site-header').boundingBox()).y)<1);
-  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});await noOverflow(`Homepage has no overflow at ${width}px`);check(`All nav links visible at ${width}px`,await page.locator('header a[href="#how-it-works"]').isVisible()&&await page.locator('header a[href="#use-cases"]').isVisible()&&await page.locator('header a[href="/lab"]').isVisible());}
+  for(const width of [320,390,768,1440]){
+    await page.setViewportSize({width,height:900});await noOverflow(`Homepage has no overflow at ${width}px`);check(`All primary nav links visible at ${width}px`,await page.locator('header a[href="#how-it-works"]').isVisible()&&await page.locator('header a[href="#use-cases"]').isVisible()&&await page.locator('header a[href="/lab"]').isVisible());
+    await page.locator('.nav-more summary').click();
+    check(`More links target shipped pages at ${width}px`,await page.getByRole('link',{name:'Under the Hood'}).getAttribute('href')==='/for-the-larp'&&await page.getByRole('link',{name:'Probe Guide',exact:true}).getAttribute('href')==='/probe');
+    const menu=await page.locator('.nav-more-links').boundingBox();check(`More disclosure fits viewport at ${width}px`,menu.x>=0&&menu.x+menu.width<=width);
+    if(width===390){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:`${output}/navigation-mobile.png`});}
+    await page.locator('.nav-more summary').click();
+    const nav=await page.locator('header nav').boundingBox();check(`Primary navigation remains one row at ${width}px`,nav.height<60);
+  }
   await page.evaluate(()=>document.querySelector('#use-cases').scrollIntoView());await page.screenshot({path:`${output}/audiences-desktop.png`});
   await page.goto(`${base}/lab`);await stage('Capture');
   check('Idle banner removed',await page.locator('.session-banner').count()===0&&!(await page.locator('body').innerText()).includes('READY WHEN YOU ARE'));
@@ -65,14 +73,28 @@ try {
   check('Circuit edit removes result and probe state',await page.locator('.voltage-result').count()===0&&await page.locator('.probe-guide').count()===0);
   check('Circuit edit gates later stages',await stages().getByRole('button',{name:/Compare/}).isDisabled()&&await stages().getByRole('button',{name:/Investigate/}).isDisabled());
   await page.getByRole('checkbox',{name:'I verified values, terminals and ground'}).check();await next();await solve('0');check('Reconfirm and solve edited ladder computes 2.381 V',(await page.locator('.voltage-result').innerText()).includes('2.381'));
-  await readySample('divider');await solve();check('Divider backend computes 2.500 V',(await page.locator('.voltage-result').innerText()).includes('2.500'));await next();await stage('Investigate');check('No-reading stage explains how to add evidence',await page.getByText('Add a reading to investigate a discrepancy.',{exact:true}).isVisible());
+  await readySample('divider');await solve();check('Divider backend computes 2.500 V',(await page.locator('.voltage-result').innerText()).includes('2.500'));await next();await stage('Investigate');
+  check('No-reading investigation offers a direct reading input',await page.locator('#investigate-reading').isVisible()&&await frame().getByRole('button',{name:'Compare reading',exact:true}).isDisabled());
+  check('Prepared circuit provenance remains visible',await page.locator('.investigation-context').innerText()==='Prepared circuit · no image AI call\nBackend circuit solver');
+  await page.locator('#investigate-reading').fill('0.45');await frame().getByRole('button',{name:'Compare reading',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.investigation-reading-status')?.textContent?.includes('Comparison updated: 0.45 V'));
+  await stage('Investigate');check('Direct reading makes actual probe guide available without navigation',await page.getByRole('button',{name:'Guide me',exact:true}).isVisible());
+  check('Direct reading request uses submitted value',JSON.parse(requests.filter(r=>r.url.endsWith('/api/solve')).at(-1).body).measuredVoltage===0.45);
+  await page.route('**/api/solve',r=>r.fulfill({status:503,json:{error:{code:'QA_ERROR',message:'Fixture: direct comparison unavailable'}}}));
+  await page.locator('#investigate-reading').fill('0.7');await frame().getByRole('button',{name:'Compare reading',exact:true}).click();await page.waitForSelector('.guided-error');
+  check('Direct comparison error preserves draft and offers retry',await page.locator('#investigate-reading').inputValue()==='0.7'&&await frame().getByRole('button',{name:'Compare reading',exact:true}).isEnabled());
+  check('Comparison error shows relevant recovery wording',(await page.getByRole('alert').innerText()).includes('Retry this step'));
+  await page.unroute('**/api/solve');await frame().getByRole('button',{name:'Compare reading',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.investigation-reading-status')?.textContent?.includes('Comparison updated: 0.7 V'));await stage('Investigate');
+  await page.locator('#investigate-reading').fill('2.5');await frame().getByRole('button',{name:'Compare reading',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.investigation-reading-status')?.textContent?.includes('Comparison updated: 2.5 V'));
+  check('Direct update to a matching reading clears prior investigation',await page.getByText('Your reading agrees with the prediction.',{exact:true}).isVisible()&&await page.locator('.probe-guide').count()===0);
   await stages().getByRole('button',{name:/Compare/}).click();await solve('2.5');await next();check('Matched reading uses honest notice',await page.getByText('Your reading agrees with the prediction.',{exact:true}).isVisible()&&await page.locator('.probe-guide').count()===0);
   await stages().getByRole('button',{name:/Review/}).click();await page.getByRole('spinbutton',{name:'R2 value in ohms'}).fill('1000');await page.getByRole('checkbox',{name:'I verified values, terminals and ground'}).check();await next();await solve('0.45');check('Edited divider backend computes 0.455 V',(await page.locator('.voltage-result').innerText()).includes('0.455'));
   await readySample('network');await solve('4.8');check('Network backend computes 6.545 V',(await page.locator('.voltage-result').innerText()).includes('6.545'));
+  await page.getByRole('button',{name:'Load sample',exact:true}).click();await stage('Capture');check('Persistent sample reset clears confirmation and analysis',await page.locator('.voltage-result').count()===0&&await stages().getByRole('button',{name:/Compare/}).isDisabled());
+  await readySample('divider');await frame().getByRole('checkbox',{name:'Use backend solver'}).uncheck();const requestsBeforeLocal=requests.length;await solve('0.45');await next();await stage('Investigate');check('Local fallback provenance remains visible',(await page.locator('.investigation-context').innerText()).includes('Local divider calculation')&&requests.length===requestsBeforeLocal);
   for(const width of [320,390,768]){
     await page.setViewportSize({width,height:900});await readySample('ladder');await stages().getByRole('button',{name:/Capture/}).click();await stage('Capture');await noOverflow(`Capture no overflow ${width}`);await next();await stage('Review');await noOverflow(`Review no overflow ${width}`);await next();await stage('Compare');await solve('0');await noOverflow(`Compare no overflow ${width}`);await next();await stage('Investigate');await page.getByRole('button',{name:'Guide me',exact:true}).click();await page.waitForSelector('.next-probe');await noOverflow(`Investigate no overflow ${width}`);
     check(`Sidebar visibility appropriate at ${width}`,width<=760?!await page.locator('.circuit-preview').isVisible():await page.locator('.circuit-preview').isVisible());
-    if(width===390)await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:`${output}/investigate-mobile.png`,fullPage:true});
+    if(width===390){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:`${output}/investigate-mobile.png`,fullPage:true});}
   }
   await page.goto(`${base}/lab`);await page.waitForSelector('.guided-frame');
   await page.locator('.json-editor summary').click();await page.locator('#graph-json').fill('{broken');await page.getByRole('button',{name:'Load graph for review'}).click();check('Malformed graph shows visible recovery alert',await page.getByRole('alert').isVisible()&&await frame().getByRole('button',{name:'Next step'}).isDisabled());
@@ -96,6 +118,5 @@ try {
   check('No browser runtime errors',errors.length===0);
   writeFileSync(`${output}/results.json`,JSON.stringify({passed:checks.length,checks,errors,realRequests:requests.length,environment:'Browser smoke against BASE_URL; genuine solve/probe; extraction and HTTP error fixtures explicitly labeled'},null,2));
   console.log(`${checks.length} browser assertions passed; ${requests.length} API requests; no browser runtime errors.`);
-}catch(e){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:`${output}/failure.png`,fullPage:true});console.error('BODY', (await page.locator('body').innerText()).slice(-6000));throw e;}
+}catch(e){console.error(e);try{await page.screenshot({path:`${output}/failure.png`,fullPage:true});console.error('BODY', (await page.locator('body').innerText()).slice(-6000));}catch{/* Preserve the original test failure if the page closes. */}throw e;}
 finally{await browser.close();}
-
