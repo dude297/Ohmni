@@ -12,7 +12,7 @@ describe('parseSiValue', () => {
   const table: [string, number | null][] = [
     ['1k', 1e3], ['1K', 1e3], ['1m', 1e-3], ['1M', 1e-3], ['1meg', 1e6], ['1MEG', 1e6], ['2.2Meg', 2.2e6],
     ['10u', 1e-5], ['10µ', 1e-5], ['4n7', 4.7e-9], ['100p', 1e-10], ['1f', 1e-15], ['1g', 1e9], ['1t', 1e12],
-    ['4k7', 4700], ['4R7', 4.7], ['1M5', 1.5e-3], ['1Meg5', 1.5e6],
+    ['4k7', 4700], ['4R7', 4.7], ['1M5', 1.5e6], ['1m5', 1.5e-3], ['2G2', 2.2e9], ['1Meg5', 1.5e6],
     ['10kohm', 1e4], ['5V', 5], ['3mV', 3e-3], ['2mohm', 2e-3], ['1.2kΩ', 1200], ['1e3', 1000], ['-5', -5], ['.5', 0.5],
     ['1mil', null], ['abc', null], ['1xyz', null], ['', null],
   ];
@@ -20,6 +20,20 @@ describe('parseSiValue', () => {
     const got = parseSiValue(s);
     if (v === null) expect(got).toBeNull();
     else expect(got).toBeCloseTo(v, 12);
+  });
+});
+
+describe('bare M warning', () => {
+  const run = (v: string) => importNetlist(`t
+V1 a 0 5
+R1 a 0 ${v}
+`, { measureNode: 'a' });
+  it('warns on 1M and 1m, not on 1MEG or RKM 1M5', () => {
+    expect(run('1M').warnings.join()).toMatch(/milli-ohm.*1MEG/);
+    expect(run('1m').warnings.join()).toMatch(/milli-ohm/);
+    expect(run('1MEG').warnings).toEqual([]);
+    expect(run('1M5').warnings).toEqual([]);
+    expect(run('1M').graph!.components[1].value).toBe(1e-3);
   });
 });
 

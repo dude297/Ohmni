@@ -1,6 +1,6 @@
 import type { CircuitComponent } from '@/lib/circuit/types';
 import { finish, type ImportOptions, type NetlistResult, type Rejected } from './types';
-import { parseSiValue } from './values';
+import { MILLI_WARNING, parseSiValueDetailed } from './values';
 
 type List = { items: Sx[]; line: number };
 type Sx = string | List;
@@ -101,8 +101,12 @@ export function importKicad(text: string, opts: ImportOptions = {}): NetlistResu
       if (/^(ac|sin|pulse|pwl|exp)\b/i.test(value)) { rej(c, ref, `${ref}: AC/SIN/PULSE sources are not supported (DC only)`); continue; }
       if (pins.sort().join() !== '1,2') { rej(c, ref, `${ref}: voltage source pins must be 1 (+) and 2 (-), found ${pins.join(',')}`); continue; }
       [a, b] = ['1', '2'];
-      num = parseSiValue(value.replace(/^dc\s*/i, '').replace(/\s+/g, ''));
-    } else num = parseSiValue(value.replace(/\s+/g, ''));
+      num = parseSiValueDetailed(value.replace(/^dc\s*/i, '').replace(/\s+/g, ''))?.value ?? null;
+    } else {
+      const pv = parseSiValueDetailed(value.replace(/\s+/g, ''));
+      num = pv?.value ?? null;
+      if (pv?.bareMilli) warnings.push(`${ref}: ${MILLI_WARNING(value)}`);
+    }
     if (num === null) { rej(c, ref, `${ref}: cannot parse value "${value}"`); continue; }
     comps.push({
       id: ref,

@@ -36,7 +36,9 @@ Format is auto-detected (`(export` => KiCad, else SPICE) unless `opts.format` is
 
 ## Values
 
-Case-insensitive SPICE suffixes: `f p n u µ m k meg g t`. **`m` is milli, `meg` is mega** (`1M` = 1 mΩ, as in SPICE; `1MEG` = 1 MΩ); `f` is femto, not farad; `mil` is rejected. Trailing units ignored: `ohm(s)`, `V`, `volt(s)`, `Ω`, `R`. RKM style supported: `4k7` = 4700, `4R7` = 4.7, `1M5` = 1.5 m (SPICE `m`!). Exponents (`1e3`) OK.
+Case-insensitive SPICE suffixes: `f p n u µ m k meg g t`. **`m` is milli, `meg` is mega** (`1M` = 1 mΩ as in SPICE; `1MEG` = 1 MΩ); `f` is femto, not farad; `mil` is rejected. A bare `m`/`M` suffix on a resistor adds a warning ("`1M` is milli-ohm in SPICE; did you mean 1MEG?"). Trailing units ignored: `ohm(s)`, `V`, `volt(s)`, `Ω`, `R`. Exponents (`1e3`) OK.
+
+RKM (IEC 60062, digit-letter-digit) follows the standard, not SPICE: the letter is the decimal point. `4k7` = 4700, `4R7` = 4.7, `2G2` = 2.2e9, **`1M5` = 1.5e6 (uppercase M = mega)**, `1m5` = 1.5e-3 (lowercase m = milli), `1Meg5` = 1.5e6. RKM never warns.
 
 ## Limits
 

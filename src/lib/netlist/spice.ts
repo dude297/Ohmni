@@ -1,6 +1,6 @@
 import type { CircuitComponent } from '@/lib/circuit/types';
 import { finish, type ImportOptions, type NetlistResult, type Rejected } from './types';
-import { parseSiValue } from './values';
+import { MILLI_WARNING, parseSiValue, parseSiValueDetailed } from './values';
 
 export const spiceNode = (n: string) => (n === '0' || n.toLowerCase() === 'gnd' ? 'GND' : n.toUpperCase());
 const NAMES: Record<string, string> = {
@@ -69,7 +69,9 @@ export function importSpice(text: string, opts: ImportOptions = {}): NetlistResu
       if (/^dc$/i.test(rest[0])) rest = rest.slice(1);
     }
     if (rest.length !== 1) { rej(l, `${id}: unexpected or missing value parameters "${rest.join(' ')}"`); continue; }
-    const value = parseSiValue(rest[0]);
+    const pv = parseSiValueDetailed(rest[0]);
+    const value = pv?.value ?? null;
+    if (pv?.bareMilli && kind === 'r') warnings.push(`line ${l.line}: ${MILLI_WARNING(rest[0])}`);
     if (value === null) { rej(l, `${id}: cannot parse value "${rest[0]}"`); continue; }
     seen.add(id);
     comps.push({ id, kind: kind === 'r' ? 'resistor' : 'dc_voltage', value, positiveNode: n1, negativeNode: n2 });
