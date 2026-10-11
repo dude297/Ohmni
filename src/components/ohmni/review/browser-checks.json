@@ -1,0 +1,32 @@
+{
+  "passed": [
+    "latest compiled CSS verified",
+    "desktop landing overflow",
+    "interactive hero recalculates",
+    "confirmation required",
+    "2.500 V sample and 1 kΩ mismatch hypothesis",
+    "desktop workspace overflow",
+    "no fabricated model events",
+    "edits clear result and confirmation",
+    "1 kΩ correction recalculates to 0.455 V",
+    "invalid resistance blocks confirmation",
+    "320px workspace overflow",
+    "390px workspace overflow",
+    "768px workspace overflow",
+    "1920px workspace overflow",
+    "mobile landing overflow",
+    "provider-down retains image without fake success",
+    "manual recovery works",
+    "ambiguous extraction requires clarification",
+    "typed backend request and result rendering (test fixture)",
+    "returned route and confidence render (test fixture)",
+    "422 rejects without sample fallback",
+    "malformed contract rejected",
+    "no browser page errors"
+  ],
+  "errors": [],
+  "accessibility": {
+    "landing": [],
+    "lab": []
+  }
+}
