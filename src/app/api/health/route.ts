@@ -1,9 +1,11 @@
+import { connection } from 'next/server';
 import { geminiModel } from '@/lib/ai/gemini';
 import { groqModel } from '@/lib/ai/groq';
 // Env presence only — never emit key values or lengths.
 const on = (k: string) => Boolean(process.env[k]);
 
-export function GET() {
+export async function GET() {
+  await connection(); // read env at request time (Anbaric loads keys at boot, not build)
   return Response.json({
     status: 'ok',
     build: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? process.env.BUILD_SHA ?? 'dev',

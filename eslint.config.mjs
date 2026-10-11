@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     ".claude/**",
     "out/**",
+    "deploy/anbaric/out/**",
     "build/**",
     "next-env.d.ts",
   ]),
