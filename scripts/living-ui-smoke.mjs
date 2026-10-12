@@ -56,6 +56,17 @@ try {
    const boxes=await svg.locator('text').evaluateAll(es=>es.map(e=>{const b=e.getBoundingClientRect();return {text:e.textContent,x:b.x,y:b.y,width:b.width,height:b.height};}));
    const collisions=[];for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++)if(overlap(boxes[i],boxes[j]))collisions.push([boxes[i].text,boxes[j].text]);
    check(`Advanced diagram labels never overlap ${tag}: ${JSON.stringify(collisions)}`,collisions.length===0);
+   const wireHits=await svg.evaluate(el=>{
+    const labels=[...el.querySelectorAll('text')].map(e=>({text:e.textContent,b:e.getBBox()})),hits=[];
+    for(const wire of el.querySelectorAll('.advanced-wire')){
+     const tokens=wire.getAttribute('d').match(/[MHV]|-?\d+(?:\.\d+)?/g);let x=0,y=0;
+     for(let i=0;i<tokens.length;){const cmd=tokens[i++];if(cmd==='M'){x=Number(tokens[i++]);y=Number(tokens[i++]);continue;}const nx=cmd==='H'?Number(tokens[i++]):x,ny=cmd==='V'?Number(tokens[i++]):y;
+      for(const {text,b} of labels){if((cmd==='H'&&y>b.y-1&&y<b.y+b.height+1&&Math.max(x,nx)>b.x&&Math.min(x,nx)<b.x+b.width)||(cmd==='V'&&x>b.x-1&&x<b.x+b.width+1&&Math.max(y,ny)>b.y&&Math.min(y,ny)<b.y+b.height))hits.push(text);}
+      x=nx;y=ny;
+     }
+    }return hits;
+   });
+   check(`Advanced labels clear physical wires ${tag}: ${JSON.stringify(wireHits)}`,wireHits.length===0);
    const expected=await page.locator('.comparison-value').first().boundingBox(),measured=await page.locator('.comparison-value.observed').boundingBox();
    check(`Advanced values visible after solve ${tag}`,[expected,measured].every(b=>b.y>=60&&b.y+b.height<=height));
    check(`Advanced measurement node is highlighted ${tag}`,await svg.locator('[data-node="C"]').getAttribute('data-highlighted')==='true');
