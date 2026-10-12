@@ -76,6 +76,8 @@ export function analyzeTwin(intended: CircuitGraph, observed: CircuitGraph, obse
           ...p,
           supportingObservations: [],
           resolves: false,
+          // ponytail: probability here is from simulating the described hardware, not a measurement; consumers must not show it as confidence
+          simulatedOnly: true,
           uncertainty: 'Based on your described hardware (simulated), not on a measurement. ' + p.uncertainty,
         }));
     } catch {

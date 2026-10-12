@@ -314,7 +314,7 @@ export function TwinClient() {
               {step === 5 && proposal && result && (
                 <>
                   <div className="tw-fix">
-                    <small>MOST LIKELY · {pct(proposal.probability ?? 0)}</small>
+                    <small>{rec?.status === "repair" && rec.basis === "observed_diff" ? "FROM YOUR DESCRIBED HARDWARE · simulated, not measured" : `MOST LIKELY · ${pct(proposal.probability ?? 0)}`}</small>
                     <p className="tw-big">{proposal.title}</p>
                     <p className="tw-patch"><b>{proposal.patch?.componentId}</b>: restore {formatValue(proposal.patch?.designValue ?? 0, proposal.patch?.unit === "V" ? "dc_voltage" : "resistor")}
                       <span> (now {formatValue(proposal.patch?.faultedValue ?? 0, proposal.patch?.unit === "V" ? "dc_voltage" : "resistor")})</span></p>

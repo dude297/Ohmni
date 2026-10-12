@@ -20,6 +20,7 @@ describe('twin recommendation on ties', () => {
     const a = analyzeTwin(G, obs, []);
     expect(a.recommendation).toMatchObject({ status: 'repair', hypothesisId: 'R6:open', basis: 'observed_diff', evidence: ['Your described hardware is missing R6.'] });
     expect(a.repair?.proposals[0].supportingObservations).toEqual([]);
+    expect(a.repair?.proposals[0]).toMatchObject({ simulatedOnly: true });
   });
   it('identical hardware, no readings: nothing recommended', () => {
     expect(analyzeTwin(G, G, []).recommendation.status).toBe('insufficient');
