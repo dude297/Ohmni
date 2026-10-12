@@ -1,0 +1,1144 @@
+{
+ "description": "Hand-derived expectations for the dual-candidate topology engine. pairA/pairB = [reading with supply shorted, reading with supply unplugged] in ohms between the ambiguous pair in candidate A / B. null = open circuit.",
+ "cases": [
+  {
+   "id": "div-vout-gnd",
+   "description": "Equal divider 5V 10k/10k, ambiguous VOUT-GND (R2 shorted out if joined)",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "VOUT",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VIN",
+      "negativeNode": "VOUT"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VOUT",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "VOUT",
+    "GND"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A: supply shorted (VIN=GND) -> R1||R2 = 5k; unplugged -> R2 = 10k. B: same net -> 0. B drops R2: 5V/10k = 0.5 mA, safe. Voltages: A VOUT=5*10k/20k=2.5 V, B 0 V.",
+    "pairA": [
+     5000,
+     10000
+    ],
+    "alias": {
+     "VOUT": "GND"
+    },
+    "survivor": "GND",
+    "voltageOption": {
+     "node": "VOUT",
+     "A": 2.5,
+     "B": 0
+    }
+   }
+  },
+  {
+   "id": "div-12v-1k-3k3",
+   "description": "Divider 12V 1k/3.3k, ambiguous VOUT-GND",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "VOUT",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 12,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "VIN",
+      "negativeNode": "VOUT"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 3300,
+      "positiveNode": "VOUT",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "VOUT",
+    "GND"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A: shorted 1000*3300/4300 = 767.44; unplugged 3300. B: 0.",
+    "pairA": [
+     767.4418604651163,
+     3300
+    ],
+    "alias": {
+     "VOUT": "GND"
+    },
+    "survivor": "GND"
+   }
+  },
+  {
+   "id": "div-gnd-first",
+   "description": "Same as div-vout-gnd with the pair given as (GND, VOUT): GND must still survive",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "VOUT",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VIN",
+      "negativeNode": "VOUT"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VOUT",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "GND",
+    "VOUT"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "Resistance is symmetric: 5k/10k vs 0. Alias must map VOUT -> GND regardless of argument order.",
+    "pairA": [
+     5000,
+     10000
+    ],
+    "alias": {
+     "VOUT": "GND"
+    },
+    "survivor": "GND"
+   }
+  },
+  {
+   "id": "div-vin-vout",
+   "description": "Divider 10k/10k, ambiguous VIN-VOUT (R1 shorted out if joined; neither node is GND)",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "VOUT",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VIN",
+      "negativeNode": "VOUT"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VOUT",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "VIN",
+    "VOUT"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A: supply shorted VIN=GND, R1||R2 = 5k; unplugged only R1 = 10k. B: 0. B puts 5V across R2 = 0.5 mA, safe. First-named node survives: alias VOUT -> VIN.",
+    "pairA": [
+     5000,
+     10000
+    ],
+    "alias": {
+     "VOUT": "VIN"
+    },
+    "survivor": "VIN"
+   }
+  },
+  {
+   "id": "ladder-n2-gnd",
+   "description": "Two-section ladder, ambiguous N2-GND",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "N2",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 10,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "VIN",
+      "negativeNode": "N1"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "N1",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R3",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "N1",
+      "negativeNode": "N2"
+     },
+     {
+      "id": "R4",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "N2",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "N2",
+    "GND"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A shorted: (R1||R2 = 2000/3) + R3 = 5000/3; || R4 = 2000*(5000/3)/(2000+5000/3) = 10000/11 = 909.09. Unplugged: (R2+R3) = 3k || 2k = 1200. B: 0. B supply load: 10V/(1k + 2k||1k) = 6 mA, safe.",
+    "pairA": [
+     909.0909090909091,
+     1200
+    ],
+    "alias": {
+     "N2": "GND"
+    },
+    "survivor": "GND"
+   }
+  },
+  {
+   "id": "sp-mid-gnd",
+   "description": "Series-parallel 12V (100 / 200||300), ambiguous MID-GND",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "MID",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 12,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 100,
+      "positiveNode": "VIN",
+      "negativeNode": "MID"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 200,
+      "positiveNode": "MID",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R3",
+      "kind": "resistor",
+      "value": 300,
+      "positiveNode": "MID",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "MID",
+    "GND"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A shorted: 100||200||300 = 600/11 = 54.545; unplugged 200||300 = 120. B: 0. B load: 12V/100 = 120 mA, safe.",
+    "pairA": [
+     54.54545454545455,
+     120
+    ],
+    "alias": {
+     "MID": "GND"
+    },
+    "survivor": "GND"
+   }
+  },
+  {
+   "id": "sp-vin-mid",
+   "description": "Series-parallel 12V, ambiguous VIN-MID (R1 shorted out if joined)",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "MID",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 12,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 100,
+      "positiveNode": "VIN",
+      "negativeNode": "MID"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 200,
+      "positiveNode": "MID",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R3",
+      "kind": "resistor",
+      "value": 300,
+      "positiveNode": "MID",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "VIN",
+    "MID"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A shorted VIN=GND: R1 || (R2||R3 = 120) = 12000/220 = 54.545; unplugged only R1 = 100. B: 0; B loads 12V across 120 ohm = 100 mA, safe.",
+    "pairA": [
+     54.54545454545455,
+     100
+    ],
+    "alias": {
+     "MID": "VIN"
+    },
+    "survivor": "VIN"
+   }
+  },
+  {
+   "id": "bridge-balanced-l-r",
+   "description": "Balanced symmetric bridge (four 1k), ambiguous L-R: equipotential nodes, no resistor between them",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "L",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "VIN",
+      "negativeNode": "L"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "L",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R3",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "VIN",
+      "negativeNode": "R"
+     },
+     {
+      "id": "R4",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "R",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "L",
+    "R"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "Both nodes sit at 2.5 V, so NO voltage reading separates A from B (voltage separation 0). An ohmmeter can: A shorted: L-(R1||R2=500)-GND-(R3||R4=500)-R = 1000; unplugged: two parallel 2k paths = 1000. B: 0.",
+    "pairA": [
+     1000,
+     1000
+    ],
+    "alias": {
+     "R": "L"
+    },
+    "survivor": "L",
+    "voltageSeparationMax": 0.01
+   }
+  },
+  {
+   "id": "supply-short-vin-gnd",
+   "description": "Merging VIN and GND shorts the 5V supply",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "VOUT",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VIN",
+      "negativeNode": "VOUT"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VOUT",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "VIN",
+    "GND"
+   ],
+   "expected": {
+    "shortsSupply": true,
+    "poweredSafe": false,
+    "decisive": true,
+    "unplugSupply": true,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A shorted-supply convention: VIN=GND -> 0 ohm (useless); unplugged: R1+R2 = 20k. B: source has both leads on one node (shortsSupply), reads 0. Only the unplugged check separates (20k vs 0). Never power B.",
+    "pairA": [
+     0,
+     20000
+    ],
+    "alias": {
+     "VIN": "GND"
+    },
+    "survivor": "GND"
+   }
+  },
+  {
+   "id": "overcurrent-a-gnd",
+   "description": "Merging A-GND puts 5V across 1 ohm = 5 A: not a source short but an overload",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "A",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 1,
+      "positiveNode": "VIN",
+      "negativeNode": "A"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "A",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "A",
+    "GND"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": false,
+    "decisive": true,
+    "unplugSupply": true,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A shorted: 1||10000 = 10000/10001 = 0.9999; unplugged 10k. B: 0. B current = 5V/1ohm = 5 A > 0.5 A limit -> poweredSafe false. Unplugged: 10k vs 0.",
+    "pairA": [
+     0.9999000099990001,
+     10000
+    ],
+    "alias": {
+     "A": "GND"
+    },
+    "survivor": "GND"
+   }
+  },
+  {
+   "id": "shunt-1ohm-indistinguishable",
+   "description": "X and Y joined by a 1 ohm shunt inside a 10k/10k divider: merging changes nothing a hobby meter resolves",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "X",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VIN",
+      "negativeNode": "X"
+     },
+     {
+      "id": "Rs",
+      "kind": "resistor",
+      "value": 1,
+      "positiveNode": "X",
+      "negativeNode": "Y"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "Y",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "X",
+    "Y"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": false,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A shorted: 1 || 20k = 20000/20001 = 0.99995; unplugged 1. B: 0. separation = 1/(0.02*1+1 + 1) = 0.495 << 3. Voltages differ by ~1e-4 V << sigma 0.01 V.",
+    "pairA": [
+     0.999950002499875,
+     1
+    ],
+    "alias": {
+     "Y": "X"
+    },
+    "survivor": "X",
+    "separationMax": 1
+   }
+  },
+  {
+   "id": "shunt-6ohm-below-threshold",
+   "description": "6 ohm shunt: just below the decisive threshold",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "X",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VIN",
+      "negativeNode": "X"
+     },
+     {
+      "id": "Rs",
+      "kind": "resistor",
+      "value": 6,
+      "positiveNode": "X",
+      "negativeNode": "Y"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "Y",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "X",
+    "Y"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": false,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A shorted: 6*20000/20006 = 5.9982; unplugged 6. Threshold x/(2+0.02x)=3 -> x = 6.383 ohm. sep(short) = 5.9982/(0.11996+1+1) = 2.829 < 3.",
+    "pairA": [
+     5.998200539838049,
+     6
+    ],
+    "alias": {
+     "Y": "X"
+    },
+    "survivor": "X"
+   }
+  },
+  {
+   "id": "shunt-7ohm-above-threshold",
+   "description": "7 ohm shunt: just above the decisive threshold",
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "X",
+    "components": [
+     {
+      "id": "V1",
+      "kind": "dc_voltage",
+      "value": 5,
+      "positiveNode": "VIN",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "R1",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "VIN",
+      "negativeNode": "X"
+     },
+     {
+      "id": "Rs",
+      "kind": "resistor",
+      "value": 7,
+      "positiveNode": "X",
+      "negativeNode": "Y"
+     },
+     {
+      "id": "R2",
+      "kind": "resistor",
+      "value": 10000,
+      "positiveNode": "Y",
+      "negativeNode": "GND"
+     }
+    ]
+   },
+   "ambiguous": [
+    "X",
+    "Y"
+   ],
+   "expected": {
+    "shortsSupply": false,
+    "poweredSafe": true,
+    "decisive": true,
+    "unplugSupply": false,
+    "pairB": [
+     0,
+     0
+    ],
+    "derivation": "A shorted: 7*20000/20007 = 6.99755; unplugged 7. sep(short) = 6.99755/(0.13995+1+1) = 3.270 >= 3.",
+    "pairA": [
+     6.99755085719998,
+     7
+    ],
+    "alias": {
+     "Y": "X"
+    },
+    "survivor": "X"
+   }
+  }
+ ],
+ "networks": [
+  {
+   "id": "series-3",
+   "formula": "1k+2k+3k",
+   "pair": [
+    "A",
+    "D"
+   ],
+   "expected": 6000,
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "A",
+    "components": [
+     {
+      "id": "a",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "A",
+      "negativeNode": "B"
+     },
+     {
+      "id": "b",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "B",
+      "negativeNode": "C"
+     },
+     {
+      "id": "c",
+      "kind": "resistor",
+      "value": 3000,
+      "positiveNode": "C",
+      "negativeNode": "D"
+     }
+    ]
+   }
+  },
+  {
+   "id": "parallel-3",
+   "formula": "1/(1/1k+1/2k+1/3k) = 6000/11",
+   "pair": [
+    "A",
+    "B"
+   ],
+   "expected": 545.4545454545455,
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "A",
+    "components": [
+     {
+      "id": "a",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "A",
+      "negativeNode": "B"
+     },
+     {
+      "id": "b",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "A",
+      "negativeNode": "B"
+     },
+     {
+      "id": "c",
+      "kind": "resistor",
+      "value": 3000,
+      "positiveNode": "A",
+      "negativeNode": "B"
+     }
+    ]
+   }
+  },
+  {
+   "id": "triangle",
+   "formula": "(1k+2k)||3k = 1500",
+   "pair": [
+    "A",
+    "C"
+   ],
+   "expected": 1500,
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "A",
+    "components": [
+     {
+      "id": "a",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "A",
+      "negativeNode": "B"
+     },
+     {
+      "id": "b",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "B",
+      "negativeNode": "C"
+     },
+     {
+      "id": "c",
+      "kind": "resistor",
+      "value": 3000,
+      "positiveNode": "A",
+      "negativeNode": "C"
+     }
+    ]
+   }
+  },
+  {
+   "id": "wheatstone-balanced-1k",
+   "formula": "balanced: bridge resistor carries no current: (1k+1k)||(1k+1k) = 1000",
+   "pair": [
+    "T",
+    "B"
+   ],
+   "expected": 1000,
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "T",
+    "components": [
+     {
+      "id": "a",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "T",
+      "negativeNode": "L"
+     },
+     {
+      "id": "b",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "T",
+      "negativeNode": "R"
+     },
+     {
+      "id": "c",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "L",
+      "negativeNode": "B"
+     },
+     {
+      "id": "d",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "R",
+      "negativeNode": "B"
+     },
+     {
+      "id": "e",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "L",
+      "negativeNode": "R"
+     }
+    ]
+   }
+  },
+  {
+   "id": "wheatstone-balanced-ratio",
+   "formula": "a/c = b/d = 1/2 so e (7k) irrelevant: (1k+2k)||(2k+4k) = 2000",
+   "pair": [
+    "T",
+    "B"
+   ],
+   "expected": 2000,
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "T",
+    "components": [
+     {
+      "id": "a",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "T",
+      "negativeNode": "L"
+     },
+     {
+      "id": "b",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "T",
+      "negativeNode": "R"
+     },
+     {
+      "id": "c",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "L",
+      "negativeNode": "B"
+     },
+     {
+      "id": "d",
+      "kind": "resistor",
+      "value": 4000,
+      "positiveNode": "R",
+      "negativeNode": "B"
+     },
+     {
+      "id": "e",
+      "kind": "resistor",
+      "value": 7000,
+      "positiveNode": "L",
+      "negativeNode": "R"
+     }
+    ]
+   }
+  },
+  {
+   "id": "wheatstone-unbalanced",
+   "formula": "a..e = 1,2,3,4,5 kohm; nodal solve with VT=1: VL=0.741177, VR=0.682353, I=71/170 mS -> R = 170000/71",
+   "pair": [
+    "T",
+    "B"
+   ],
+   "expected": 2394.3661971830984,
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "T",
+    "components": [
+     {
+      "id": "a",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "T",
+      "negativeNode": "L"
+     },
+     {
+      "id": "b",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "T",
+      "negativeNode": "R"
+     },
+     {
+      "id": "c",
+      "kind": "resistor",
+      "value": 3000,
+      "positiveNode": "L",
+      "negativeNode": "B"
+     },
+     {
+      "id": "d",
+      "kind": "resistor",
+      "value": 4000,
+      "positiveNode": "R",
+      "negativeNode": "B"
+     },
+     {
+      "id": "e",
+      "kind": "resistor",
+      "value": 5000,
+      "positiveNode": "L",
+      "negativeNode": "R"
+     }
+    ]
+   }
+  },
+  {
+   "id": "ladder-3-section",
+   "formula": "back-fold: 3k; 2k||3k+1k = 2.2k; 2k||2.2k+1k = 43/21 k",
+   "pair": [
+    "N0",
+    "GND"
+   ],
+   "expected": 2047.6190476190477,
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "N0",
+    "components": [
+     {
+      "id": "s1",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "N0",
+      "negativeNode": "N1"
+     },
+     {
+      "id": "p1",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "N1",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "s2",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "N1",
+      "negativeNode": "N2"
+     },
+     {
+      "id": "p2",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "N2",
+      "negativeNode": "GND"
+     },
+     {
+      "id": "s3",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "N2",
+      "negativeNode": "N3"
+     },
+     {
+      "id": "p3",
+      "kind": "resistor",
+      "value": 2000,
+      "positiveNode": "N3",
+      "negativeNode": "GND"
+     }
+    ]
+   }
+  },
+  {
+   "id": "disconnected",
+   "formula": "no path between the islands -> open circuit",
+   "pair": [
+    "A",
+    "X"
+   ],
+   "expected": null,
+   "graph": {
+    "schemaVersion": 1,
+    "groundNode": "GND",
+    "measureNode": "A",
+    "components": [
+     {
+      "id": "a",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "A",
+      "negativeNode": "B"
+     },
+     {
+      "id": "b",
+      "kind": "resistor",
+      "value": 1000,
+      "positiveNode": "X",
+      "negativeNode": "Y"
+     }
+    ]
+   }
+  }
+ ]
+}
