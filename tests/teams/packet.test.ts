@@ -25,3 +25,12 @@ describe('teams packet', () => {
     expect(md).toContain('Open question: why?');
   });
 });
+
+import { derivedQuestions as _dq, buildExamplePacket as _bp } from "../../src/app/teams/packet";
+import { it as _it, expect as _expect } from "vitest";
+_it("derivedQuestions flags unverified repair and missing nextTest only from packet data", () => {
+  const p = { ..._bp(), nextTest: undefined, repair: { title: "Fix", patch: {}, before: {}, after: {}, status: "hypothesized" as const } };
+  const q = _dq(p).join("|");
+  _expect(q).toContain("hypothesized");
+  _expect(q).toContain("No follow-up test");
+});

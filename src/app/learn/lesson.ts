@@ -36,3 +36,7 @@ export const hintText = (level: 1 | 2 | 3, r2: number) =>
     : level === 2
       ? "VOUT is the fraction of VIN that falls across R2: VOUT = VIN × R2 / (R1 + R2)."
       : `Plug in VIN = ${VIN} V, R1 = ${R1} Ω, R2 = ${r2} Ω and compute the fraction R2 / (R1 + R2) first.`;
+
+export const TOL_PCT = 5;
+/** Correct when the prediction is within TOL_PCT percent of the solver value. */
+export const isCorrect = (predicted: number, actual: number) => errorPct(predicted, actual) <= TOL_PCT;
