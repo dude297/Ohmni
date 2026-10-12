@@ -80,3 +80,5 @@ Claude should independently review the canonical fixture integration, drawing-to
 ## Prelint follow-up
 
 The owner explicitly authorized Prelint on this draft. The first technical review returned LGTM; product feedback prompted restoring beginner-first onboarding, visible upload/advanced links and an open component editor before confirmation. The advanced Capture preview remains available. Initial full-app QA exposed a real-font node-label collision at 320px; label spacing was increased and collision checks now wait for loaded fonts and report the exact pair. Acceptance still requires the updated full-app QA and independent re-review.
+
+Visual inspection of the production artifact found a ground-voltage label touching the return wire even though text-to-text checks passed. The final follow-up moves VIN/GND labels clear of wires and adds a loaded-font wire-intersection assertion. Focused 320px checks pass for both motion preferences. Committed local captures retain the prior validated 294-check preflight; the latest full-app artifact linked in the PR is authoritative for the final spacing.
