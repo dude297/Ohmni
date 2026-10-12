@@ -2,6 +2,8 @@
 
 This is a historical safety/QA plan; a plan is not evidence. Today's build-stamped hosted smoke (11/11), Chrome browser user journeys (8/8), source/deployment provenance and outstanding signed-in Anbaric gates are recorded in [RELEASE_E2E_2026-10-11.md](RELEASE_E2E_2026-10-11.md). Older smoke results below remain historical, not current release sign-off.
 
+Living Schematic #67 has separate [exact-build validation](ui-review/LIVING_SCHEMATIC.md#validation-and-screenshot-evidence): 169 unit tests, lint/types/build, and 302 full-app browser checks at four widths with both motion preferences. That suite verifies real solve/probe handlers and loaded-font label/wire clearance without model calls. The later [integration inventory and CI](CURRENT_STATE.md) includes additional routes and 630 passed tests, 7 expected failures and 2 skips. Neither result verifies production parity, signed-in Anbaric, all experimental hosted flows, live extraction or a submission receipt. The older homepage showcase/roadmap checks below describe the recorded release design.
+
 ### Deterministic DC solver
 - 5V with 10k/10k divider VOUT = 2.500000V (1e-5V tolerance).
 - 5V with 10k/1k divider VOUT = 0.454545V (1e-5V tolerance).

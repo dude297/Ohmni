@@ -1,6 +1,6 @@
 # /studio — interactive 3D circuit studio
 
-Branch `moonshot/studio-3d` (local only). Split view: intended schematic (SVG) and breadboard build (React Three Fiber, with a keyboard-accessible 2D top-view fallback).
+Originally `moonshot/studio-3d`, now merged through [#69](https://github.com/dude297/Ohmni/pull/69). Experimental split view: intended schematic (SVG) and virtual breadboard build (React Three Fiber, with a keyboard-accessible 2D top-view fallback). The local tests/captures below are not current production-host verification.
 
 - Model: `@/lib/breadboard` (merged from `moonshot/studio-breadboard` @ bfd1810). `src/app/studio/_model.ts` only adds UI helpers (hole parsing, net lookups). Connectivity is strips + explicit jumper ends, never proximity.
 - Example: 5 V divider on a half board. The "mistake" preset puts jumper J2 on c15 (R2's pin is column 14), splitting VOUT. Fix it by selecting J2, clicking an end (or "Move end B"), then clicking c14.

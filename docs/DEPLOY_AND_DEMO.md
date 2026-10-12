@@ -1,4 +1,6 @@
-# Ohmni — Deployment, Smoke Test and Three-Minute Demo
+# Ohmni — Deployment and Demo Verification
+
+The [four-minute submission script](DEMO_SCRIPT.md) preserves the recorded release demo. The [three-minute Living Schematic storyboard](ui-review/LIVING_SCHEMATIC.md#three-minute-visual-first-storyboard) covers the verified frontend subset from #67, now merged in the wider experimental integration. Check [current source status](CURRENT_STATE.md) and [dated hosted evidence](RELEASE_E2E_2026-10-11.md) before reporting a deployment.
 
 ### Corrected deadline and release sequence
 **External hard deadline: Sunday October 11, 2026, 5:30 PM PDT = 8:30 PM EDT.** Target submission **5:00 PM PDT**, 30-minute cushion. Feature freeze **3:30 PM PDT**, production verification **3:30–4:30 PM PDT**, rehearsal/submission **4:30–5:00 PM PDT**. See ROADMAP.md; old T+150 schedule superseded.
@@ -6,7 +8,7 @@
 ### Hosting decision
 Single Node/Next.js app, two hosts (owner decision 2026-10-11, superseding the earlier "20-minute T0 spike" plan):
 - **Primary: Anbaric Cloud** — https://ohmni.cloud.anbaric.ai (app `ohmni`), prebuilt Next.js bundle served in-process; models + solver run on Anbaric (see docs/ANBARIC_DEPLOYMENT.md). Anbaric's managed app proxy is auth-walled by design (every request, incl. /api/health, 302s to Anbaric's Auth0 login; no anonymous mode), so it does **not** satisfy "public URL opens in incognito" — judges need an Anbaric login or organizer-provided access.
-- **Public fallback: Vercel** — https://multimodal-hackathon-sage.vercel.app, same code and live providers; this is the URL that meets checklist item 1 below.
+- **Public fallback: Vercel** — https://multimodal-hackathon-sage.vercel.app; build parity must be checked rather than assumed. The last recorded public-host verification was `d5a0035`, behind newer source features. This is the anonymous-access URL for checklist item 1 below.
 Do not introduce Render free/second FastAPI service.
 
 ### Credentials and safety
@@ -15,13 +17,13 @@ GEMINI_API_KEY, GEMINI_MODEL (default `gemini-3.5-flash`), BEATAPI_API_KEY, BEAT
 ### Smoke steps
 1. Public URL opens in incognito (Vercel; Anbaric requires login — see above), mobile UI responsive.
 2. GET /api/health 200 from actual Node runtime.
-3. Real clean schematic → Gemini candidate + Jev choice with trace.
+3. Real clean schematic → configured primary vision candidate (Groq by default, Gemini fallback) + actual Jev choice with trace. Respect the shared provider quota; a prepared sample does not verify extraction.
 4. Edit/review → real solver 2.50V, alternate 0.454545V.
 5. Enter 0.45V against expected 2.50V → hypothesis-labeled resistor test with power off.
 6. Ambiguous/error path asks for clarification; no invented specialist call.
 7. Record hosted build SHA, actual provider/token/latency observations, log-link and known limitations.
 
-### Judge demo (180s)
+### Earlier 180-second release outline (historical)
 0:00–0:20 real problem/payoff. 0:20–1:00 real image upload/extraction. 1:00–1:30 Jev reason/route choice incl contrasting example. 1:30–2:00 user-confirmed netlist and deterministic 2.50V. 2:00–2:35 measured 0.45V and next measurement. 2:35–3:00 cost/latency/provenance and classroom/engineering value.
 
 Record backup video but **label it recorded**. Do not show a pre-recorded model trace as live. If real model unavailable, clearly call manual-mode a fallback and mark multimodel judging proof incomplete.

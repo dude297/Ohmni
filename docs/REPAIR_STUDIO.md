@@ -1,5 +1,7 @@
 # Repair Studio (backend, post-submission)
 
+Merged through [#69](https://github.com/dude297/Ohmni/pull/69), with source clients in `/build`, `/twin` and `/for-the-larp/voice-lab`. These integrations still require their own hosted user-flow evidence; a simulated proposal never performs a physical repair.
+
 Flow: Observe (user voltages) -> Diagnose (`probeStep` posterior) -> Propose -> Simulate (MNA solver) -> Approve (human) -> Verify (follow-up measurement).
 
 Labels: **measured** (user), **simulated** (solver), **hypothesized** (probe), **verified** (follow-up measurement). Nothing is "fixed for certain"; verification is "consistent with the repair".

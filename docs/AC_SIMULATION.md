@@ -1,6 +1,7 @@
 # AC simulation (moonshot, branch `moonshot/ac-spice`)
 
 Sandboxed frequency-response adapter. **Not wired into the DC flow**: `solveDC`, `/api/solve` and the v1 `CircuitGraph` are untouched.
+Merged into main through [#69](https://github.com/dude297/Ohmni/pull/69). This is experimental source; its unit/build results are not a hosted-user-flow claim. See [current verification](CURRENT_STATE.md).
 Research background: `git show f39f3b8:docs/research/SPICE_AC_TRANSIENT.md`.
 
 ## Pieces
@@ -40,5 +41,4 @@ Caveat: the DC-resistance prediction assumes no parallel DC path around the resi
 | CR high-pass 1k/1µF at fc | -3.01 dB, +45° | -3.01 dB, +45° |
 
 ## Limits / not done
-Per-instance in-memory queue; engine path resolved from `process.cwd()` (Vercel would need `outputFileTracingIncludes`; deployment not tested);
-no transient analysis; no auth or rate-limit rule for `/api/ac` (the queue cap is the only guard).
+Per-instance in-memory queue; engine path resolved from `process.cwd()`. The integration adds `outputFileTracingIncludes` for the engine files, but serverless deployment behavior still needs hosted verification. `/api/ac` is covered by the central POST limiter (20/min by default, `RATE_AC_PER_MIN`) as well as the queue cap and worker timeout. No application-authentication layer or transient analysis is claimed.
