@@ -1,0 +1,38 @@
+// Inline copy of fixtures/netlist/loaded_bridge.net (SYNTHETIC example), so the client needs no file access.
+export const BRIDGE_NETLIST = `(export (version "E")
+  (design
+    (source "SYNTHETIC example: loaded_bridge.kicad_sch (hand-written, not exported from KiCad)")
+    (tool "Eeschema 7.0.0"))
+  (components
+    (comp (ref "V1") (value "12V") (libsource (lib "Simulation_SPICE") (part "VDC") (description "SYNTHETIC")))
+    (comp (ref "R1") (value "1k"))
+    (comp (ref "R2") (value "2k"))
+    (comp (ref "R3") (value "1.5k"))
+    (comp (ref "R4") (value "1k"))
+    (comp (ref "R5") (value "3.3k"))
+    (comp (ref "R6") (value "680"))
+    (comp (ref "R7") (value "1k2")))
+  (nets
+    (net (code "1") (name "GND")
+      (node (ref "V1") (pin "2"))
+      (node (ref "R2") (pin "2"))
+      (node (ref "R4") (pin "2"))
+      (node (ref "R7") (pin "2")))
+    (net (code "2") (name "/VIN")
+      (node (ref "V1") (pin "1"))
+      (node (ref "R1") (pin "1"))
+      (node (ref "R3") (pin "1")))
+    (net (code "3") (name "Net-(R1-Pad2)")
+      (node (ref "R1") (pin "2"))
+      (node (ref "R2") (pin "1"))
+      (node (ref "R5") (pin "1")))
+    (net (code "4") (name "/B")
+      (node (ref "R3") (pin "2"))
+      (node (ref "R4") (pin "1"))
+      (node (ref "R5") (pin "2"))
+      (node (ref "R6") (pin "1")))
+    (net (code "5") (name "/VOUT")
+      (node (ref "R6") (pin "2"))
+      (node (ref "R7") (pin "1")))))
+`;
+export const BRIDGE_MEASURE_NODE = "VOUT";

@@ -9,8 +9,10 @@ import type {
 } from "../../lib/circuit/types";
 export type { Component, Graph, Route, Trace, Extraction, Result };
 import { DIVIDER_10K_10K, SERIES_PARALLEL_12V } from "../../lib/circuit/fixtures";
-export type SampleKind = "divider" | "network" | "ladder";
+import { advancedGraph } from "./advanced-sample";
+export type SampleKind = "divider" | "network" | "ladder" | "advanced";
 export const sampleGraph = (kind: SampleKind = "divider"): Graph => {
+  if (kind === "advanced") return advancedGraph();
   if (kind === "ladder") return {
     schemaVersion: 1, groundNode: "GND", measureNode: "B",
     components: [

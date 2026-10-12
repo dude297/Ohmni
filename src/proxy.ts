@@ -10,4 +10,10 @@ export function proxy(req: NextRequest) {
   );
 }
 
-export const config = { matcher: ['/api/extract', '/api/solve', '/api/explain'] };
+// Next requires a static matcher; keep in sync with LIMITED_ROUTES (tests/server/rateLimit.test.ts checks).
+export const config = {
+  matcher: [
+    '/api/extract', '/api/solve', '/api/explain', '/api/review', '/api/ac', '/api/probe',
+    '/api/topology', '/api/repair', '/api/repair/verify', '/api/twin', '/api/firmware/adc',
+  ],
+};

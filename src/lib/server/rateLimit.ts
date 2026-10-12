@@ -4,17 +4,28 @@ const num = (k: string, d: number) => Number(process.env[k]) || d;
 const MAX_BODY = 6 * 1024 * 1024;
 
 type Rule = { name: string; max: number; windowMs: number };
-const rules = (pathname: string): Rule[] =>
-  pathname === '/api/extract'
-    ? [
-        { name: 'extract-min', max: num('RATE_EXTRACT_PER_MIN', 6), windowMs: 60_000 },
-        { name: 'extract-hour', max: num('RATE_EXTRACT_PER_HOUR', 40), windowMs: 3_600_000 },
-      ]
-    : pathname === '/api/solve'
-      ? [{ name: 'solve-min', max: num('RATE_SOLVE_PER_MIN', 60), windowMs: 60_000 }]
-      : pathname === '/api/explain'
-        ? [{ name: 'explain-min', max: num('RATE_EXPLAIN_PER_MIN', 10), windowMs: 60_000 }]
-        : [];
+const perMin = (name: string, env: string, d: number): Rule[] => [{ name, max: num(env, d), windowMs: 60_000 }];
+const RULES: Record<string, () => Rule[]> = {
+  '/api/extract': () => [
+    { name: 'extract-min', max: num('RATE_EXTRACT_PER_MIN', 6), windowMs: 60_000 },
+    { name: 'extract-hour', max: num('RATE_EXTRACT_PER_HOUR', 40), windowMs: 3_600_000 },
+  ],
+  '/api/solve': () => perMin('solve-min', 'RATE_SOLVE_PER_MIN', 60),
+  '/api/explain': () => perMin('explain-min', 'RATE_EXPLAIN_PER_MIN', 10),
+  // model call (free-tier quota)
+  '/api/review': () => perMin('review-min', 'RATE_REVIEW_PER_MIN', 10),
+  // ngspice in a worker: CPU-heavy
+  '/api/ac': () => perMin('ac-min', 'RATE_AC_PER_MIN', 20),
+  // local deterministic engines
+  '/api/probe': () => perMin('probe-min', 'RATE_LOCAL_PER_MIN', 60),
+  '/api/topology': () => perMin('topology-min', 'RATE_LOCAL_PER_MIN', 60),
+  '/api/repair': () => perMin('repair-min', 'RATE_LOCAL_PER_MIN', 60),
+  '/api/repair/verify': () => perMin('repair-verify-min', 'RATE_LOCAL_PER_MIN', 60),
+  '/api/twin': () => perMin('twin-min', 'RATE_LOCAL_PER_MIN', 60),
+  '/api/firmware/adc': () => perMin('adc-min', 'RATE_LOCAL_PER_MIN', 60),
+};
+export const LIMITED_ROUTES = Object.keys(RULES);
+const rules = (pathname: string): Rule[] => RULES[pathname]?.() ?? [];
 
 const hits = new Map<string, { count: number; resetAt: number }>();
 
@@ -24,7 +35,7 @@ export function clientIp(h: Headers): string {
 
 export type Block = { status: 429 | 413; code: 'RATE_LIMITED' | 'TOO_LARGE'; message: string; retryAfter?: number };
 
-/** Returns a Block if the request must be rejected, else null. Only POST /api/extract, /api/solve and /api/explain are guarded. */
+/** Returns a Block if the request must be rejected, else null. Only POSTs to LIMITED_ROUTES are guarded. */
 export function check(method: string, pathname: string, headers: Headers, now = Date.now()): Block | null {
   if (method !== 'POST') return null;
   const rs = rules(pathname);

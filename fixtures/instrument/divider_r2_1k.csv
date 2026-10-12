@@ -1,0 +1,5 @@
+# SYNTHETIC — generated for tests, not captured by an instrument
+# Circuit: divider (5 V -> R1 10k -> VOUT -> R2 10k -> GND). Truth: R2 is 1 kΩ (band misread).
+node,value,unit,timestamp,instrument
+VOUT,450,mV,2026-10-11T11:00:00Z,DMM-1
+VIN,5.01,V,2026-10-11T11:00:30Z,DMM-1

@@ -1,0 +1,6 @@
+# SYNTHETIC — generated for tests, not captured by an instrument
+# Circuit: ladder (5 V -> R1 -> A -> R2 -> B -> R3 -> GND, 10k each). Truth: R2 open.
+timestamp,node,value,unit,instrument,channel,note
+2026-10-11T10:00:00Z,B,0.00,V,DMM-1,CH1,first reading at measure node
+2026-10-11T10:00:20Z,A,5.00,V,DMM-1,CH1,probe guide suggested A
+2026-10-11T10:00:35Z,b,1.2,mV,DMM-1,CH1,re-check B (same within tolerance)

@@ -1,0 +1,120 @@
+/* Plain CSS with tw- prefix (not a CSS module: next.config's turbopack "*.css" rule breaks module semantics). */
+.tw-main { width: 100%; max-width: 1320px; margin: 0 auto; padding: 24px 24px 56px; --tw-ivory: #f6f5f0; --tw-teal: #142c32; --tw-copper: #f2b45a; --tw-sage: #829e98; --tw-red: #943e2c; }
+.tw-title { font-size: 30px; font-weight: 500; letter-spacing: -1px; margin: 0 0 18px; }
+.tw-title span { display: block; font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--ohmni-muted); margin-top: 4px; }
+.tw-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.tw-layout { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 24px; align-items: start; }
+.tw-rail { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; position: sticky; top: 16px; }
+.tw-rail button { width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; border: 1px solid var(--ohmni-border); background: #fff; border-radius: 8px; padding: 10px 12px; font-size: 14px; cursor: pointer; transition: background-color 0.2s; }
+.tw-rail button b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--tw-sage); color: #fff; font-size: 12px; flex: none; }
+.tw-rail button.tw-on { background: var(--tw-teal); color: #fff; border-color: var(--tw-teal); }
+.tw-rail button.tw-on b { background: var(--tw-copper); color: var(--tw-teal); }
+.tw-rail button:disabled { opacity: 0.45; cursor: not-allowed; }
+.tw-body { display: grid; gap: 18px; min-width: 0; }
+.tw-hero { background: #fff; border: 1px solid var(--ohmni-border); border-radius: 12px; padding: 14px; }
+.tw-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tw-fig { margin: 0; min-width: 0; }
+.tw-fig figcaption { margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+.tw-svg { width: 100%; height: auto; display: block; max-height: 460px; }
+.tw-dual .tw-svg { max-height: 360px; }
+.tw-wire { stroke: var(--tw-teal); stroke-width: 2.5; fill: none; stroke-linecap: round; }
+.tw-res { fill: var(--ohmni-bg); stroke: var(--tw-teal); stroke-width: 2.5; }
+.tw-src { fill: #fff; stroke: var(--tw-teal); stroke-width: 2.5; }
+.tw-pm { font-size: 14px; font-weight: 700; fill: var(--tw-teal); }
+.tw-dot { fill: var(--tw-teal); }
+.tw-lbl { font-size: 12px; fill: var(--tw-teal); font-weight: 600; }
+.tw-railtxt { font-size: 12px; fill: var(--tw-sage); font-weight: 700; }
+.tw-node { font-size: 14px; font-weight: 700; fill: var(--tw-sage); }
+.tw-volt { font-size: 15px; font-weight: 700; fill: var(--tw-teal); font-variant-numeric: tabular-nums; }
+.tw-tint { font-size: 12px; font-weight: 700; fill: var(--tw-red); }
+.tw-fault .tw-res { fill: #f3dcd5; stroke: var(--tw-red); }
+.tw-fault .tw-wire { stroke: var(--tw-red); }
+.tw-reroute { stroke: var(--tw-red); stroke-width: 3; stroke-dasharray: 7 5; fill: none; }
+.tw-pulse { fill: rgba(242, 180, 90, 0.35); stroke: var(--tw-copper); stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: tw-pulse 1.4s ease-in-out infinite; }
+.tw-pulseDot { fill: var(--tw-copper); }
+@keyframes tw-pulse { 50% { transform: scale(1.5); opacity: 0.4; } }
+.tw-panel { background: #fff; border: 1px solid var(--ohmni-border); border-radius: 12px; padding: 22px; display: grid; gap: 14px; }
+.tw-panel h2 { margin: 0; font-size: 20px; font-weight: 600; outline: none; }
+.tw-panel textarea, .tw-panel select, .tw-panel input:not([type="checkbox"]):not([type="file"]) { min-height: 44px; border: 1px solid #c7d2cc; border-radius: 6px; padding: 8px 12px; font-size: 16px; background: #fff; min-width: 0; }
+.tw-panel textarea { width: 100%; font-family: var(--font-geist-mono), monospace; font-size: 12px; }
+.tw-lab { font-size: 13px; color: var(--ohmni-muted); }
+.tw-muted { color: var(--ohmni-muted); font-size: 13px; margin: 0; }
+.tw-note, .tw-warn { font-size: 13px; background: #fff3d6; border: 1px solid #e6c36d; border-radius: 6px; padding: 8px 12px; margin: 8px 0 0; }
+.tw-err { color: var(--tw-red); background: #fbe9e5; border-radius: 6px; padding: 10px 12px; margin: 0; font-size: 14px; }
+.tw-ok { color: var(--ohmni-success); background: #e8f3ee; border-radius: 6px; padding: 10px 12px; margin: 0; }
+.tw-pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tw-pills button { border: 1px solid var(--ohmni-border); background: transparent; border-radius: 999px; padding: 9px 14px; font-size: 13px; cursor: pointer; transition: background-color 0.2s; }
+.tw-pills button.tw-on { background: var(--tw-teal); color: #fff; border-color: var(--tw-teal); }
+.tw-ex { font-size: 11px; font-weight: 700; letter-spacing: 1.4px; color: var(--tw-red); border: 1px solid var(--tw-red); border-radius: 4px; padding: 3px 6px; }
+.tw-go { justify-self: start; background: var(--tw-teal); color: #fff; border: 0; border-radius: 8px; padding: 12px 20px; font-size: 15px; font-weight: 600; cursor: pointer; min-height: 44px; }
+.tw-go:hover:not(:disabled) { background: #1d4048; }
+.tw-go:disabled { opacity: 0.45; cursor: not-allowed; }
+.tw-go:focus-visible, .tw-rail button:focus-visible, .tw-pills button:focus-visible, .tw-panel input:focus-visible, .tw-panel select:focus-visible, .tw-panel textarea:focus-visible { outline: 3px solid var(--tw-copper); outline-offset: 2px; }
+.tw-tablewrap { overflow-x: auto; }
+.tw-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.tw-table th, .tw-table td { padding: 3px 6px; text-align: left; }
+.tw-table thead th { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ohmni-muted); }
+.tw-table input { width: 100%; min-height: 36px !important; padding: 4px 8px !important; font-size: 14px !important; }
+.tw-table input.tw-changed { border-color: var(--tw-red); background: #fbeeea; font-weight: 700; }
+.tw-check { display: flex; gap: 10px; align-items: center; font-size: 15px; }
+.tw-check input { width: 20px; height: 20px; accent-color: var(--tw-teal); }
+.tw-badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; border-radius: 4px; padding: 3px 7px; }
+.tw-b-ink { background: var(--tw-teal); color: #fff; }
+.tw-b-sage { background: #e3ebe8; color: #3c5a54; }
+.tw-b-copper { background: #fbe7c4; color: #654113; }
+.tw-b-fault { background: #f3dcd5; color: var(--tw-red); }
+.tw-b-ok { background: #e8f3ee; color: var(--ohmni-success); }
+.tw-diffs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.tw-diffs li { background: #f3dcd5; color: var(--tw-red); border-radius: 6px; padding: 8px 12px; font-size: 16px; }
+.tw-nums, .tw-ba { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tw-num { border: 1px solid var(--ohmni-border); border-radius: 10px; padding: 12px; display: grid; gap: 4px; justify-items: start; }
+.tw-num small { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ohmni-muted); }
+.tw-n1 { font-size: 28px; font-weight: 500; letter-spacing: -0.8px; color: var(--tw-teal); font-variant-numeric: tabular-nums; }
+.tw-n2 { font-size: 28px; font-weight: 500; letter-spacing: -0.8px; color: var(--tw-sage); font-variant-numeric: tabular-nums; }
+span.tw-fault { color: var(--tw-red); }
+.tw-n3 { font-size: 15px; font-weight: 700; }
+.tw-next { border: 2px solid var(--tw-copper); background: #fffaf0; border-radius: 10px; padding: 16px; }
+.tw-next small, .tw-fix small { font-size: 11px; letter-spacing: 1.6px; font-weight: 700; color: var(--ohmni-accent-ink); }
+.tw-big { font-size: 26px; font-weight: 500; letter-spacing: -0.6px; margin: 4px 0 6px; }
+.tw-big mark { background: var(--tw-copper); padding: 0 10px; border-radius: 5px; }
+.tw-outs { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.tw-outs li { display: grid; grid-template-columns: 70px minmax(60px, 1fr) minmax(0, 1.4fr); gap: 10px; align-items: center; font-size: 13px; }
+.tw-outs i { height: 10px; background: var(--tw-copper); border-radius: 5px; display: block; transition: width 0.2s; }
+.tw-read { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.tw-read input { width: 150px; }
+.tw-file { font-size: 13px; color: var(--ohmni-muted); display: grid; gap: 6px; }
+.tw-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.tw-chips li { background: #eaf0eb; border-radius: 999px; padding: 6px 12px; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+.tw-hyp { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tw-hyp li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(60px, 1fr) 44px; gap: 10px; align-items: center; font-size: 14px; }
+.tw-hyp i { height: 10px; background: #e6ece8; border-radius: 5px; overflow: hidden; display: block; }
+.tw-hyp b { display: block; height: 100%; background: var(--tw-teal); transition: width 0.2s; }
+.tw-hyp em { font-style: normal; font-weight: 700; text-align: right; }
+.tw-fix { display: grid; gap: 10px; }
+.tw-patch { font-size: 20px; margin: 0; }
+.tw-patch span { color: var(--ohmni-muted); font-size: 14px; }
+.tw-actions { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.tw-verdict { display: flex; gap: 12px; align-items: center; border-radius: 10px; padding: 16px; font-size: 15px; }
+.tw-verdict b { font-size: 24px; letter-spacing: 0.5px; }
+.tw-v-ok { background: #e8f3ee; color: var(--ohmni-success); }
+.tw-v-bad { background: #f3dcd5; color: var(--tw-red); }
+@media (prefers-reduced-motion: reduce) {
+  .tw-pulse { animation: none; }
+  .tw-main * { transition: none !important; }
+}
+@media (max-width: 860px) {
+  .tw-layout { grid-template-columns: 1fr; gap: 14px; }
+  .tw-rail { position: static; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .tw-rail button span { display: none; }
+  .tw-rail button { justify-content: center; padding: 8px 0; }
+  .tw-rail button.tw-on span { display: none; }
+  .tw-dual { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .tw-main { padding: 16px 16px 40px; }
+  .tw-title { font-size: 24px; }
+  .tw-panel { padding: 16px; }
+  .tw-hero { padding: 10px; }
+  .tw-outs li { grid-template-columns: 56px 1fr; }
+  .tw-outs li span { grid-column: 1 / -1; }
+}
