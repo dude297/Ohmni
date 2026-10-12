@@ -8,7 +8,7 @@ vi.mock('@google/genai', () => ({
   },
 }));
 
-import { reviewCircuit, mentorExplain, type Finding } from '@/lib/review';
+import { reviewCircuit, mentorExplain, REVIEW_DISCLAIMER, type Finding } from '@/lib/review';
 import { POST } from '@/app/api/review/route';
 import { DIVIDER_10K_10K, DIVIDER_10K_1K, MALFORMED_NO_GND, MALFORMED_UNKNOWN_KIND } from '@/lib/circuit/fixtures';
 import type { CircuitGraph } from '@/lib/circuit/types';
@@ -133,6 +133,9 @@ describe('POST /api/review', () => {
     expect(res.status).toBe(200);
     expect(result.findings.some((f: Finding) => f.id === 'value_mismatch:R2')).toBe(true);
     expect(result.mentor.text).toBe('ok');
+    expect(result.advisory).toBe(true);
+    expect(result.disclaimer).toBe(REVIEW_DISCLAIMER);
+    expect(result.disclaimer).toContain('Advisory review: rules + DC solver');
     expect(result.trace.map((t: { step: string }) => t.step)).toEqual(['review', 'mentor']);
     expect((await post({ graph: DIVIDER_10K_1K, userConfirmed: true, mentor: { findingId: 'nope', level: 'beginner', mode: 'hint' } })).status).toBe(422);
   });
