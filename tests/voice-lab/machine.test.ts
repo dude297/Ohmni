@@ -105,7 +105,7 @@ describe("grounded reply", () => {
   });
   it("divider match within tolerance", async () => {
     const r = await commitReading(fakeFetch(), DIVIDER_10K_10K, [], reading("VOUT", 2.49));
-    expect(r.reply).toContain("predicts 2.5 volts at VOUT. That reading matches");
+    expect(r.reply).toContain("predicts 2.5 volts at VOUT. On its own, that reading is within meter tolerance");
   });
 });
 

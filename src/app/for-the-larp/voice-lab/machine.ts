@@ -133,7 +133,7 @@ export function groundedReply(r: Reading, solve: SolveResponse, probe: ProbeResu
   const expected = solve.voltages[r.node];
   if (Number.isFinite(expected)) {
     const ok = Math.abs(volts(r) - expected) <= 3 * sigma(volts(r));
-    out.push(`Your circuit predicts ${V(expected)} at ${r.node}. ${ok ? "That reading matches within meter tolerance." : "That reading doesn't match."}`);
+    out.push(`Your circuit predicts ${V(expected)} at ${r.node}. ${ok ? "On its own, that reading is within meter tolerance; the diagnosis below combines it with your other readings." : "That reading doesn't match."}`);
   }
   const lead = solve.hypotheses?.[0];
   if (lead && Number.isFinite(expected) && Math.abs(volts(r) - expected) > 3 * sigma(volts(r)))
