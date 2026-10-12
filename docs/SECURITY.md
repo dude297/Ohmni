@@ -13,7 +13,7 @@
 60 components was chosen from timing: `/api/probe` at the cap runs in ~140 ms cold on the dev machine (limit 250 ms, `tests/server/ceilings.test.ts`); a 400-resistor graph used to block the event loop ~4 s and is now rejected at validation.
 
 ## Rate limiting (`src/proxy.ts`, `src/lib/server/rateLimit.ts`)
-- Client IP: `x-vercel-forwarded-for` / `x-real-ip` / `x-nf-client-connection-ip`, else the Nth-from-last `X-Forwarded-For` hop (`TRUSTED_PROXY_HOPS`, default 1), else `unknown` (shared bucket). The first XFF hop is client-controlled and is NOT used. Deploying without a trusted proxy that sets these headers means every client shares one bucket or can pick its own header: keep it behind Vercel.
+- Client IP: only the header the current host's edge overwrites is trusted: `x-vercel-forwarded-for` when `VERCEL` is set, `x-nf-client-connection-ip` when `NETLIFY` is set, or `TRUSTED_IP_HEADER` if configured (e.g. `x-real-ip` behind a proxy you control). Other platforms' headers are ignored, because a client can send them. Otherwise the Nth-from-last `X-Forwarded-For` hop (`TRUSTED_PROXY_HOPS`, default 1), else `unknown` (one shared bucket). The first XFF hop is client-controlled and is never used.
 - Counter store is hard-capped at 10k keys (two-generation, O(1)); a flood of unique real IPs can age counters out early.
 - Model routes (/api/extract, /api/explain, /api/review) also share a global per-route budget (`RATE_MODEL_GLOBAL_PER_MIN`, default 30) to protect free-tier quotas.
 - Env limits are read once per process.

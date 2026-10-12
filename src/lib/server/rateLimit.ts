@@ -70,19 +70,27 @@ const hits = new Store();
 const MODEL_ROUTES = new Set(['/api/extract', '/api/explain', '/api/review']);
 const modelHits = new Store();
 
-const first = (h: Headers, names: string[]) => {
-  for (const n of names) {
-    const v = h.get(n)?.trim();
-    if (v) return v;
-  }
-};
 
 /**
- * Trusted client IP. Platform headers (set/overwritten by the edge) win; otherwise the Nth-from-last
- * X-Forwarded-For hop (TRUSTED_PROXY_HOPS, default 1) -- the first hop is client-supplied and spoofable.
+ * Trusted client IP. Only the header that THIS host's edge sets/overwrites is trusted: a fixed list would let a client
+ * on Netlify send its own x-vercel-forwarded-for (and vice versa). Otherwise the Nth-from-last X-Forwarded-For hop
+ * (TRUSTED_PROXY_HOPS, default 1); the first hop is client-supplied and spoofable.
  */
+let trusted: string | null | undefined;
+const trustedHeader = () =>
+  trusted !== undefined
+    ? trusted
+    : (trusted =
+        process.env.TRUSTED_IP_HEADER?.toLowerCase() ||
+        (process.env.VERCEL ? 'x-vercel-forwarded-for' : process.env.NETLIFY ? 'x-nf-client-connection-ip' : null));
+/** Test hook: override the detected platform header (null = none, undefined = re-detect from env). */
+export function __setTrustedIpHeader(h: string | null | undefined) {
+  trusted = h;
+}
+
 export function clientIp(h: Headers): string {
-  const platform = first(h, ['x-vercel-forwarded-for', 'x-real-ip', 'x-nf-client-connection-ip']);
+  const name = trustedHeader();
+  const platform = name ? h.get(name)?.trim() : undefined;
   if (platform) return platform.split(',')[0].trim();
   const hops = h.get('x-forwarded-for')?.split(',').map((x) => x.trim()).filter(Boolean) ?? [];
   const n = Math.max(1, Math.floor(num('TRUSTED_PROXY_HOPS', 1)));
@@ -111,7 +119,7 @@ export function check(method: string, pathname: string, headers: Headers, now = 
   const rs = rules(pathname);
   if (!rs.length) return null;
   if (pathname === '/api/extract' && Number(headers.get('content-length')) > MAX_BODY) {
-    return { status: 413, code: 'TOO_LARGE', message: 'Image too large — please upload a file under 6 MB.' };
+    return { status: 413, code: 'TOO_LARGE', message: 'Image too large â€” please upload a file under 6 MB.' };
   }
   const ip = clientIp(headers);
   let retry = 0;
@@ -120,7 +128,7 @@ export function check(method: string, pathname: string, headers: Headers, now = 
     return {
       status: 429,
       code: 'RATE_LIMITED',
-      message: `Too many requests — this public demo protects free model quotas. Try again in ${retry}s.`,
+      message: `Too many requests â€” this public demo protects free model quotas. Try again in ${retry}s.`,
       retryAfter: retry,
     };
   if (MODEL_ROUTES.has(pathname)) {
