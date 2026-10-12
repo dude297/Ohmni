@@ -44,7 +44,9 @@ RKM (IEC 60062, digit-letter-digit) follows the standard, not SPICE: the letter 
 
 DC resistor/voltage-source networks only. No subcircuit expansion, parameters (`.param`), expressions (`{...}`), or current sources. A netlist with any unsupported part is refused whole, by design.
 
-## Future UI (owned by ChatGPT Work)
+## Current and future UI
+
+The merged `/twin` design-comparison route accepts pasted KiCad netlist text and uses the importer before confirmation/comparison. It does not make image-model calls. General file upload/import in the core Lab remains a future integration; the proposal below is not a claim that every format has a Lab import button.
 
 Add "Import netlist" next to image upload: accept `.cir/.sp/.net/.txt` or paste. Call `importNetlist`; on `graph` go straight to the existing review step (no vision call, `requiresHumanReview` still applies to measureNode choice). On `rejected` / `errors` show the list with line numbers; offer a measureNode picker populated from the graph's nodes when a fallback warning is present.
 

@@ -1,9 +1,11 @@
 # Ohmni — Submission
 
+**Dated submission copy.** The hosting/build claims below belong to the recorded release handoff and require runtime verification before reuse. This is not a deployment inventory for the later #69 integration or a submission receipt. See [current source status](CURRENT_STATE.md), [hosted-release evidence](RELEASE_E2E_2026-10-11.md) and [the post-submission design](ui-review/LIVING_SCHEMATIC.md).
+
 **Ohmni turns a circuit schematic and real electrical measurements into an explainable investigation, helping users determine what went wrong and what to measure next.** Intelligent model routing, human oversight, and a deterministic engineering solver.
 
 - **Primary host (Anbaric Cloud):** https://ohmni.cloud.anbaric.ai (app `ohmni`, build `d4b97d2` (release candidate #62 + Loaded bridge sample #64, redeployed ~16:00 PDT)). It requires an Anbaric login, so judges need organizer/Anbaric access ([ANBARIC_DEPLOYMENT.md](ANBARIC_DEPLOYMENT.md)). Includes `/api/topology`.
-- **Public fallback (Vercel, no signup):** https://multimodal-hackathon-sage.vercel.app, frozen at `d5a0035` because the Vercel daily deploy allowance is exhausted. Same demo flow; it lacks only `/api/topology` (#57) and the newest docs.
+- **Public fallback (Vercel, no signup):** https://multimodal-hackathon-sage.vercel.app; the dated hosted audit observed `d5a0035` during the deployment cap. It supports the common guided demo but predates `/api/topology` (#57), cinematic refinements (#62), the Loaded bridge addition and newer documentation. Check the runtime build before reusing this deployment statement.
   - Lab (guided: Capture, Review, Compare, Investigate; Probe Guide): `/lab`
   - Probe Guide + tutor: `/probe` · Under the Hood: `/for-the-larp`
   - Health / build SHA / model ids: `/api/health` (on either host)

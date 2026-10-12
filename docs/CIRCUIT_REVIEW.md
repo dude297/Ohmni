@@ -16,6 +16,6 @@ Known ceiling: shorts are series-path only (parallel-combination shorts are not 
 ## API
 `POST /api/review { graph, userConfirmed: true, intended?, ratings?, mentor?: { findingId, level, mode, hintIndex? } }` returns `{ result: { findings, solution?, mentor?, trace } }`. Errors: `{ error: { code, message, details? } }` (BAD_JSON 400; INVALID_REQUEST, NOT_CONFIRMED, FINDING_NOT_FOUND 422).
 
-## Integration TODO
-`src/proxy.ts` is not part of this change: add `/api/review` to its rate-limit matcher when integrating (it can call Gemini).
+## Integration status
+Merged through [#69](https://github.com/dude297/Ohmni/pull/69). `/api/review` is now in `src/proxy.ts` and the central POST limiter (10/min by default, `RATE_REVIEW_PER_MIN`), because its optional mentor can call Gemini. This source integration does not establish hosted mentor availability.
 Live check: `RUN_LIVE_MENTOR=1 LIVE_KEY=<gemini key> npx vitest run tests/review` (one Gemini call).

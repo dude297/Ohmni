@@ -1,4 +1,6 @@
-# Voice Repair Studio (moonshot, local branch)
+# Voice Repair Studio (experimental integration)
+
+Merged through [#69](https://github.com/dude297/Ohmni/pull/69). The local source/test observations below do not establish a hosted voice workflow or real microphone verification.
 
 Route: `/for-the-larp/voice-lab`. Default circuit: 12 V loaded bridge (measure C).
 

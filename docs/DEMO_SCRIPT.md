@@ -1,5 +1,7 @@
 # Ohmni 4-minute demo script (Groq-primary pipeline)
 
+**Recorded release script.** Host/build statements below are dated deployment records and require a fresh `/api/health` check before a live rehearsal. The now-merged Living Schematic changes homepage copy, sample links and tutor disclosure; its [three-minute storyboard](ui-review/LIVING_SCHEMATIC.md#three-minute-visual-first-storyboard) demonstrates that verified frontend subset, not every later experiment. Do not substitute source/CI screenshots for submission-host evidence.
+
 Hosts: primary Anbaric https://ohmni.cloud.anbaric.ai (build `d4b97d2` (release candidate #62 + Loaded bridge sample #64, redeployed ~16:00 PDT), needs an Anbaric login; `/api/topology` available); public fallback Vercel https://multimodal-hackathon-sage.vercel.app (frozen at `d5a0035`, no `/api/topology`, same demo flow). Check `/api/health` first (build SHA, `visionPrimary: "groq"`, all three providers `configured: true`).
 
 Core value (say it once, early): **Ohmni turns a circuit schematic and real electrical measurements into an explainable investigation, helping users determine what went wrong and what to measure next.**
@@ -10,7 +12,7 @@ Quota rules (free tiers): Jev allows **1 successful call per minute**, Groq's fr
 
 Prep: tabs on `/lab` and `/probe`. The lab has one-click demo images (**Clear divider**, **Smudged value**), so no files are needed. Backup video `docs/demo/ohmni-demo-guided.webm` open in a player (see `docs/demo/README.md`).
 
-Note: the lab is now the guided four-stage flow (PR #49: **Capture, Review, Compare, Investigate**, with a **Next step** button between stages). Button names below were re-checked in the browser against the Vercel host at `c27807c`; the Anbaric build `d4b97d2` (release candidate #62 + Loaded bridge sample #64, redeployed ~16:00 PDT) adds docs only to this flow, but re-run the click-through there once. If the lab UI changes again, re-run the click-through once before demoing.
+Note: the release lab uses the guided four-stage flow (PR #49: **Capture, Review, Compare, Investigate**, with a **Next step** button between stages). Button names below were checked against Vercel build `c27807c`. The reported Anbaric source `d4b97d2` includes cinematic refinements (#62) and the Loaded bridge sample (#64), so it is not a docs-only difference; verify its click-through while signed in before demoing. This script does not claim that verification has occurred.
 
 | Time | Do | Say |
 |---|---|---|
