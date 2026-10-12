@@ -69,3 +69,30 @@ describe('proxy', () => {
     expect((await res.json()).error.code).toBe('TOO_LARGE');
   });
 });
+
+describe('route coverage', () => {
+  it('proxy matcher covers every limited route and every POST API route', async () => {
+    const { config } = await import('../../src/proxy');
+    const { LIMITED_ROUTES } = await import('../../src/lib/server/rateLimit');
+    expect([...config.matcher].sort()).toEqual([...LIMITED_ROUTES].sort());
+    const { readdirSync, readFileSync, statSync } = await import('node:fs');
+    const { join, sep } = await import('node:path');
+    const posts: string[] = [];
+    const isPost = new RegExp('export (async )?function POST|export const POST');
+    const walk = (d: string) => {
+      for (const f of readdirSync(d)) {
+        const p = join(d, f);
+        if (statSync(p).isDirectory()) walk(p);
+        else if (f === 'route.ts' && isPost.test(readFileSync(p, 'utf8'))) posts.push(d.split(sep).join('/').replace('src/app', ''));
+      }
+    };
+    walk('src/app/api');
+    expect(posts.filter((r) => !LIMITED_ROUTES.includes(r))).toEqual([]);
+  });
+  it('limits /api/review at 10/min', () => {
+    resetRateLimits();
+    const h = new Headers({ 'x-forwarded-for': '9.9.9.9' });
+    for (let i = 0; i < 10; i++) expect(check('POST', '/api/review', h)).toBeNull();
+    expect(check('POST', '/api/review', h)?.status).toBe(429);
+  });
+});
