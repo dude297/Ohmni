@@ -1,0 +1,67 @@
+{
+  "synthetic": true,
+  "description": "SYNTHETIC: loaded bridge as built with R6 lower lead on GND instead of VOUT (wiring fault)",
+  "graph": {
+    "schemaVersion": 1,
+    "components": [
+      {
+        "id": "V1",
+        "kind": "dc_voltage",
+        "value": 12,
+        "positiveNode": "VIN",
+        "negativeNode": "GND"
+      },
+      {
+        "id": "R1",
+        "kind": "resistor",
+        "value": 1000,
+        "positiveNode": "VIN",
+        "negativeNode": "N1"
+      },
+      {
+        "id": "R2",
+        "kind": "resistor",
+        "value": 2000,
+        "positiveNode": "N1",
+        "negativeNode": "GND"
+      },
+      {
+        "id": "R3",
+        "kind": "resistor",
+        "value": 1500,
+        "positiveNode": "VIN",
+        "negativeNode": "B"
+      },
+      {
+        "id": "R4",
+        "kind": "resistor",
+        "value": 1000,
+        "positiveNode": "B",
+        "negativeNode": "GND"
+      },
+      {
+        "id": "R5",
+        "kind": "resistor",
+        "value": 3300,
+        "positiveNode": "N1",
+        "negativeNode": "B"
+      },
+      {
+        "id": "R6",
+        "kind": "resistor",
+        "value": 680,
+        "positiveNode": "B",
+        "negativeNode": "GND"
+      },
+      {
+        "id": "R7",
+        "kind": "resistor",
+        "value": 1200,
+        "positiveNode": "VOUT",
+        "negativeNode": "GND"
+      }
+    ],
+    "groundNode": "GND",
+    "measureNode": "VOUT"
+  }
+}
