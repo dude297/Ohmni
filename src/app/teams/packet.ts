@@ -111,6 +111,16 @@ export function residuals(p: EvidencePacket) {
   });
 }
 
+/** Open items derived from the packet itself (nothing invented). */
+export function derivedQuestions(p: EvidencePacket): string[] {
+  const q: string[] = [];
+  const top = p.hypotheses[0];
+  if (top && top.probability < 0.99) q.push(`Top hypothesis "${top.title}" is only ${fmt(top.probability * 100)}% likely; not a confirmed fault.`);
+  if (p.repair && p.repair.status !== 'verified') q.push(`Repair "${p.repair.title}" is ${p.repair.status}; no verifying measurement recorded.`);
+  if (!p.nextTest) q.push('No follow-up test recorded in the packet.');
+  return q;
+}
+
 export function toMarkdown(p: EvidencePacket, hash: string, notes: string, questions: string[]): string {
   const L: string[] = [];
   L.push(`# Review: ${p.circuit.name}`, '', `> ${DISCLAIMER}`, '');
@@ -132,7 +142,7 @@ export function toMarkdown(p: EvidencePacket, hash: string, notes: string, quest
   } else L.push('None in packet.');
   L.push('', '## Assumptions and unresolved questions', '');
   p.assumptions.forEach((a) => L.push(`- Assumption: ${a}`));
-  questions.forEach((q) => L.push(`- Open question: ${q}`));
+  [...derivedQuestions(p), ...questions].forEach((q) => L.push(`- Open question: ${q}`));
   L.push('', '## Reviewer notes (local)', '', notes.trim() || '(none)', '', '## Safety', '', p.safety, '');
   return L.join('\n');
 }

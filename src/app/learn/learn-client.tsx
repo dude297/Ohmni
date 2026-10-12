@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { R1, R2_MAX, R2_MIN, VIN, canShowHint, dividerGraph, errorPct, formulaVout, hintText, r2InRange, substitution } from "./lesson";
+import { R1, R2_MAX, R2_MIN, VIN, canShowHint, dividerGraph, errorPct, formulaVout, hintText, isCorrect, r2InRange, TOL_PCT, substitution } from "./lesson";
 import "./learn.css";
 
 type Attempt = { r2: number; predicted: number; solver: number; err: number };
@@ -89,6 +89,7 @@ export function LearnClient() {
         {result && (
           <section className="ln-card" data-testid="reveal">
             <h2>3. Result</h2>
+            <p role="status" data-testid="verdict"><b>{isCorrect(result.predicted, result.solver) ? "Correct" : "Not quite"}</b>: your prediction is {result.err.toFixed(2)} % from the solver value; correct means within {TOL_PCT} %.{!isCorrect(result.predicted, result.solver) && result.predicted > result.solver ? " Too high: check how R2 compares with R1." : !isCorrect(result.predicted, result.solver) ? " Too low: VOUT is the share of VIN across R2." : ""}</p>
             <table className="ln-table"><tbody>
               <tr><th>YOUR PREDICTION</th><td>{result.predicted.toFixed(4)} V</td></tr>
               <tr><th>SIMULATED (solver)</th><td data-testid="solver-vout">{result.solver.toFixed(4)} V</td></tr>

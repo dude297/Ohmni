@@ -161,7 +161,7 @@ export function TwinClient() {
     <>
       <header className="site-header lab-header"><Brand /><nav><Link href="/probe" className="back-link">Probe Guide</Link></nav></header>
       <main className="tw-main">
-        <h1 className="tw-title">Digital twin <span>I designed this. My hardware disagrees.</span></h1>
+        <h1 className="tw-title">Design vs hardware <span>I designed this. My hardware disagrees. Simulated DC comparison from your netlist, not a physical twin.</span></h1>
         <div role="status" aria-live="polite" className="tw-sr">Step {step} of 6: {STEPS[step - 1]}</div>
         <div className="tw-layout">
           <ol className="tw-rail" aria-label="Steps">

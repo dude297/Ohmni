@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DISCLAIMER, EvidencePacket, buildExamplePacket, contentHash, fmt, parsePacket, residuals, toMarkdown } from "./packet";
+import { DISCLAIMER, EvidencePacket, buildExamplePacket, contentHash, derivedQuestions, fmt, parsePacket, residuals, toMarkdown } from "./packet";
 import "./teams.css";
 
 function save(name: string, type: string, body: string) {
@@ -101,7 +101,7 @@ export function TeamsClient() {
             <h2>Assumptions and unresolved questions</h2>
             <ul>
               {packet.assumptions.map((a, i) => <li key={"a" + i}>Assumption: {a}</li>)}
-              {qs.map((x, i) => <li key={"q" + i}>Open question: {x}</li>)}
+              {[...derivedQuestions(packet), ...qs].map((x, i) => <li key={"q" + i}>Open question: {x}</li>)}
             </ul>
             <div className="tm-noprint">
               <input aria-label="Add question" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Add an unresolved question" />{" "}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { solveDC } from "../../src/lib/circuit/solve";
-import { canShowHint, dividerGraph, errorPct, formulaVout, hintText } from "../../src/app/learn/lesson";
+import { canShowHint, dividerGraph, errorPct, formulaVout, hintText, isCorrect, TOL_PCT } from "../../src/app/learn/lesson";
 
 describe("learn lesson", () => {
   it("formula equals solveDC within 1e-9", () => {
@@ -15,4 +15,9 @@ describe("learn lesson", () => {
     expect(canShowHint(3, 2, true)).toBe(false);
   });
   it("hint 1 has no answer", () => expect(hintText(1, 10000)).not.toMatch(/\d\.\d/));
+  it("verdict uses stated tolerance", () => {
+    expect(TOL_PCT).toBe(5);
+    expect(isCorrect(2.55, 2.5)).toBe(true);
+    expect(isCorrect(2.75, 2.5)).toBe(false);
+  });
 });
