@@ -89,5 +89,7 @@ describe("voice-lab parser: commands", () => {
     ["repeat", "repeat"], ["say that again", "repeat"], ["next", "next_probe"], ["where should I probe next?", "next_probe"],
     ["explain", "explain_result"], ["why", "explain_result"], ["show hypotheses", "show_hypotheses"], ["what's wrong", "show_hypotheses"],
   ])("%s -> %s", (t, type) => expect(parseCommand(t, DIVIDER_10K_10K).intent.type).toBe(type));
+  it.each(["right", "okay", "yes no wait", "not yes", "yes but no", "yeah no", "no yes", "yes cancel"])("%s is not a confirmation", (t) => expect(parseCommand(t, DIVIDER_10K_10K).intent.type).not.toBe("confirm"));
+  it.each(["right", "okay", "yes no wait", "not yes", "yes but no", "yeah no", "no yes", "yes cancel"])("%s is not a confirmation", (t) => expect(parseCommand(t, DIVIDER_10K_10K).intent.type).not.toBe("confirm"));
   it("gibberish is unknown", () => expect(parseCommand("banana", DIVIDER_10K_10K).intent.type).toBe("unknown"));
 });
