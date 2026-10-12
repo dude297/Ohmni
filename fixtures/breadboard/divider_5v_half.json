@@ -1,0 +1,16 @@
+{
+  "_synthetic": true,
+  "_note": "SYNTHETIC fixture: hand-authored half-board build of the 5 V 10k/10k divider. Not a photo or a real bench build.",
+  "board": { "id": "half", "cols": 30, "railSegments": 1 },
+  "placements": [
+    { "id": "V1", "kind": "dc_supply", "value": 5, "pins": { "positive": "L+1", "negative": "L-1" } },
+    { "id": "R1", "kind": "resistor", "value": 10000, "pins": { "positive": "a5", "negative": "a10" } },
+    { "id": "R2", "kind": "resistor", "value": 10000, "pins": { "positive": "b10", "negative": "a15" } }
+  ],
+  "jumpers": [
+    { "id": "J_vin", "a": "L+2", "b": "b5", "color": "red" },
+    { "id": "J_gnd", "a": "L-2", "b": "b15", "color": "black" }
+  ],
+  "groundNet": "L-1",
+  "probeHoles": { "VOUT": "e10" }
+}
