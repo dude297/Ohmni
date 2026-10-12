@@ -27,6 +27,9 @@ type TwinResult = {
     done: boolean; reason?: string; fitWarning?: string; safety?: string;
   };
   repair?: { proposals: any[]; basis?: string; safety?: string };
+  recommendation?:
+    | { status: "repair"; hypothesisId: string; basis: "measurements" | "observed_diff"; evidence: string[] }
+    | { status: "insufficient"; message: string; tied: { id: string; title: string; probability: number }[]; evidence: string[] };
 };
 type Reading = Obs & { source: Source };
 
@@ -70,7 +73,9 @@ export function TwinClient() {
     headRef.current?.focus();
   }, [step]);
 
-  const proposal = useMemo(() => [...(result?.repair?.proposals ?? [])].sort((a, b) => (b.probability ?? 0) - (a.probability ?? 0))[0], [result]);
+  const rec = result?.recommendation;
+  // Only the API's recommendation may become THE repair; ties / thin evidence yield no proposal.
+  const proposal = useMemo(() => (rec?.status === "repair" ? result?.repair?.proposals.find((p) => p.hypothesisId === rec.hypothesisId) : undefined), [result, rec]);
   const reach = [true, !!design, !!result, !!result, !!proposal, approved];
   const measured: Record<string, Source> = {};
   for (const r of readings) measured[r.node] = r.source;
@@ -269,6 +274,15 @@ export function TwinClient() {
                       </ul>
                     </div>
                   )}
+                  {!!rec?.evidence.length && (
+                    <div className="tw-warn" role="note"><b>Observed in your described hardware (direct evidence, not a hypothesis)</b>
+                      <ul>{rec.evidence.map((e) => <li key={e}>{e}</li>)}</ul></div>
+                  )}
+                  {rec?.status === "insufficient" && (
+                    <div className="tw-warn" role="status"><b>{rec.message}</b>
+                      <p>These candidates are tied; one reading can separate them:</p>
+                      <ul>{rec.tied.map((t) => <li key={t.id}>{t.title} ({pct(t.probability)})</li>)}</ul></div>
+                  )}
                   {result.probe?.done && <p className="tw-ok">{result.probe.reason ?? "Enough evidence collected."}</p>}
                   {result.probe?.fitWarning && <p className="tw-warn">{result.probe.fitWarning}</p>}
                   <div className="tw-read">
@@ -293,14 +307,14 @@ export function TwinClient() {
                     </ul>
                   )}
                   {result.probe?.safety && <p className="tw-muted">{result.probe.safety}</p>}
-                  <button type="button" className="tw-go" disabled={!proposal} onClick={() => setStep(5)}>{proposal ? "See the fix" : "Take a reading to unlock the fix"}</button>
+                  <button type="button" className="tw-go" disabled={!proposal} onClick={() => setStep(5)}>{proposal ? "See the fix" : rec?.status === "insufficient" ? "Not enough evidence yet: take the suggested reading" : "Take a reading to unlock the fix"}</button>
                 </>
               )}
 
               {step === 5 && proposal && result && (
                 <>
                   <div className="tw-fix">
-                    <small>MOST LIKELY · {pct(proposal.probability ?? 0)}</small>
+                    <small>{rec?.status === "repair" && rec.basis === "observed_diff" ? "FROM YOUR DESCRIBED HARDWARE · simulated, not measured" : `MOST LIKELY · ${pct(proposal.probability ?? 0)}`}</small>
                     <p className="tw-big">{proposal.title}</p>
                     <p className="tw-patch"><b>{proposal.patch?.componentId}</b>: restore {formatValue(proposal.patch?.designValue ?? 0, proposal.patch?.unit === "V" ? "dc_voltage" : "resistor")}
                       <span> (now {formatValue(proposal.patch?.faultedValue ?? 0, proposal.patch?.unit === "V" ? "dc_voltage" : "resistor")})</span></p>
