@@ -539,7 +539,7 @@ export function LabWorkspace() {
                     }
                   }}
                 />
-                <details className="review-values" open={sampleKind !== "advanced"}><summary>Values & connections · {graph.components.length} components</summary><div className="component-editor">
+                <details className="review-values" open><summary>Values & connections · {graph.components.length} components</summary><div className="component-editor">
                   <div className="editor-heading">
                     <span className="eyebrow">COMPONENTS</span>
                     <span>Values in Ω / V</span>

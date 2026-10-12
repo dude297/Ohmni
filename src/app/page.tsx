@@ -18,8 +18,8 @@ export default function Home() {
      <div className="hero-kicker"><span className="tiny-dot"/> THE LIVING SCHEMATIC</div>
      <h1>Circuits,<br/><span>made clear.</span></h1>
      <p>Turn a schematic and a meter reading into an investigation. Review the connections, compare real calculations, and choose your next experiment.</p>
-     <div className="hero-actions"><Link href="/lab?sample=advanced" className="button primary">Try Ohmni <ArrowRight size={18}/></Link></div>
-     <div className="hero-footnote"><Link href="/lab?sample=divider">Start with the beginner divider →</Link></div>
+     <div className="hero-actions"><Link href="/lab?sample=divider" className="button primary">Try Ohmni <ArrowRight size={18}/></Link></div>
+     <div className="hero-footnote"><Link href="/lab?upload=1">Upload your schematic →</Link><Link href="/lab?sample=advanced">Explore the advanced bridge →</Link></div>
     </div>
     <div className="hero-visual"><div className="orbit-label">01 / CHANGE ONE PART. SEE THE CIRCUIT RESPOND.</div><HeroCircuit/><div className="visual-footnote"><span>TUTORIAL · LOCAL DIVIDER PREVIEW</span><span>ADVANCED BRIDGE IN LAB →</span></div></div>
    </section>

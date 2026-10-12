@@ -6,7 +6,7 @@
 
 The homepage puts an oversized circuit instrument beside a confident two-line headline, 21 words of supporting copy and one primary **Try Ohmni** CTA. The beginner divider remains an interactive, explicitly local preview; changing R2 immediately changes its real calculation. Backend verification still requires review. Mobile puts the diagram before supporting prose while keeping keyboard actions in their DOM order. Repetitive marketing/roadmap cards are removed; audience limits remain labelled.
 
-The four Lab stages and their state remain intact. **Try Ohmni** opens the prepared bridge in unconfirmed Review. Component inspection is keyboard accessible; advanced edit forms are disclosed on demand. Compare places the real expected/measured numerals, signed gap and shared-scale bars beside one orthogonal schematic. The measured node is highlighted. On small screens the values arrive first and the instrument is a keyboard-focusable pan viewport; selecting a recommended node pans only that instrument, not the page. Raw events are preserved inside the trace disclosure.
+The four Lab stages and their state remain intact. **Try Ohmni** opens the beginner divider in unconfirmed Review; the visible advanced link opens the bridge. Component inspection is keyboard accessible; component values and connections start open before confirmation and remain collapsible. Compare places the real expected/measured numerals, signed gap and shared-scale bars beside one orthogonal schematic. The measured node is highlighted. On small screens the values arrive first and the instrument is a keyboard-focusable pan viewport; selecting a recommended node pans only that instrument, not the page. Raw events are preserved inside the trace disclosure.
 
 Probe Guide gives the schematic visual priority. Actual API probabilities drive bar scales and deemphasis below 1%; rows are not labelled impossible. The actual recommended node receives one focus ring. Reading history, expected outcomes, model-relative uncertainty and safety remain available. The conclusion names the returned leading model or unresolved tie. The optional tutor is progressively disclosed and the advanced graph requires explicit review before either probe or tutor requests. No calls are duplicated or automatically replayed by a visual effect.
 
@@ -54,7 +54,7 @@ No animation package, new runtime dependency, endless electrical ticker, synthet
 | Time | Scene / action | Evidence to show |
 | --- | --- | --- |
 | 0:00–0:20 | Homepage; set tutorial R2 to 1 kΩ, then return to 10 kΩ | Real local 0.455 / 2.500 V; **LOCAL PREVIEW**, no model call |
-| 0:20–0:55 | Try Ohmni; inspect the bridge and open values if needed; explicitly confirm | Eight components, three coupled nodes, prepared provenance, confirmation gate |
+| 0:20–0:55 | Explore the advanced bridge; inspect the bridge and open values if needed; explicitly confirm | Eight components, three coupled nodes, prepared provenance, confirmation gate |
 | 0:55–1:25 | Compare the reviewed circuit against a **labelled demo C=0 V** reading | Server MNA C≈2.609 V versus 0.000 V; real discrepancy and illuminated C |
 | 1:25–2:25 | Probe Guide; select Advanced bridge, review, enter demo C=0, then the server-selected node's independently calculated R6-open scenario reading | Four plausible models recede to the returned leading R6-open model. No scripted recommendation or physical certainty |
 | 2:25–3:00 | Show the actual reading trail, verification warning and expandable engineering evidence | Single-fault assumptions, safe physical follow-up, data provenance |
@@ -63,7 +63,7 @@ Use the known-good ladder (B=0, A=5, modeled R2 open) as an interactive fallback
 
 ## Validation and screenshot evidence
 
-Local browser checks render actual components and genuine solve/probe handlers with lightweight Next navigation adapters and fallback fonts. They are **component-level preflight**, not full production proof. Local evidence is in [living/local-browser](living/local-browser); baseline captures are in [living/before](living/before). The local browser folder contains 278 passing assertions and current after captures at 390 and 1440px with both motion preferences. Earlier local baseline screenshots precede main's loaded-bridge addition; authoritative paired baseline/after screenshots come from the isolated CI job.
+Local browser checks render actual components and genuine solve/probe handlers with lightweight Next navigation adapters and fallback fonts. They are **component-level preflight**, not full production proof. Local evidence is in [living/local-browser](living/local-browser); baseline captures are in [living/before](living/before). The local browser folder contains 294 passing assertions and current after captures at 390 and 1440px with both motion preferences. Earlier local baseline screenshots precede main's loaded-bridge addition; authoritative paired baseline/after screenshots come from the isolated CI job.
 
 `scripts/living-ui-smoke.mjs` runs against a target application's real routes at 320, 390, 768 and 1440px with both motion preferences. It verifies confirmation, actual API values, exact rendered terminals, nonoverlapping labels, visible comparison values, graph-edit invalidation, actual recommended-node highlighting, posterior narrowing, safety and no model calls. `scripts/guided-ui-smoke.mjs` retains broader retry/extraction-fixture/regression checks. Unit tests cover independent bridge conservation and fallback protection.
 
@@ -73,6 +73,10 @@ Local lint/typecheck and unit/browser results are reported in the PR. Local Next
 
 ## Remaining undeployed / review scope
 
-This experience is not deployed to Anbaric or Vercel. Do not substitute its local/CI screenshots for current production evidence. The QA job does not verify authenticated Anbaric, provider quotas, live extraction or physical measurements. Native hypothesis-row motion is deliberately limited to true probability transforms and deemphasis; photo morphs, AC/transients, arbitrary PCB inference and continuous current flow remain out of scope.
+This experience is not deployed to production. The existing Vercel Git integration automatically creates a branch preview; no hosting configuration or production deployment was changed. Do not substitute its local/CI screenshots for current production evidence. The QA job does not verify authenticated Anbaric, provider quotas, live extraction or physical measurements. Native hypothesis-row motion is deliberately limited to true probability transforms and deemphasis; photo morphs, AC/transients, arbitrary PCB inference and continuous current flow remain out of scope.
 
 Claude should independently review the canonical fixture integration, drawing-to-terminals correspondence, numeric/probe claims, mobile pan and focus, confirmation/tutor gates and full-app artifacts. Valid findings return to the frontend author for corrections and re-review. Keep this PR out of the submission release.
+
+## Prelint follow-up
+
+The owner explicitly authorized Prelint on this draft. The first technical review returned LGTM; product feedback prompted restoring beginner-first onboarding, visible upload/advanced links and an open component editor before confirmation. The advanced Capture preview remains available. Initial full-app QA exposed a real-font node-label collision at 320px; label spacing was increased and collision checks now wait for loaded fonts and report the exact pair. Acceptance still requires the updated full-app QA and independent re-review.

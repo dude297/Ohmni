@@ -12,6 +12,7 @@
 .living-home .hero-actions { margin-top: 28px; }
 .living-home .hero-actions .button { min-width: 185px; min-height: 54px; border-radius: 8px; }
 .living-home .hero-footnote a { color: #365e55; text-decoration: underline; text-underline-offset: 4px; }
+.living-home .hero-footnote { display: flex; flex-wrap: wrap; gap: 12px 20px; }
 .living-home .visual-footnote { letter-spacing: .07em; }
 .living-method { max-width: 1356px; margin: auto; padding: 48px 42px; border-top: 1px solid var(--ohmni-border); }
 .living-method h2 { font-size: clamp(27px,3vw,42px); font-weight: 500; letter-spacing: -1.3px; margin: 12px 0 28px; }
@@ -32,7 +33,7 @@
 .living-lab .mismatch-card:not(.matched) { border-color: #d99783; background: #fff0e9; color: #863b2a; }
 .living-lab .comparison-delta.is-mismatch { background: #f7d7c7; color: #863b2a; }
 .living-lab[data-sample="advanced"] .guided-layout { grid-template-columns: minmax(0,1fr); }
-.living-lab[data-sample="advanced"] .circuit-preview { display: none; }
+.living-lab[data-sample="advanced"]:not([data-stage="capture"]) .circuit-preview { display: none; }
 .comparison-scene { display: block; }
 .living-lab[data-sample="advanced"] .comparison-scene { display: grid; grid-template-columns: minmax(0,1.45fr) minmax(0,1fr); gap: 18px; align-items: start; }
 .living-lab[data-sample="advanced"] .comparison-evidence { order: 2; }

@@ -23,7 +23,8 @@ try {
   await page.goto(base);await page.waitForSelector('.hero-instrument');await page.waitForTimeout(750);
   await noOverflow('Home');await shot('home');
   if(!before){
-   check(`Main CTA opens advanced Review ${tag}`,await page.getByRole('link',{name:'Try Ohmni',exact:true}).getAttribute('href')==='/lab?sample=advanced');
+   check(`Main CTA opens beginner Review ${tag}`,await page.getByRole('link',{name:'Try Ohmni',exact:true}).getAttribute('href')==='/lab?sample=divider');
+   check(`Upload and advanced paths remain visible ${tag}`,await page.getByRole('link',{name:'Upload your schematic →',exact:true}).isVisible()&&await page.getByRole('link',{name:'Explore the advanced bridge →',exact:true}).isVisible());
    const words=(await page.locator('.hero-copy > p').innerText()).split(/\s+/).length;
    check(`Hero supporting copy stays short ${tag}`,words>=20&&words<=30);
    check(`Hero verification requires review ${tag}`,await page.locator('.hero-verify').isDisabled());
@@ -51,9 +52,10 @@ try {
    const svg=page.locator('.evidence-schematic svg');
    check(`All eight components and five nodes are distinct ${tag}`,await svg.locator('[data-component]').count()===8&&await svg.locator('[data-node]').count()===5);
    for(const c of graph.components){const part=svg.locator(`[data-component="${c.id}"]`);check(`Rendered ${c.id} preserves terminals ${tag}`,await part.getAttribute('data-positive-node')===c.positiveNode&&await part.getAttribute('data-negative-node')===c.negativeNode);}
+   await page.evaluate(()=>document.fonts.ready);
    const boxes=await svg.locator('text').evaluateAll(es=>es.map(e=>{const b=e.getBoundingClientRect();return {text:e.textContent,x:b.x,y:b.y,width:b.width,height:b.height};}));
    const collisions=[];for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++)if(overlap(boxes[i],boxes[j]))collisions.push([boxes[i].text,boxes[j].text]);
-   check(`Advanced diagram labels never overlap ${tag}`,collisions.length===0);
+   check(`Advanced diagram labels never overlap ${tag}: ${JSON.stringify(collisions)}`,collisions.length===0);
    const expected=await page.locator('.comparison-value').first().boundingBox(),measured=await page.locator('.comparison-value.observed').boundingBox();
    check(`Advanced values visible after solve ${tag}`,[expected,measured].every(b=>b.y>=60&&b.y+b.height<=height));
    check(`Advanced measurement node is highlighted ${tag}`,await svg.locator('[data-node="C"]').getAttribute('data-highlighted')==='true');
@@ -62,7 +64,7 @@ try {
    const faultResponse=await page.request.post(`${base}/api/solve`,{data:{graph:{...graph,components:graph.components.filter(c=>c.id!=='R6')},userConfirmed:true}});
    check(`Fault scenario uses the real server ${tag}`,faultResponse.ok());const fault=(await faultResponse.json()).result;
    check(`Open R6 grounds C and changes coupled nodes ${tag}`,fault.voltages.C===0&&Math.abs(fault.voltages.A-7.533)<.005&&Math.abs(fault.voltages.B-5.220)<.005);
-   await page.getByRole('navigation',{name:'Investigation stages'}).getByRole('button',{name:/Review/}).click();await page.locator('.review-values summary').click();await page.getByRole('spinbutton',{name:'R6 value in ohms'}).fill('700');
+   await page.getByRole('navigation',{name:'Investigation stages'}).getByRole('button',{name:/Review/}).click();check(`Advanced values remain open for review ${tag}`,await page.locator('.review-values').getAttribute('open')!==null);await page.getByRole('spinbutton',{name:'R6 value in ohms'}).fill('700');
    check(`Editing bridge clears result and confirmation ${tag}`,await page.locator('.voltage-result').count()===0&&await page.getByRole('navigation',{name:'Investigation stages'}).getByRole('button',{name:/Compare/}).isDisabled());
    await page.goto(`${base}/probe`);await page.getByRole('button',{name:'Advanced bridge',exact:true}).click();await page.locator('#v0').fill('0');
    check(`Advanced probe requires explicit graph review ${tag}`,await page.getByRole('button',{name:'Guide me',exact:true}).isDisabled());

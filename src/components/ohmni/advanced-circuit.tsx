@@ -45,8 +45,8 @@ export function AdvancedCircuit({graph,selected,onSelect,result,highlightedNode,
           {...(onMeasureNode?{role:"button",tabIndex:0,"aria-label":`Measure ${n.name}`,onClick:()=>onMeasureNode(n.name),onKeyDown:(e:React.KeyboardEvent)=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onMeasureNode(n.name);}}}:{})}>
           {active&&<circle key={highlightedNode} className="advanced-target" cx={n.x} cy={n.y} r={17}/>}
           <circle cx={n.x} cy={n.y} r={6}/>
-          <text className="advanced-node-name" x={n.name==="C"?615:n.x+12} y={n.name==="C"?278:n.y+(above?-22:25)}>{n.name}</text>
-          {value!==undefined&&<text className="advanced-reading" x={n.name==="C"?570:n.x+12} y={n.name==="C"?298:n.y+(above?-4:45)}>{value.toFixed(3)} V</text>}
+          <text className="advanced-node-name" x={n.name==="C"?615:n.x+12} y={n.name==="C"?278:n.y+(n.name==="VIN"?-34:above?-22:25)}>{n.name}</text>
+          {value!==undefined&&<text className="advanced-reading" x={n.name==="C"?570:n.x+12} y={n.name==="C"?308:n.y+(n.name==="VIN"?-4:above?6:55)}>{value.toFixed(3)} V</text>}
         </g>;})}
         <path className="advanced-wire" d="M85 400 V425 M65 425 H105 M72 433 H98 M79 441 H91"/>
       </svg>
