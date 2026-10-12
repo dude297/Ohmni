@@ -59,3 +59,6 @@ V1 5V VIN-GND; R1 10k VIN-VOUT; R2 10k VOUT-GND -> VOUT=2.5V. With R2=1k -> VOUT
 
 ## Contract changes
 Update this doc, shared src/lib/circuit/types.ts, Zod schema, fixtures and UI consumer as a coordinated reviewed change. No silent drift.
+
+## /api/repair/verify (server-authoritative)
+See docs/REPAIR_STUDIO.md. Request: `{ graph, userConfirmed, hypothesisId, measured, revisionId? }`; client expectVolts/toleranceVolts are ignored. Response adds `node, expectVolts, toleranceVolts, hypothesisId, revisionId, basis:"server_recomputed"`. Errors: 422 UNKNOWN_HYPOTHESIS / UNKNOWN_NODE, 409 REVISION_MISMATCH. `/api/repair` result now includes `revisionId`.
