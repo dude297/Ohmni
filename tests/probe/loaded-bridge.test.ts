@@ -44,9 +44,15 @@ describe('loaded bridge probe sample', () => {
     expect(s1.done).toBe(false);
     expect(s1.hypotheses.slice(0, 4).map((h) => h.id).sort()).toEqual(['R4:short', 'R6:open', 'R7:short', 'V1:dead']);
     expect(s1.next?.node).toBe('A');
+    // With 5 % part tolerance in the likelihood, R7:short is not ruled out by C and A alone: a third reading finishes it.
     const s2 = probeStep(LOADED_BRIDGE_12V, [{ node: 'C', volts: 0 }, { node: 'A', volts: 7.533 }]);
-    expect(s2.done).toBe(true);
+    expect(s2.done).toBe(false);
     expect(s2.hypotheses[0].id).toBe('R6:open');
-    expect(s2.hypotheses[0].probability).toBeGreaterThan(0.9);
+    expect(s2.next?.node).toBe('B');
+    const s3 = probeStep(LOADED_BRIDGE_12V, [{ node: 'C', volts: 0 }, { node: 'A', volts: 7.533 }, { node: 'B', volts: 5.22 }]);
+    expect(s3.done).toBe(true);
+    expect(s3.fit).toBe('good');
+    expect(s3.hypotheses[0].id).toBe('R6:open');
+    expect(s3.hypotheses[0].probability).toBeGreaterThan(0.9);
   });
 });

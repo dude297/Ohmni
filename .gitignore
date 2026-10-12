@@ -45,3 +45,4 @@ next-env.d.ts
 
 # Anbaric bundle (generated)
 /deploy/anbaric/out/
+bench/report/

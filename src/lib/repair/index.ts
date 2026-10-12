@@ -1,7 +1,7 @@
 import type { CircuitGraph } from '../circuit/types';
 import { solveDC, type DCSolution } from '../circuit/solve';
 import { validateGraph } from '../circuit/validate';
-import { probeStep, type Observation } from '../probe';
+import { modeledHypotheses, probeStep, type Observation } from '../probe';
 
 // Repair Studio: Observe -> Diagnose (probe posterior) -> Propose -> Simulate -> Approve -> Verify.
 // Every number is solver-simulated; patches only restore the CONFIRMED design (no rewiring, no new voltage).
@@ -57,14 +57,15 @@ export class RepairError extends Error {}
 
 export function repairStep(graph: CircuitGraph, observations: Observation[]): RepairResult {
   const step = probeStep(graph, observations);
-  const top = step.hypotheses[0];
+  const hyps = modeledHypotheses(step); // repairs are proposed among modeled faults only; step.fitWarning carries the misfit
+  const top = hyps[0];
   if (!top) throw new RepairError('Circuit could not be solved.');
   const nodes = Object.keys(top.predicted).filter((n) => n !== graph.groundNode);
   const obs = observations.filter((o) => nodes.includes(o.node));
   const after = solveDC(graph); // simulated: confirmed design. Patch = restore this; never raises a source above design.
 
   const proposals: RepairProposal[] = [];
-  for (const h of step.hypotheses) {
+  for (const h of hyps) {
     if (h.id === 'nominal' || h.probability < 0.05) continue;
     const [componentId, key] = h.id.split(':');
     const comp = graph.components.find((c) => c.id === componentId);
@@ -96,7 +97,7 @@ export function repairStep(graph: CircuitGraph, observations: Observation[]): Re
       if (Math.abs(after.voltages[n] - before.voltages[n]) > Math.abs(after.voltages[vNode] - before.voltages[vNode]) + 1e-12) vNode = n;
     const expectVolts = after.voltages[vNode];
 
-    const others = step.hypotheses.filter((o) => o.id !== h.id && o.id !== 'nominal' && o.probability >= 0.05);
+    const others = hyps.filter((o) => o.id !== h.id && o.id !== 'nominal' && o.probability >= 0.05);
     const uncertainty = [
       others.length ? `Alternatives: ${others.map((o) => `${o.title} (${pct(o.probability)})`).join('; ')}.` : 'No other hypothesis above 5%.',
       `This is a hypothesis (${pct(h.probability)}), not a confirmed fault.`,

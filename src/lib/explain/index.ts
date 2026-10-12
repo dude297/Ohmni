@@ -23,34 +23,73 @@ export type ExplainOutcome =
   | { ok: false; status: 422; code: 'INVALID_GRAPH' | 'UNSOLVABLE'; message: string; details?: string[] };
 
 // ---- grounding checker ----
-const PREFIX: Record<string, number> = { '': 1, k: 1e3, K: 1e3, M: 1e6, m: 1e-3, u: 1e-6, µ: 1e-6, μ: 1e-6 };
-// number (optionally 10,000-style), then optional prefix+unit. Lookbehind skips ids like R12 / V1.
-const NUM_RE =
-  /(?<![A-Za-z0-9_.])(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|-?\.\d+)\s*(?:(k|K|M|m|u|µ|μ)?(V|A|Ω|ohms?)|(k|K|M)(?![A-Za-z]))?(?![A-Za-z0-9])/g;
+// Every digit run in the prose is a typed claim {value, dimension}. A claim is grounded only when a fact of the SAME
+// dimension matches (honest rounding allowed). Unitless numbers are only allowed as step ordinals ("Step 2").
+export type Dim = 'V' | 'A' | 'Ω' | 'W' | 'none' | 'pct' | 'any';
+export type Fact = { value: number; dim: Dim }; // dim 'any' = dimension unknown (matches every claim)
+const SI: Record<string, number> = { kilo: 1e3, kil: 1e3, k: 1e3, K: 1e3, mega: 1e6, meg: 1e6, M: 1e6, milli: 1e-3, m: 1e-3, micro: 1e-6, u: 1e-6, µ: 1e-6, μ: 1e-6 };
+const CORE = '(?:[Vv]olts?|[Aa]mps?|[Aa]mperes?|[Oo]hms?|[Ww]atts?|V|A|Ω|W)';
+// mantissa (thousands separated by , / space / thin space), optional exponent, optional unit; lookbehind skips ids like R12 / V1
+const NUM_RE = new RegExp(
+  String.raw`(?<![A-Za-z0-9_.])(-?(?:\d{1,3}(?:[,\u00a0\u2009\u202f ]\d{3})+(?!\d)|\d+)(?:\.\d+)?|-?\.\d+)` +
+    String.raw`(?:[eE]([+-]?\d+)|\s?[x×]\s?10\^?([+\-−]?\d+))?` +
+    String.raw`(\s*(?:kilo|kil|mega|meg|milli|micro|k|K|M|m|u|µ|μ)?${CORE}(?![A-Za-z0-9])|\s*[kKM](?![A-Za-z0-9])|\s*%)?` +
+    String.raw`(?![A-Za-z0-9])`,
+  'g',
+);
 
-export type FoundNumber = { text: string; value: number; scale: number; halfUlp: number };
+function parseUnit(u: string | undefined): { scale: number; dim: Dim } {
+  const t = (u ?? '').trim();
+  if (!t) return { scale: 1, dim: 'none' };
+  if (t === '%') return { scale: 1, dim: 'pct' };
+  if (/^[kKM]$/.test(t)) return { scale: SI[t], dim: 'Ω' }; // "10k"
+  const m = /^(kilo|kil|mega|meg|milli|micro|k|K|M|m|u|µ|μ)?(.+)$/.exec(t)!;
+  const core = m[2].toLowerCase();
+  const dim: Dim = core.startsWith('v') ? 'V' : core.startsWith('a') ? 'A' : core.startsWith('w') ? 'W' : 'Ω';
+  return { scale: m[1] ? SI[m[1]] : 1, dim };
+}
+
+export type FoundNumber = { text: string; value: number; scale: number; halfUlp: number; dim: Dim; ordinal?: number };
 
 export function extractNumbers(text: string): FoundNumber[] {
   const out: FoundNumber[] = [];
   for (const m of text.matchAll(NUM_RE)) {
-    const scale = PREFIX[m[2] ?? m[4] ?? ''];
-    const dec = m[1].split('.')[1]?.length;
-    // Half a unit in the last written decimal place: "0.17 mA" stands for anything that rounds to it.
-    const halfUlp = dec ? 0.5 * 10 ** -dec * scale : 0;
-    out.push({ text: m[0].trim(), value: Number(m[1].replace(/,/g, '')) * scale, scale, halfUlp });
+    const { scale, dim } = parseUnit(m[4]);
+    const mant = m[1].replace(/[,\u00a0\u2009\u202f ]/g, '');
+    const exp = Number((m[2] ?? m[3] ?? '0').replace('−', '-'));
+    const dec = mant.split('.')[1]?.length;
+    const mult = scale * 10 ** exp;
+    const before = text.slice(Math.max(0, m.index - 10), m.index);
+    const after = text[m.index + m[0].length] ?? '';
+    const isOrdinal =
+      dim === 'none' && /^\d+$/.test(mant) && (/\b[Ss]tep\s*#?\s*$/.test(before) || (/(^|\n)\s*$/.test(before) && /[.)]/.test(after)) ||
+        /^\s*(significant|sig\b|decimal|digits?\b|places?\b)/i.test(text.slice(m.index + m[0].length))); // "3 significant figures" is precision, not a claim
+    out.push({
+      text: m[0].trim(),
+      value: Number(mant) * mult,
+      scale: mult,
+      // Half a unit in the last written decimal place: "0.17 mA" stands for anything that rounds to it.
+      halfUlp: dec ? 0.5 * 10 ** -dec * mult : 0,
+      dim,
+      ...(isOrdinal && { ordinal: Number(mant) }),
+    });
   }
   return out;
 }
 
-/** Returns the numbers in `text` not matching any allowed value: 1% relative, or honest rounding to the written
- * decimals (capped at 5% relative), or 1e-6 in the displayed unit's scale. */
-export function checkGrounding(text: string, allowed: number[]): string[] {
-  const abs = allowed.map(Math.abs);
-  // ponytail: abs tolerance scales with the written prefix so "0.2 µA" can't silently match 0
+const close = (c: FoundNumber, a: number) =>
+  Math.abs(Math.abs(c.value) - Math.abs(a)) <= Math.max(0.01 * Math.abs(a), Math.min(c.halfUlp, 0.05 * Math.abs(a)), 1e-6 * c.scale);
+
+/** Returns the claims in `text` that no fact supports: same dimension, and 1% relative, or honest rounding to the
+ * written decimals (capped at 5% relative). Plain numbers in `allowed` are dimension-agnostic (legacy). Unitless
+ * claims pass only as step ordinals <= maxSteps. */
+export function checkGrounding(text: string, allowed: (number | Fact)[], maxSteps = 5): string[] {
+  const facts: Fact[] = allowed.map((a) => (typeof a === 'number' ? { value: a, dim: 'any' as const } : a));
   return extractNumbers(text)
-    .filter(({ value, scale, halfUlp }) =>
-      !abs.some((a) => Math.abs(Math.abs(value) - a) <= Math.max(0.01 * a, Math.min(halfUlp, 0.05 * a), 1e-6 * scale)),
-    )
+    .filter((c) => {
+      if (c.ordinal !== undefined && c.ordinal >= 1 && c.ordinal <= maxSteps) return false;
+      return !facts.some((f) => (f.dim === 'any' || f.dim === c.dim) && close(c, f.value));
+    })
     .map((n) => n.text);
 }
 
@@ -59,20 +98,28 @@ export function allowedNumbers(
   sol: { voltages: Record<string, number>; currents: Record<string, number> },
   measured?: number,
   hyps?: NonNullable<SolveResponse['hypotheses']>,
-): number[] {
-  const set = [...Array(11).keys()]; // 0..10 for step numbering
+): Fact[] {
+  const set: Fact[] = [];
+  const add = (dim: Dim, ...vs: number[]) => vs.forEach((value) => Number.isFinite(value) && set.push({ value, dim }));
   const V = sol.voltages;
-  for (const v of Object.values(V)) set.push(v);
-  for (const i of Object.values(sol.currents)) set.push(Math.abs(i), Math.abs(i) * 1e3);
+  add('V', ...Object.values(V));
+  add('A', ...Object.values(sol.currents));
   for (const c of graph.components) {
-    set.push(c.value);
     const i = Math.abs(sol.currents[c.id]);
-    if (c.kind === 'dc_voltage' && i > 0) set.push(c.value / i, c.value / i / 1e3); // total load seen by the source (e.g. 20 kΩ)
-    if (c.kind === 'resistor') set.push(c.value / 1e3, c.value / 1e6, V[c.positiveNode] - V[c.negativeNode]); // kΩ/MΩ forms + drop
+    if (c.kind === 'dc_voltage') {
+      add('V', c.value);
+      if (i > 0) add('Ω', c.value / i); // total load seen by the source (e.g. 20 kΩ)
+      add('W', c.value * i);
+    } else {
+      const drop = V[c.positiveNode] - V[c.negativeNode];
+      add('Ω', c.value);
+      add('V', drop);
+      add('W', Math.abs(drop) * i);
+    }
   }
-  if (measured !== undefined) set.push(measured, V[graph.measureNode] - measured);
-  for (const h of hyps ?? []) for (const n of extractNumbers(`${h.title} ${h.rationale} ${h.nextMeasurement}`)) set.push(n.value);
-  return set.filter(Number.isFinite);
+  if (measured !== undefined) add('V', measured, V[graph.measureNode] - measured);
+  for (const h of hyps ?? []) for (const n of extractNumbers(`${h.title} ${h.rationale} ${h.nextMeasurement}`)) add(n.dim, n.value);
+  return set;
 }
 
 // ---- model call ----

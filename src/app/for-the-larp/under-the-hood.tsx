@@ -435,7 +435,7 @@ function Live() {
 function Probe() {
   const [obs, setObs] = useState<Observation[]>([{ node: "B", volts: 0 }]);
   const step = useMemo(() => probeStep(LADDER_5V, obs), [obs]);
-  const nodes = Object.keys(step.hypotheses[0]?.predicted ?? {}).filter((n) => n !== "GND" && !obs.some((o) => o.node === n));
+  const nodes = Object.keys(step.hypotheses.find((h) => h.id !== "unmodeled")?.predicted ?? {}).filter((n) => n !== "GND" && !obs.some((o) => o.node === n));
   return (
     <div className="ul-two">
       <div>
