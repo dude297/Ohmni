@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPacket, logRows } from "../../src/app/build/evidence";
+import { buildPacket, fmtOhms, logRows } from "../../src/app/build/evidence";
 import { LOADED_BRIDGE_12V } from "../../src/lib/circuit/fixtures";
 
 describe("evidence log", () => {
@@ -24,5 +24,11 @@ describe("evidence log", () => {
     expect(p.source).toBe("build");
     expect(p.assumptions.length).toBeGreaterThan(0);
     expect(Date.parse(p.createdAt)).not.toBeNaN();
+  });
+});
+
+describe("fmtOhms", () => {
+  it("renders faults and engineering notation", () => {
+    expect([1e9, 1e8, 1e-3, 0, 680, 1500, 4.7e6].map(fmtOhms)).toEqual(["open", "open", "short", "short", "680 Ω", "1.5 kΩ", "4.7 MΩ"]);
   });
 });

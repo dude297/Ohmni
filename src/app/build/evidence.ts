@@ -49,3 +49,11 @@ export function buildPacket(
     ...i,
   };
 }
+
+/** Resistance for humans: >=1e8 open, <=1e-3 short, else 680 Ω / 1.5 kΩ / 4.7 MΩ. */
+export function fmtOhms(r: number): string {
+  if (r >= 1e8) return "open";
+  if (r <= 1e-3) return "short";
+  const f = (x: number, u: string) => `${+x.toPrecision(3)} ${u}`;
+  return r >= 1e6 ? f(r / 1e6, "MΩ") : r >= 1e3 ? f(r / 1e3, "kΩ") : f(r, "Ω");
+}
