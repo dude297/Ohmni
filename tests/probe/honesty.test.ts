@@ -86,3 +86,17 @@ describe('probe honesty (out-of-model faults)', () => {
     expect(sum.outOfModel.flaggedRate).toBeGreaterThan(0.4);
   }, 120_000);
 });
+
+describe('repair refuses to invent a fix on poor fit', () => {
+  it('out-of-model readings -> no repair proposal, blocked poor_fit', async () => {
+    const { repairStep } = await import('../../src/lib/repair');
+    const { solveDC } = await import('../../src/lib/circuit/solve');
+    const { LOADED_BRIDGE_12V: G } = await import('../../src/lib/circuit/fixtures');
+    // R3 doubled (not in the single-fault model): read every node exactly
+    const faulted = { ...G, components: G.components.map((c) => (c.id === 'R3' ? { ...c, value: c.value * 2 } : c)) };
+    const v = solveDC(faulted).voltages;
+    const r = repairStep(G, ['A', 'B', 'C'].map((node) => ({ node, volts: v[node] })));
+    expect(r.basis.blocked).toBe('poor_fit');
+    expect(r.proposals).toEqual([]);
+  });
+});

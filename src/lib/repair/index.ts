@@ -28,7 +28,7 @@ export type RepairProposal = {
 };
 export type RepairResult = {
   proposals: RepairProposal[];
-  basis: { topHypothesisId: string; topProbability: number; done: boolean };
+  basis: { topHypothesisId: string; topProbability: number; done: boolean; blocked?: 'poor_fit' };
   safety: string;
 };
 
@@ -58,6 +58,11 @@ export class RepairError extends Error {}
 export function repairStep(graph: CircuitGraph, observations: Observation[]): RepairResult {
   const step = probeStep(graph, observations);
   const hyps = modeledHypotheses(step); // repairs are proposed among modeled faults only; step.fitWarning carries the misfit
+  // No repair is proposed when no modeled fault explains the readings: a confident-looking fix would be invented.
+  if (step.fit === 'poor' || step.hypotheses[0]?.id === 'unmodeled') {
+    const lead = step.hypotheses[0];
+    return { proposals: [], basis: { topHypothesisId: lead?.id ?? 'unmodeled', topProbability: lead?.probability ?? 0, done: false, blocked: 'poor_fit' }, safety: step.safety };
+  }
   const top = hyps[0];
   if (!top) throw new RepairError('Circuit could not be solved.');
   const nodes = Object.keys(top.predicted).filter((n) => n !== graph.groundNode);
