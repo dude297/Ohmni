@@ -1,17 +1,21 @@
 /* plain CSS, tm- prefix (not a CSS module; see probe.css) */
-.tm-page{background:#F6F5F0;color:#142C32;min-height:100vh;padding:24px 16px;max-width:900px;margin:0 auto;font-family:system-ui,sans-serif}
+.tm-page{width:100%;background:#F6F5F0;color:#142C32;min-height:100vh;padding:24px 16px;max-width:900px;margin:0 auto;font-family:inherit;line-height:1.5}
 .tm-page h1,.tm-page h2{margin:0 0 8px}
-.tm-page small{font-weight:400;color:#829E98;font-size:.7em}
+.tm-page h1{font-size:clamp(28px,6vw,40px);letter-spacing:-.5px}
+.tm-page h2{font-size:18px}
+.tm-lede{color:#53656a;margin:0 0 16px}
+.tm-page small{font-weight:400;color:#53656a;font-size:.7em}
 .tm-banner{background:#142C32;color:#F6F5F0;padding:10px 14px;border-radius:6px;font-weight:600}
 .tm-card{background:#fff;border:1px solid #829E98;border-radius:8px;padding:14px;margin:14px 0;overflow-x:auto}
 .tm-card textarea,.tm-card input:not([type]){width:100%;box-sizing:border-box;border:1px solid #829E98;border-radius:6px;padding:8px;margin:8px 0;font:inherit}
 .tm-btn{display:inline-block;background:#142C32;color:#F6F5F0;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font:inherit}
 .tm-btn.tm-alt{background:#F2B45A;color:#142C32}
-.tm-btn:disabled{opacity:.5}
+.tm-btn:disabled,.tm-btn.tm-alt:disabled{background:#e3e1d8;color:#3d4d51;border:1px dashed #53656a;cursor:not-allowed}
+.tm-btn:focus-visible,.tm-page input:focus-visible,.tm-page textarea:focus-visible,.tm-btn:has(input:focus-visible){outline:3px solid #c47620;outline-offset:2px}
 .tm-err{color:#943E2C;font-weight:600}
 .tm-table{border-collapse:collapse;width:100%}
 .tm-table th,.tm-table td{border-bottom:1px solid #829E98;padding:6px;text-align:left}
-.tm-badge{display:inline-block;padding:2px 8px;border-radius:10px;color:#fff;background:#829E98;font-size:.85em}
+.tm-badge{display:inline-block;padding:2px 8px;border-radius:10px;color:#fff;background:#53656a;font-size:.85em}
 .tm-badge.tm-hypothesized{background:#F2B45A;color:#142C32}
 .tm-badge.tm-verified{background:#142C32}
 .tm-badge.tm-not_verified{background:#943E2C}
