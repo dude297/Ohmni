@@ -84,3 +84,14 @@ describe('probeStepMulti', () => {
     expect(ms).toBeLessThan(1500);
   });
 });
+
+describe('probeStepMulti: R3 x10 + R7 open on LOADED_BRIDGE_12V', () => {
+  const truth = withR(withR(LOADED_BRIDGE_12V, 'R3', 15000), 'R7', 1e9);
+  const obs = readAll(truth).filter((o) => ['A', 'B', 'C'].includes(o.node));
+  it('true pair ranks #1 from readings at A, B, C', () => {
+    expect(obs.map((o) => o.node).sort()).toEqual(['A', 'B', 'C']);
+    const m = probeStepMulti(LOADED_BRIDGE_12V, obs, two);
+    expect(m.hypotheses[0].id).toBe('R3:x10+R7:open');
+    expect(m.hypotheses[0].probability).toBeGreaterThan(0.9);
+  });
+});

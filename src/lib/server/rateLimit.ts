@@ -18,6 +18,7 @@ const RULES: Record<string, () => Rule[]> = {
   '/api/ac': () => perMin('ac-min', 'RATE_AC_PER_MIN', 20),
   // local deterministic engines
   '/api/probe': () => perMin('probe-min', 'RATE_LOCAL_PER_MIN', 60),
+  '/api/probe-multi': () => perMin('probe-multi-min', 'RATE_LOCAL_PER_MIN', 60),
   '/api/topology': () => perMin('topology-min', 'RATE_LOCAL_PER_MIN', 60),
   '/api/repair': () => perMin('repair-min', 'RATE_LOCAL_PER_MIN', 60),
   '/api/repair/verify': () => perMin('repair-verify-min', 'RATE_LOCAL_PER_MIN', 60),
