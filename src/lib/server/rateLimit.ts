@@ -1,5 +1,11 @@
 // ponytail: in-memory per instance (each serverless instance counts separately); upgrade path = Vercel KV/Upstash if abused.
-const num = (k: string, d: number) => Number(process.env[k]) || d;
+// Env limits are read once per process (process.env access is slow on the hot path); restart to change.
+const envCache = new Map<string, number>();
+const num = (k: string, d: number) => {
+  let v = envCache.get(k);
+  if (v === undefined) envCache.set(k, (v = Number(process.env[k]) || d));
+  return v;
+};
 
 const MAX_BODY = 6 * 1024 * 1024;
 
@@ -26,15 +32,78 @@ const RULES: Record<string, () => Rule[]> = {
   '/api/firmware/adc': () => perMin('adc-min', 'RATE_LOCAL_PER_MIN', 60),
 };
 export const LIMITED_ROUTES = Object.keys(RULES);
-const rules = (pathname: string): Rule[] => RULES[pathname]?.() ?? [];
+const ruleCache = new Map<string, Rule[]>();
+const rules = (pathname: string): Rule[] => {
+  let r = ruleCache.get(pathname);
+  if (!r) ruleCache.set(pathname, (r = RULES[pathname]?.() ?? []));
+  return r;
+};
 
-const hits = new Map<string, { count: number; resetAt: number }>();
+type Entry = { count: number; resetAt: number };
+// Two-generation store: O(1) get/set, hard cap of MAX_ENTRIES total. When the current generation fills, it becomes "old" and the
+// previous old one is dropped wholesale (Map.keys().next() eviction is O(n) in V8 after many deletes). ponytail: a flood of unique
+// real IPs can age out counters early; shared store (KV/Upstash) is the real fix.
+const MAX_ENTRIES = 10_000;
+class Store {
+  cur = new Map<string, Entry>();
+  old = new Map<string, Entry>();
+  get(k: string) {
+    return this.cur.get(k) ?? this.old.get(k);
+  }
+  set(k: string, e: Entry) {
+    if (!this.cur.has(k) && this.cur.size >= MAX_ENTRIES / 2) {
+      this.old = this.cur;
+      this.cur = new Map();
+    }
+    this.cur.set(k, e);
+  }
+  get size() {
+    return this.cur.size + this.old.size;
+  }
+  clear() {
+    this.cur.clear();
+    this.old.clear();
+  }
+}
+const hits = new Store();
+// Model-calling routes also share one budget across ALL clients on this instance (free-tier quota protection).
+const MODEL_ROUTES = new Set(['/api/extract', '/api/explain', '/api/review']);
+const modelHits = new Store();
 
+const first = (h: Headers, names: string[]) => {
+  for (const n of names) {
+    const v = h.get(n)?.trim();
+    if (v) return v;
+  }
+};
+
+/**
+ * Trusted client IP. Platform headers (set/overwritten by the edge) win; otherwise the Nth-from-last
+ * X-Forwarded-For hop (TRUSTED_PROXY_HOPS, default 1) -- the first hop is client-supplied and spoofable.
+ */
 export function clientIp(h: Headers): string {
-  return h.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const platform = first(h, ['x-vercel-forwarded-for', 'x-real-ip', 'x-nf-client-connection-ip']);
+  if (platform) return platform.split(',')[0].trim();
+  const hops = h.get('x-forwarded-for')?.split(',').map((x) => x.trim()).filter(Boolean) ?? [];
+  const n = Math.max(1, Math.floor(num('TRUSTED_PROXY_HOPS', 1)));
+  return hops.length ? hops[Math.max(0, hops.length - n)] : 'unknown';
 }
 
-export type Block = { status: 429 | 413; code: 'RATE_LIMITED' | 'TOO_LARGE'; message: string; retryAfter?: number };
+export type Block = {
+  status: 429 | 413;
+  code: 'RATE_LIMITED' | 'TOO_LARGE' | 'MODEL_BUDGET';
+  message: string;
+  retryAfter?: number;
+};
+
+/** Fixed-window counter; returns seconds to wait if over max, else 0. O(1); the store is hard-capped. */
+function bump(m: Store, key: string, max: number, windowMs: number, now: number): number {
+  let e = m.get(key);
+  if (!e || e.resetAt <= now) {
+    m.set(key, (e = { count: 0, resetAt: now + windowMs }));
+  }
+  return ++e.count > max ? Math.ceil((e.resetAt - now) / 1000) : 0;
+}
 
 /** Returns a Block if the request must be rejected, else null. Only POSTs to LIMITED_ROUTES are guarded. */
 export function check(method: string, pathname: string, headers: Headers, now = Date.now()): Block | null {
@@ -42,26 +111,30 @@ export function check(method: string, pathname: string, headers: Headers, now = 
   const rs = rules(pathname);
   if (!rs.length) return null;
   if (pathname === '/api/extract' && Number(headers.get('content-length')) > MAX_BODY) {
-    return { status: 413, code: 'TOO_LARGE', message: 'Image too large â€” please upload a file under 6 MB.' };
+    return { status: 413, code: 'TOO_LARGE', message: 'Image too large — please upload a file under 6 MB.' };
   }
   const ip = clientIp(headers);
-  if (hits.size > 5000) for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
   let retry = 0;
-  for (const r of rs) {
-    const key = `${r.name}:${ip}`;
-    let e = hits.get(key);
-    if (!e || e.resetAt <= now) hits.set(key, (e = { count: 0, resetAt: now + r.windowMs }));
-    if (++e.count > r.max) retry = Math.max(retry, Math.ceil((e.resetAt - now) / 1000));
+  for (const r of rs) retry = Math.max(retry, bump(hits, `${r.name}:${ip}`, r.max, r.windowMs, now));
+  if (retry)
+    return {
+      status: 429,
+      code: 'RATE_LIMITED',
+      message: `Too many requests — this public demo protects free model quotas. Try again in ${retry}s.`,
+      retryAfter: retry,
+    };
+  if (MODEL_ROUTES.has(pathname)) {
+    const g = bump(modelHits, pathname, num('RATE_MODEL_GLOBAL_PER_MIN', 30), 60_000, now);
+    if (g)
+      return { status: 429, code: 'MODEL_BUDGET', message: `The shared model budget is used up for now. Try again in ${g}s.`, retryAfter: g };
   }
-  if (!retry) return null;
-  return {
-    status: 429,
-    code: 'RATE_LIMITED',
-    message: `Too many requests â€” this public demo protects free model quotas. Try again in ${retry}s.`,
-    retryAfter: retry,
-  };
+  return null;
 }
+
+/** Test hook: number of tracked keys. */
+export const trackedKeys = () => hits.size;
 
 export function resetRateLimits() {
   hits.clear();
+  modelHits.clear();
 }

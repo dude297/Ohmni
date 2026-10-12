@@ -9,7 +9,7 @@ import { DIVIDER_10K_10K, MALFORMED_FLOATING } from '@/lib/circuit/fixtures';
 
 const post = () => {
   const fd = new FormData();
-  fd.set('image', new File([new Uint8Array([1, 2, 3])], 'a.png', { type: 'image/png' }));
+  fd.set('image', new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1])], 'a.png', { type: 'image/png' }));
   return POST(new Request('http://x/api/extract', { method: 'POST', body: fd }));
 };
 const mockExtract = (graph: unknown) =>

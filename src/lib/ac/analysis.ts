@@ -1,6 +1,8 @@
-import { ENGINE_VERSION, runAcRaw, toCurve, type RawAc } from './engine';
+import { AcError, ENGINE_VERSION, runAcRaw, toCurve, type RawAc } from './engine';
 import { LIMITS, type AcGraph, type AcResult, type Candidate, type Discriminator, type MeasuredPoint, type Prediction } from './types';
 
+// Overall wall-clock budget for one analysis (queue wait + every candidate sim). Beyond it: AcError TIMEOUT -> 504, no partial result.
+export const ANALYSIS_DEADLINE_MS = 20_000;
 const FACTORS = [0.1, 10];
 const AMBIGUOUS_DB = 0.25; // candidates whose RMS fit differs by less than this are indistinguishable by magnitude
 const GOOD_FIT_DB = 1.5;
@@ -33,10 +35,15 @@ type Cand = Candidate & { compId: string; kind: 'resistor' | 'capacitor' | 'indu
 
 export async function analyze(
   g: AcGraph,
-  opts: { faults?: boolean; measuredPoints?: MeasuredPoint[] } = {},
+  opts: { faults?: boolean; measuredPoints?: MeasuredPoint[]; deadlineMs?: number } = {},
 ): Promise<AcResult> {
   const t0 = performance.now();
+  const deadline = t0 + (opts.deadlineMs ?? ANALYSIS_DEADLINE_MS);
+  const guard = () => {
+    if (performance.now() > deadline) throw new AcError('TIMEOUT', 'AC analysis exceeded its overall time budget; try without fault search');
+  };
   const nominalRaw = await runAcRaw(g);
+  guard();
   const result: AcResult = {
     nominal: toCurve(nominalRaw),
     trace: [],
@@ -50,6 +57,7 @@ export async function analyze(
         const v = c.value * f;
         const [lo, hi] = LIMITS.range[c.kind];
         if (v < lo || v > hi) continue;
+        guard();
         const raw = await runAcRaw({ ...g, components: g.components.map((x) => (x.id === c.id ? { ...x, value: v } : x)) });
         const cv = toCurve(raw);
         cands.push({

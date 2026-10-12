@@ -5,10 +5,17 @@ import type { CircuitGraph } from './types';
 // supported kinds only, positive resistances). Never throws.
 export type ValidationResult = { ok: true; graph: CircuitGraph } | { ok: false; errors: string[] };
 
-const node = z.string().trim().min(1, 'node name must be non-empty');
+// Workload ceilings (P0): keeps solve/probe cost bounded. 60 comps: probe ~ms (see tests/server/ceilings.test.ts).
+export const MAX_COMPONENTS = 60;
+export const MAX_NAME_LEN = 32;
+// Word chars plus the punctuation SPICE/KiCad net names use (e.g. "Net-(R1-Pad1)", "/VOUT"); no whitespace, quotes or control chars.
+const NAME_RE = /^[A-Za-z0-9_+\-.()/:~]+$/;
+const name = (what: string) =>
+  z.string().trim().min(1, `${what} must be non-empty`).max(MAX_NAME_LEN, `${what} must be at most ${MAX_NAME_LEN} characters`).regex(NAME_RE, `${what} may only contain letters, digits and _ + - . ( ) / : ~`);
+const node = name('node name');
 const component = z
   .object({
-    id: z.string().min(1, 'component id must be non-empty'),
+    id: name('component id'),
     kind: z.enum(['resistor', 'dc_voltage']),
     value: z.number().finite('value must be finite'),
     positiveNode: node,
@@ -19,7 +26,7 @@ const component = z
 export const circuitGraphSchema = z
   .object({
     schemaVersion: z.literal(1),
-    components: z.array(component).min(1, 'at least one component required'),
+    components: z.array(component).min(1, 'at least one component required').max(MAX_COMPONENTS, `at most ${MAX_COMPONENTS} components allowed`),
     groundNode: z.literal('GND'),
     measureNode: node,
   })
