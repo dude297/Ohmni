@@ -70,6 +70,35 @@ for (const [tag, vp] of [["1440", { width: 1440, height: 900 }], ["390", { width
   await p.close();
 }
 
+// tie scenario: VOUT = 0 V alone must NOT yield a single repair; N1 = 7.533 V then isolates R6 open.
+for (const [tag, vp] of [["1440", { width: 1440, height: 900 }], ["390", { width: 390, height: 844 }]]) {
+  const p = await b.newPage({ viewport: vp });
+  const errs = [];
+  p.on("console", (m) => m.type() === "error" && errs.push(m.text()));
+  p.on("pageerror", (e) => errs.push(String(e)));
+  await p.goto(`${base}/twin`);
+  await p.getByRole("button", { name: /Next: describe my hardware/ }).click();
+  await p.getByLabel("I reviewed the observed circuit").check();
+  await p.getByRole("button", { name: /Compare with the design/ }).click();
+  await p.getByRole("button", { name: /Next: where should I measure/ }).click();
+  await p.locator("#tw-rn").waitFor();
+  await p.locator("#tw-rn").selectOption("VOUT");
+  await p.locator("#tw-rv").fill("0");
+  await p.getByRole("button", { name: "Add reading", exact: true }).click();
+  await p.getByText("Not enough evidence to choose a repair yet").waitFor({ timeout: 15000 });
+  assert(!(await p.getByRole("button", { name: /See the fix/ }).count()), "no fix offered on a tie");
+  const nextNode = await p.locator("[data-next-node]").first().getAttribute("data-next-node");
+  await p.screenshot({ path: `${out}/7-tie-${tag}.png` });
+  await p.locator("#tw-rn").selectOption("N1");
+  await p.locator("#tw-rv").fill("7.533");
+  await p.getByRole("button", { name: "Add reading", exact: true }).click();
+  await p.getByRole("button", { name: /See the fix/ }).click();
+  await p.getByText(/Restore R6/).first().waitFor();
+  await p.screenshot({ path: `${out}/8-tie-resolved-${tag}.png` });
+  results.push({ tie: tag, nextNode, overflow: await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), errors: errs });
+  await p.close();
+}
+
 // wiring-fault diff screenshot (1440)
 {
   const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
