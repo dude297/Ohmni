@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { DISCLAIMER, EvidencePacket, buildExamplePacket, contentHash, derivedQuestions, fmt, parsePacket, residuals, toMarkdown } from "./packet";
+import { TopBar } from "../build/top-bar";
+import "../build/build.css";
 import "./teams.css";
 
 function save(name: string, type: string, body: string) {
@@ -42,7 +44,9 @@ export function TeamsClient() {
 
   return (
     <main className="tm-page">
+      <TopBar />
       <h1>Team review</h1>
+      <p className="tm-lede">Review an Ohmni evidence packet from the Build bench.</p>
       <p className="tm-banner">{DISCLAIMER}</p>
 
       <section className="tm-card tm-noprint">

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { AdvancedCircuit } from "../../components/ohmni/advanced-circuit";
+import { useState } from "react";
 import { LOADED_BRIDGE_12V } from "../../lib/circuit/fixtures";
 import type { FaultHypothesis, ProbeStep } from "../../lib/probe";
 import type { RepairProposal } from "../../lib/repair";
 import { apiErrorMessage, fmtPct, fmtV, parseVolts, schematicLayout } from "../probe/helpers";
-import { buildPacket, EVIDENCE_KEY, logRows, type Reading } from "./evidence";
+import { buildPacket, EVIDENCE_KEY, fmtOhms, logRows, type Reading } from "./evidence";
+import { TopBar } from "./top-bar";
 import "./build.css";
 
 const GRAPH = LOADED_BRIDGE_12V;
@@ -20,32 +22,6 @@ async function post(url: string, payload: unknown) {
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(apiErrorMessage(res.status, body, res.headers.get("retry-after")));
   return body.result;
-}
-
-function Schematic({ volts, highlight }: { volts: Record<string, number>; highlight: string | null }) {
-  const L = useMemo(() => schematicLayout(GRAPH), []);
-  return (
-    <svg className="bd-svg" viewBox={`0 0 ${L.width + 60} ${L.height}`} role="img" aria-label="Loaded bridge schematic">
-      {L.parts.map((p) => {
-        const mid = (p.a.y + p.b.y) / 2;
-        return (
-          <g key={p.id}>
-            <path d={`M${p.a.x} ${p.a.y}H${p.laneX}V${p.b.y}H${p.b.x}`} className="bd-wire" />
-            <rect x={p.laneX - 22} y={mid - 11} width={44} height={22} className="bd-part" />
-            <text x={p.laneX} y={mid + 4} textAnchor="middle" className="bd-ptxt">{p.id}</text>
-          </g>
-        );
-      })}
-      {L.nodes.map((n) => (
-        <g key={n.name} data-highlighted={highlight === n.name}>
-          {highlight === n.name && <circle cx={n.x} cy={n.y} r={15} className="bd-hl" />}
-          <circle cx={n.x} cy={n.y} r={6} className="bd-node" />
-          <text x={n.x - 12} y={n.y - 10} textAnchor="end" className="bd-ntxt">{n.name}</text>
-          {volts[n.name] !== undefined && <text x={n.x - 12} y={n.y + 8} textAnchor="end" className="bd-vtxt">{fmtV(volts[n.name])}</text>}
-        </g>
-      ))}
-    </svg>
-  );
 }
 
 export function BuildClient() {
@@ -62,6 +38,7 @@ export function BuildClient() {
   const [vv, setVv] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastNext, setLastNext] = useState<NonNullable<Probe["next"]> | null>(null);
   const [exported, setExported] = useState(false);
 
   const run = async (fn: () => Promise<void>) => {
@@ -88,6 +65,7 @@ export function BuildClient() {
       const p: Probe = await post("/api/probe", { graph: GRAPH, userConfirmed: true, observations });
       setReadings(next);
       setProbe(p);
+      if (p.next) setLastNext(p.next);
       setVolts("");
       setApproved(false);
       setVerdict(null);
@@ -123,7 +101,7 @@ export function BuildClient() {
       predictions: { voltages: nominal, currents: solved?.currents ?? {} },
       observations: readings,
       hypotheses: hyps.map((h) => ({ id: h.id, title: h.title, probability: h.probability })),
-      nextTest: probe?.next ? { node: probe.next.node, instruction: probe.next.instruction, expectedBits: probe.next.expectedBits } : undefined,
+      nextTest: (probe?.next ?? lastNext) ? { node: (probe?.next ?? lastNext)!.node, instruction: (probe?.next ?? lastNext)!.instruction, expectedBits: (probe?.next ?? lastNext)!.expectedBits } : undefined,
       repair: proposal
         ? {
             title: proposal.title,
@@ -146,6 +124,7 @@ export function BuildClient() {
 
   return (
     <main className="bd">
+      <TopBar />
       <header className="bd-head">
         <h1>Build bench</h1>
         <p>Loaded bridge, 12 V. Measure, localise, repair, verify.</p>
@@ -154,7 +133,7 @@ export function BuildClient() {
       <section className="bd-card" aria-labelledby="bd-s1">
         <h2 id="bd-s1">1. Circuit</h2>
         <div className="bd-grid">
-          <Schematic volts={solved ? nominal : {}} highlight={probe && !probe.done ? probe.next?.node ?? null : null} />
+          <AdvancedCircuit graph={GRAPH} readings={solved ? nominal : undefined} highlightedNode={probe && !probe.done ? probe.next?.node : undefined} />
           <div>
             <label className="bd-check">
               <input id="bd-confirm" type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
@@ -188,12 +167,12 @@ export function BuildClient() {
         {!solved ? <p className="bd-mute">Confirm and solve first.</p> : (
           <>
             <div className="bd-row">
-              <label>Node
+              <label htmlFor="bd-node">Node
                 <select id="bd-node" value={node} onChange={(e) => setNode(e.target.value)}>
                   {NODES.map((n) => <option key={n}>{n}</option>)}
                 </select>
               </label>
-              <label>Volts
+              <label htmlFor="bd-volts">Volts
                 <input id="bd-volts" inputMode="decimal" value={volts} onChange={(e) => setVolts(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addReading()} />
               </label>
               <button id="bd-add" className="bd-btn" disabled={busy} onClick={addReading}>Add reading</button>
@@ -243,7 +222,7 @@ export function BuildClient() {
           <h2 id="bd-s3">3. Repair proposal</h2>
           <div className="bd-big" data-testid="proposal-title">{proposal.title}</div>
           <p className="bd-mute">
-            Patch: {proposal.patch.componentId} {proposal.patch.faultedValue} to {proposal.patch.designValue} {proposal.patch.unit} · hypothesized {fmtPct(proposal.probability)}
+            Patch: {proposal.patch.componentId} {fmtOhms(proposal.patch.faultedValue)} to {fmtOhms(proposal.patch.designValue)} · hypothesized {fmtPct(proposal.probability)}
           </p>
           <table className="bd-table" aria-label="Before and after">
             <thead><tr><th>Node</th><th>Measured</th><th>Simulated before</th><th>Simulated after</th></tr></thead>
@@ -269,7 +248,7 @@ export function BuildClient() {
             <div className="bd-verify">
               <p>{proposal.verification.instruction}</p>
               <div className="bd-row">
-                <label>Measured at {proposal.verification.node} (V)
+                <label htmlFor="bd-vv">Measured at {proposal.verification.node} (V)
                   <input id="bd-vv" inputMode="decimal" value={vv} onChange={(e) => setVv(e.target.value)} onKeyDown={(e) => e.key === "Enter" && verify()} />
                 </label>
                 <button id="bd-verify" className="bd-btn" disabled={busy} onClick={verify}>Verify</button>

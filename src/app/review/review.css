@@ -1,0 +1,28 @@
+/* plain CSS, route-prefixed (rv-); CSS modules do not work here */
+.rv-head { display: flex; gap: 16px; flex-wrap: wrap; padding: 14px 16px; border-bottom: 1px solid var(--ohmni-border); }
+.rv-link { color: var(--ohmni-ink); text-decoration: underline; }
+.rv-main { max-width: 760px; margin: 0 auto; padding: 24px 16px 56px; }
+.rv-main h1 { font-size: 30px; font-weight: 500; margin-bottom: 12px; }
+.rv-main h2 { font-size: 18px; margin: 24px 0 8px; }
+.rv-banner { background: #fffaf0; border: 2px solid var(--ohmni-accent); border-radius: 8px; padding: 12px 14px; overflow-wrap: anywhere; }
+.rv-muted { color: var(--ohmni-muted); font-size: 13px; margin: 8px 0; }
+.rv-card { display: grid; gap: 10px; background: #fff; border: 1px solid var(--ohmni-border); border-radius: 8px; padding: 16px; margin-top: 12px; }
+.rv-card select, .rv-btn { min-height: 44px; font-size: 16px; border-radius: 6px; border: 1px solid #c7d2cc; padding: 0 12px; background: #fff; max-width: 100%; }
+.rv-check { display: flex; gap: 10px; align-items: center; }
+.rv-check input { width: 22px; height: 22px; }
+.rv-btn { background: var(--ohmni-ink); color: #fff; cursor: pointer; }
+.rv-btn:disabled { opacity: .5; cursor: not-allowed; }
+.rv-ghost { background: #fff; color: var(--ohmni-ink); padding: 8px 12px; }
+.rv-main :focus-visible, .rv-head :focus-visible { outline: 3px solid #1f6feb; outline-offset: 2px; }
+.rv-error { background: #fbeae6; color: var(--ohmni-danger); border-radius: 6px; padding: 10px 12px; margin-top: 12px; }
+.rv-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.rv-find { background: #fff; border: 1px solid var(--ohmni-border); border-left-width: 5px; border-radius: 6px; padding: 12px; overflow-wrap: anywhere; }
+.rv-sev-error { border-left-color: var(--ohmni-danger); }
+.rv-sev-warning { border-left-color: var(--ohmni-accent); }
+.rv-sev-info { border-left-color: #8ba79f; }
+.rv-sev { font-weight: 700; text-transform: uppercase; font-size: 12px; }
+.rv-cat { color: var(--ohmni-muted); font-size: 12px; }
+.rv-mentor { background: #eaf0eb; border-radius: 6px; padding: 8px 10px; margin-top: 8px; }
+.rv-ok { color: var(--ohmni-success); font-size: 13px; }
+.rv-warn { color: var(--ohmni-danger); font-size: 13px; }
+.rv-trace { font-family: monospace; font-size: 13px; overflow-wrap: anywhere; }

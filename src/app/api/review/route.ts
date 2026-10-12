@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { reviewCircuit, mentorExplain } from '../../../lib/review';
+import { reviewCircuit, mentorExplain, REVIEW_DISCLAIMER } from '../../../lib/review';
 import type { ModelTraceEvent } from '../../../lib/circuit/types';
 
 const body = z.object({
@@ -45,5 +45,5 @@ export async function POST(req: Request) {
     mentorOut = await mentorExplain({ graph, finding, level: mentor.level, mode: mentor.mode, hintIndex: mentor.hintIndex });
     trace.push(...mentorOut.trace);
   }
-  return Response.json({ result: { findings: review.findings, solution: review.solution, mentor: mentorOut, trace } });
+  return Response.json({ result: { advisory: true, disclaimer: REVIEW_DISCLAIMER, findings: review.findings, solution: review.solution, mentor: mentorOut, trace } });
 }
