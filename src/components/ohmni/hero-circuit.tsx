@@ -46,12 +46,12 @@ export function HeroCircuit() {
         </span>
         <span className="sample-tag">{verified ? "BACKEND VERIFIED" : "LOCAL PREVIEW"}</span>
       </div>
-      <CircuitView
+      <div className="hero-body"><div className="hero-live-circuit"><CircuitView
         graph={graph}
         selected={selected}
         onSelect={pending ? undefined : setSelected}
         result={result}
-      />
+      /></div><div className="hero-live-controls">
       <div className="instrument-controls">
         <div>
           <span className="eyebrow">PREDICTED VOUT</span>
@@ -81,7 +81,7 @@ export function HeroCircuit() {
         <p className="hero-proof" aria-live="polite">{verified ? `Actual server result${verified.trace[0] ? ` · ${verified.trace[0].provider}${verified.trace[0].model ? ` / ${verified.trace[0].model}` : ""} · ${verified.trace[0].durationMs} ms` : ""}. No vision model was called.` : "Slider uses a local divider preview. Verify to run the real server solver."}</p>
         {error && <p className="hero-error" role="alert">{error} The value shown is a local preview.</p>}
       </div>
-      <div className="instrument-note">
+      </div></div><div className="instrument-note">
         {resistance === 10000 ? "Equal resistors. Half the supply voltage." : "One component changes the whole story."}{" "}
         <Link href="/lab?sample=divider">Inspect circuit →</Link>
       </div>

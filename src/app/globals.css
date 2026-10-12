@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./living.css";
 
 :root {
   --ohmni-bg: #f6f5f0;

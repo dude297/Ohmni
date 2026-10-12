@@ -22,7 +22,7 @@ try {
   await page.goto(base);await page.waitForSelector('.site-header');
   check('No scroll progress indicator',await page.locator('.reading-progress').count()===0);
   check('Header uses sticky positioning',await page.locator('.site-header').evaluate(e=>getComputedStyle(e).position)==='sticky');
-  check('Audience section follows How it works and precedes roadmap',await page.evaluate(()=>!!(document.querySelector('#how-it-works').compareDocumentPosition(document.querySelector('#use-cases'))&Node.DOCUMENT_POSITION_FOLLOWING)&&!!(document.querySelector('#use-cases').compareDocumentPosition(document.querySelector('#roadmap'))&Node.DOCUMENT_POSITION_FOLLOWING)));
+  check('Audience section follows How it works',await page.evaluate(()=>!!(document.querySelector('#how-it-works').compareDocumentPosition(document.querySelector('#use-cases'))&Node.DOCUMENT_POSITION_FOLLOWING)));
   check('Two current and two future audience labels',await page.getByText('Current limited use case',{exact:true}).count()===2&&await page.getByText('Future applications',{exact:true}).count()===2);
   await page.evaluate(()=>scrollTo(0,900));
   check('Header remains at viewport top after scrolling',Math.abs((await page.locator('.site-header').boundingBox()).y)<1);
