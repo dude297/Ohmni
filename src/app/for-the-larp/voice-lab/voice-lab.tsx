@@ -70,11 +70,13 @@ export function VoiceLab() {
 
   const speak = useCallback(
     (text: string) => {
-      if (!speakOn || typeof window === "undefined" || !("speechSynthesis" in window) || !text) return;
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text.replace(/\bmV\b/g, "millivolts").replace(/(\d) V\b/g, "$1 volts"));
-      u.lang = "en-US";
-      window.speechSynthesis.speak(u);
+      if (!speakOn || typeof window === "undefined" || !text) return;
+      try { // speech output is optional: a missing/broken speechSynthesis must never break recording
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text.replace(/\bmV\b/g, "millivolts").replace(/(\d) V\b/g, "$1 volts"));
+        u.lang = "en-US";
+        window.speechSynthesis.speak(u);
+      } catch {}
     },
     [speakOn],
   );
@@ -209,7 +211,7 @@ export function VoiceLab() {
       const Ctor = getRecognitionCtor(window) as (new () => Rec) | null;
       if (!Ctor) return;
       if (!stateRef.current.circuitConfirmed) return say("Confirm the circuit first.");
-      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+      try { window.speechSynthesis.cancel(); } catch {}
       const rec = new Ctor();
       rec.lang = "en-US";
       rec.interimResults = true;

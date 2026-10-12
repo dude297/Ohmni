@@ -116,7 +116,7 @@ function normalize(text: string): string {
 }
 
 const PHRASES: [RegExp, VoiceIntent["type"]][] = [
-  [/^((yes|yeah|yep|yup)( (record|save) (that|it))?|(record|save) (that|it)|correct|confirm|confirmed|that s right|thats right|right|affirmative)$/, "confirm"],
+  [/^((yes|yeah|yep|yup)( (record|save) (that|it))?|(record|save) (that|it)|correct|confirm|confirmed|that s right|thats right|affirmative)$/, "confirm"],
   [/^(no|nope|cancel|wrong|stop|scratch that|never mind|nevermind|incorrect)$/, "cancel"],
   [/^(repeat|repeat (that|it)|say (that|it) again|again|come again|what did you say)$/, "repeat"],
   [/^(next|next probe|next step|next measurement|where next|what next|what s the next (measurement|probe|step)|where (should|do) i (probe|measure)( next)?|what should i measure( next)?|where now)$/, "next_probe"],
