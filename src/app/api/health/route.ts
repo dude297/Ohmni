@@ -8,7 +8,7 @@ export async function GET() {
   await connection(); // read env at request time (Anbaric loads keys at boot, not build)
   return Response.json({
     status: 'ok',
-    build: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? process.env.BUILD_SHA ?? 'dev',
+    build: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? (process.env.NETLIFY_COMMIT_REF || undefined)?.slice(0, 7) ?? process.env.BUILD_SHA ?? 'dev',
     visionPrimary: process.env.VISION_PRIMARY === 'gemini' ? 'gemini' : 'groq',
     providers: {
       gemini: { configured: on('GEMINI_API_KEY'), model: geminiModel() },
