@@ -53,6 +53,36 @@ export const withValue = (g: CircuitGraph, id: string, value: number): CircuitGr
   components: g.components.map((c) => (c.id === id ? { ...c, value } : c)),
 });
 
+export type FaultCase = {
+  comp: CircuitGraph['components'][number];
+  fclass: FaultClass;
+  faultedValue: number;
+  before: DCSolution;
+  vNode: string;
+  expectVolts: number;
+};
+
+/** Shared by repairStep and verifyHypothesis: patch + verification node/expectation, all server-derived. null = invalid/unsolvable fault id. */
+export function faultCase(graph: CircuitGraph, hypothesisId: string, nodes: string[], after = solveDC(graph)): FaultCase | null {
+  const [componentId, key] = hypothesisId.split(':');
+  const comp = graph.components.find((c) => c.id === componentId);
+  if (!comp || !FAULT_VALUE[key]) return null;
+  const faultedValue = FAULT_VALUE[key](comp.value);
+  // Safety: the patched graph (= confirmed design) must validate; the faulted model must solve.
+  if (!validateGraph(withValue(graph, comp.id, comp.value)).ok) return null;
+  let before: DCSolution;
+  try {
+    before = solveDC(withValue(graph, comp.id, faultedValue));
+  } catch {
+    return null;
+  }
+  // Most discriminating node after the fix (first node wins ties: deterministic).
+  let vNode = nodes[0];
+  for (const n of nodes)
+    if (Math.abs(after.voltages[n] - before.voltages[n]) > Math.abs(after.voltages[vNode] - before.voltages[vNode]) + 1e-12) vNode = n;
+  return { comp, fclass: CLASS[key], faultedValue, before, vNode, expectVolts: after.voltages[vNode] };
+}
+
 export class RepairError extends Error {}
 
 export function repairStep(graph: CircuitGraph, observations: Observation[]): RepairResult {
@@ -72,19 +102,9 @@ export function repairStep(graph: CircuitGraph, observations: Observation[]): Re
   const proposals: RepairProposal[] = [];
   for (const h of hyps) {
     if (h.id === 'nominal' || h.probability < 0.05) continue;
-    const [componentId, key] = h.id.split(':');
-    const comp = graph.components.find((c) => c.id === componentId);
-    if (!comp || !FAULT_VALUE[key]) continue;
-    const faultedValue = FAULT_VALUE[key](comp.value);
-    const fclass = CLASS[key];
-    // Safety: the patched graph (= confirmed design) must validate; the faulted model must solve.
-    if (!validateGraph(withValue(graph, comp.id, comp.value)).ok) continue;
-    let before: DCSolution;
-    try {
-      before = solveDC(withValue(graph, comp.id, faultedValue));
-    } catch {
-      continue;
-    }
+    const fc = faultCase(graph, h.id, nodes, after);
+    if (!fc) continue;
+    const { comp, fclass, faultedValue, before, vNode, expectVolts } = fc;
 
     const supporting = obs.map((o) => ({
       node: o.node,
@@ -95,12 +115,6 @@ export function repairStep(graph: CircuitGraph, observations: Observation[]): Re
     const fits = supporting.every((s) => Math.abs(s.measured - s.predictedIfFault) <= sigma(s.measured));
     const differs = supporting.some((s) => Math.abs(s.predictedIfRepaired - s.predictedIfFault) > sigma(s.predictedIfRepaired));
     const resolves = obs.length > 0 && fits && differs;
-
-    // Most discriminating node after the fix (first node wins ties: deterministic).
-    let vNode = nodes[0];
-    for (const n of nodes)
-      if (Math.abs(after.voltages[n] - before.voltages[n]) > Math.abs(after.voltages[vNode] - before.voltages[vNode]) + 1e-12) vNode = n;
-    const expectVolts = after.voltages[vNode];
 
     const others = hyps.filter((o) => o.id !== h.id && o.id !== 'nominal' && o.probability >= 0.05);
     const uncertainty = [
@@ -170,4 +184,22 @@ export function verifyRepair(
       ? `Measured ${fmtV(measured.volts)} at ${measured.node}, consistent with the repair (${band}).`
       : `Measured ${fmtV(measured.volts)} at ${measured.node} does not match; re-check the repair (${band}).`,
   };
+}
+
+export class VerifyInputError extends Error {
+  constructor(public code: 'UNKNOWN_HYPOTHESIS' | 'UNKNOWN_NODE', message: string) {
+    super(message);
+  }
+}
+
+/** Server-authoritative verify: hypothesis, node, expected volts and tolerance all come from the confirmed graph, never the client. */
+export function verifyHypothesis(graph: CircuitGraph, hypothesisId: string, measured: { node: string; volts: number }) {
+  const step = probeStep(graph, []);
+  const top = modeledHypotheses(step)[0]; // 'unmodeled' has no predicted voltages
+  const nodes = top ? Object.keys(top.predicted).filter((n) => n !== graph.groundNode) : [];
+  const fc = hypothesisId !== 'nominal' && step.hypotheses.some((h) => h.id === hypothesisId) ? faultCase(graph, hypothesisId, nodes) : null;
+  if (!fc) throw new VerifyInputError('UNKNOWN_HYPOTHESIS', `Unknown hypothesis "${hypothesisId}" for this circuit.`);
+  if (!nodes.includes(measured.node)) throw new VerifyInputError('UNKNOWN_NODE', `Node "${measured.node}" is not a measurable node of this circuit.`);
+  const verification = { node: fc.vNode, expectVolts: fc.expectVolts, toleranceVolts: sigma(fc.expectVolts) };
+  return { ...verifyRepair(verification, measured), ...verification, hypothesisId, basis: 'server_recomputed' as const };
 }

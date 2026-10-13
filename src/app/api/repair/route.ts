@@ -1,6 +1,8 @@
+import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
 import { validateGraph } from '../../../lib/circuit/validate';
 import { solveDC } from '../../../lib/circuit/solve';
+import { revisionId } from '../../../lib/circuit/revision';
 import { repairStep } from '../../../lib/repair';
 
 const body = z.object({
@@ -15,9 +17,9 @@ const err = (status: number, code: string, message: string, details?: string[]) 
 export async function POST(req: Request) {
   let raw: unknown;
   try {
-    raw = await req.json();
-  } catch {
-    return err(400, 'BAD_JSON', 'Request body must be valid JSON');
+    raw = await readJson(req);
+  } catch (e) {
+    return bodyErrorResponse(e);
   }
   const parsed = body.safeParse(raw);
   if (!parsed.success)
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
     solveDC(v.graph);
     const result = repairStep(v.graph, parsed.data.observations);
     return Response.json({
-      result: { ...result, trace: [{ step: 'repair', provider: 'local', model: 'mna-dc', durationMs: Math.round(performance.now() - t0), status: 'ok' }] },
+      result: { ...result, revisionId: revisionId(v.graph), trace: [{ step: 'repair', provider: 'local', model: 'mna-dc', durationMs: Math.round(performance.now() - t0), status: 'ok' }] },
     });
   } catch (e) {
     return err(422, 'UNSOLVABLE', e instanceof Error ? e.message : 'Circuit could not be solved');

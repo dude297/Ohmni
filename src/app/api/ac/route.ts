@@ -1,3 +1,4 @@
+import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
 import { analyze } from '../../../lib/ac/analysis';
 import { AcError } from '../../../lib/ac/engine';
@@ -19,9 +20,9 @@ const err = (status: number, code: string, message: string, details?: string[]) 
 export async function POST(req: Request) {
   let raw: unknown;
   try {
-    raw = await req.json();
-  } catch {
-    return err(400, 'BAD_JSON', 'Request body must be valid JSON');
+    raw = await readJson(req);
+  } catch (e) {
+    return bodyErrorResponse(e);
   }
   const parsed = body.safeParse(raw);
   if (!parsed.success) {
@@ -42,6 +43,8 @@ export async function POST(req: Request) {
     const result = await analyze(graph as AcGraph, { faults, measuredPoints });
     return Response.json({ result });
   } catch (e) {
+    if (e instanceof AcError && e.code === 'TIMEOUT')
+      return Response.json({ error: { code: 'TIMEOUT', message: e.message }, partial: false }, { status: 504 });
     if (e instanceof AcError)
       return err(e.code === 'BUSY' ? 429 : e.code === 'TIMEOUT' ? 504 : 422, e.code === 'SIM_FAILED' ? 'UNSOLVABLE' : e.code, e.message);
     throw e;
