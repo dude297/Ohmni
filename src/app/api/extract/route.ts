@@ -1,10 +1,10 @@
 import { extractWithFallback } from '@/lib/ai/vision';
 import { routeExtraction } from '@/lib/ai/jev';
 import { verifyTopology } from '@/lib/ai/secondary';
+import { readFormData, sniffImage, bodyErrorResponse } from '@/lib/server/readBody';
 import { validateGraph } from '@/lib/circuit/validate';
 import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '@/lib/circuit/types';
 
-const MIMES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX = 5 * 1024 * 1024;
 
 const err = (status: number, code: string, message: string) =>
@@ -13,19 +13,21 @@ const err = (status: number, code: string, message: string) =>
 export async function POST(req: Request) {
   let file: unknown;
   try {
-    file = (await req.formData()).get('image');
-  } catch {
-    return err(400, 'INVALID_FORM', 'Expected multipart/form-data with an "image" field');
+    file = (await readFormData(req)).get('image');
+  } catch (e) {
+    return bodyErrorResponse(e);
   }
   if (!(file instanceof File)) return err(400, 'MISSING_IMAGE', 'Field "image" is required');
-  if (!MIMES.includes(file.type)) return err(400, 'UNSUPPORTED_TYPE', 'Image must be png, jpeg or webp');
   if (file.size > MAX) return err(413, 'TOO_LARGE', 'Image must be 5MB or smaller');
 
   const bytes = new Uint8Array(await file.arrayBuffer());
+  // Never trust the declared file.type: sniff magic bytes and pass the sniffed MIME downstream.
+  const mime = sniffImage(bytes);
+  if (!mime) return err(415, 'UNSUPPORTED_MEDIA', 'Image content must be png, jpeg or webp');
   const trace: ModelTraceEvent[] = [];
   let extraction: CandidateExtraction;
 
-  const r = await extractWithFallback(bytes, file.type);
+  const r = await extractWithFallback(bytes, mime);
   extraction = r.extraction;
   trace.push(...r.events);
   if (!r.ok) {
@@ -43,7 +45,7 @@ export async function POST(req: Request) {
   trace.push(routed.event);
 
   if (routed.route === 'verify_topology') {
-    const v = await verifyTopology(bytes, file.type, extraction);
+    const v = await verifyTopology(bytes, mime, extraction);
     trace.push(v.event);
     if (v.extraction) extraction = v.extraction;
   }

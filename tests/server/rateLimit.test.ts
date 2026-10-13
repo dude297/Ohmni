@@ -4,7 +4,7 @@ import { check, resetRateLimits } from '../../src/lib/server/rateLimit';
 import { proxy } from '../../src/proxy';
 
 const h = (ip: string, extra: Record<string, string> = {}) =>
-  new Headers({ 'x-forwarded-for': `${ip}, 10.0.0.1`, ...extra });
+  new Headers({ 'x-forwarded-for': ip, ...extra });
 
 beforeEach(resetRateLimits);
 

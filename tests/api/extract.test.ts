@@ -14,7 +14,8 @@ const post = (file?: File) => {
   if (file) fd.set('image', file);
   return POST(new Request('http://x/api/extract', { method: 'POST', body: fd }));
 };
-const png = () => new File([new Uint8Array([1, 2, 3])], 'a.png', { type: 'image/png' });
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3];
+const png = () => new File([new Uint8Array(PNG)], 'a.png', { type: 'image/png' });
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -25,12 +26,15 @@ describe('POST /api/extract', () => {
     expect((await r.json()).error.code).toBe('MISSING_IMAGE');
   });
 
-  it('400 on wrong mime', async () => {
-    expect((await post(new File(['x'], 'a.gif', { type: 'image/gif' }))).status).toBe(400);
+  it('415 on wrong content (declared type is not trusted)', async () => {
+    expect((await post(new File(['x'], 'a.gif', { type: 'image/gif' }))).status).toBe(415);
+    const r = await post(new File(['definitely not a png'], 'a.png', { type: 'image/png' }));
+    expect(r.status).toBe(415);
+    expect((await r.json()).error.code).toBe('UNSUPPORTED_MEDIA');
   });
 
   it('413 on oversize', async () => {
-    expect((await post(new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'a.png', { type: 'image/png' }))).status).toBe(413);
+    expect((await post(new File([new Uint8Array(5 * 1024 * 1024 + 1).fill(1)], 'a.png', { type: 'image/png' }))).status).toBe(413);
   });
 
   it('ask_user without calling Jev when every provider fails', async () => {
