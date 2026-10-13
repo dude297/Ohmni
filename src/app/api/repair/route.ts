@@ -2,6 +2,7 @@ import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
 import { validateGraph } from '../../../lib/circuit/validate';
 import { solveDC } from '../../../lib/circuit/solve';
+import { revisionId } from '../../../lib/circuit/revision';
 import { repairStep } from '../../../lib/repair';
 
 const body = z.object({
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     solveDC(v.graph);
     const result = repairStep(v.graph, parsed.data.observations);
     return Response.json({
-      result: { ...result, trace: [{ step: 'repair', provider: 'local', model: 'mna-dc', durationMs: Math.round(performance.now() - t0), status: 'ok' }] },
+      result: { ...result, revisionId: revisionId(v.graph), trace: [{ step: 'repair', provider: 'local', model: 'mna-dc', durationMs: Math.round(performance.now() - t0), status: 'ok' }] },
     });
   } catch (e) {
     return err(422, 'UNSOLVABLE', e instanceof Error ? e.message : 'Circuit could not be solved');
