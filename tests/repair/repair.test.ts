@@ -63,11 +63,11 @@ describe('repair engine', () => {
     expect(p.verification.expectVolts).toBeLessThanOrEqual(5);
   });
 
-  it('contradictory observations: resolves false and uncertainty mentions misfit', () => {
+  it('contradictory observations: no repair is invented (blocked on poor fit)', () => {
     const r = repairStep(DIVIDER_10K_10K, [{ node: 'VOUT', volts: 3.7 }, { node: 'VIN', volts: 1 }]);
-    expect(r.proposals.length).toBeGreaterThan(0);
-    expect(r.proposals.every((p) => !p.resolves)).toBe(true);
-    expect(r.proposals[0].uncertainty).toMatch(/Misfit|No single-fault/);
+    expect(r.proposals).toEqual([]);
+    expect(r.basis.blocked).toBe('poor_fit');
+    expect(r.basis.done).toBe(false);
   });
 
   it('patched graph validates and solves', () => {

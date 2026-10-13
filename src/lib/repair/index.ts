@@ -1,7 +1,7 @@
 import type { CircuitGraph } from '../circuit/types';
 import { solveDC, type DCSolution } from '../circuit/solve';
 import { validateGraph } from '../circuit/validate';
-import { probeStep, type Observation } from '../probe';
+import { modeledHypotheses, probeStep, type Observation } from '../probe';
 
 // Repair Studio: Observe -> Diagnose (probe posterior) -> Propose -> Simulate -> Approve -> Verify.
 // Every number is solver-simulated; patches only restore the CONFIRMED design (no rewiring, no new voltage).
@@ -28,7 +28,7 @@ export type RepairProposal = {
 };
 export type RepairResult = {
   proposals: RepairProposal[];
-  basis: { topHypothesisId: string; topProbability: number; done: boolean };
+  basis: { topHypothesisId: string; topProbability: number; done: boolean; blocked?: 'poor_fit' };
   safety: string;
 };
 
@@ -87,14 +87,20 @@ export class RepairError extends Error {}
 
 export function repairStep(graph: CircuitGraph, observations: Observation[]): RepairResult {
   const step = probeStep(graph, observations);
-  const top = step.hypotheses[0];
+  const hyps = modeledHypotheses(step); // repairs are proposed among modeled faults only; step.fitWarning carries the misfit
+  // No repair is proposed when no modeled fault explains the readings: a confident-looking fix would be invented.
+  if (step.fit === 'poor' || step.hypotheses[0]?.id === 'unmodeled') {
+    const lead = step.hypotheses[0];
+    return { proposals: [], basis: { topHypothesisId: lead?.id ?? 'unmodeled', topProbability: lead?.probability ?? 0, done: false, blocked: 'poor_fit' }, safety: step.safety };
+  }
+  const top = hyps[0];
   if (!top) throw new RepairError('Circuit could not be solved.');
   const nodes = Object.keys(top.predicted).filter((n) => n !== graph.groundNode);
   const obs = observations.filter((o) => nodes.includes(o.node));
   const after = solveDC(graph); // simulated: confirmed design. Patch = restore this; never raises a source above design.
 
   const proposals: RepairProposal[] = [];
-  for (const h of step.hypotheses) {
+  for (const h of hyps) {
     if (h.id === 'nominal' || h.probability < 0.05) continue;
     const fc = faultCase(graph, h.id, nodes, after);
     if (!fc) continue;
@@ -110,7 +116,7 @@ export function repairStep(graph: CircuitGraph, observations: Observation[]): Re
     const differs = supporting.some((s) => Math.abs(s.predictedIfRepaired - s.predictedIfFault) > sigma(s.predictedIfRepaired));
     const resolves = obs.length > 0 && fits && differs;
 
-    const others = step.hypotheses.filter((o) => o.id !== h.id && o.id !== 'nominal' && o.probability >= 0.05);
+    const others = hyps.filter((o) => o.id !== h.id && o.id !== 'nominal' && o.probability >= 0.05);
     const uncertainty = [
       others.length ? `Alternatives: ${others.map((o) => `${o.title} (${pct(o.probability)})`).join('; ')}.` : 'No other hypothesis above 5%.',
       `This is a hypothesis (${pct(h.probability)}), not a confirmed fault.`,
@@ -189,7 +195,7 @@ export class VerifyInputError extends Error {
 /** Server-authoritative verify: hypothesis, node, expected volts and tolerance all come from the confirmed graph, never the client. */
 export function verifyHypothesis(graph: CircuitGraph, hypothesisId: string, measured: { node: string; volts: number }) {
   const step = probeStep(graph, []);
-  const top = step.hypotheses[0];
+  const top = modeledHypotheses(step)[0]; // 'unmodeled' has no predicted voltages
   const nodes = top ? Object.keys(top.predicted).filter((n) => n !== graph.groundNode) : [];
   const fc = hypothesisId !== 'nominal' && step.hypotheses.some((h) => h.id === hypothesisId) ? faultCase(graph, hypothesisId, nodes) : null;
   if (!fc) throw new VerifyInputError('UNKNOWN_HYPOTHESIS', `Unknown hypothesis "${hypothesisId}" for this circuit.`);

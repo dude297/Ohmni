@@ -1,0 +1,744 @@
+{
+ "label": "baseline: origin/main d6bc997 (probe/grounding via this bench; solver via the same stress on d6bc997 solve.ts)",
+ "seed": 20261012,
+ "summary": {
+  "inModel": {
+   "sessions": 900,
+   "top1": 0.7656,
+   "top1EquivAware": 0.9955,
+   "meanProbes": 1.4567,
+   "confidentWrongRate": 0,
+   "silentConfidentWrongRate": 0,
+   "flaggedRate": 0
+  },
+  "inModelPlusParts": {
+   "sessions": 900,
+   "top1": 0.69,
+   "top1EquivAware": 0.9722,
+   "meanProbes": 1.4767,
+   "confidentWrongRate": 0.02,
+   "silentConfidentWrongRate": 0.02,
+   "flaggedRate": 0
+  },
+  "nominalPlusParts": {
+   "sessions": 600,
+   "top1": 1,
+   "top1EquivAware": 1,
+   "meanProbes": 1.0667,
+   "confidentWrongRate": 0,
+   "silentConfidentWrongRate": 0,
+   "flaggedRate": 0
+  },
+  "outOfModel": {
+   "sessions": 4200,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1.2557,
+   "confidentWrongRate": 0.7048,
+   "silentConfidentWrongRate": 0.2419,
+   "flaggedRate": 0
+  },
+  "bridgeOutOfModel": {
+   "sessions": 1500,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1.574,
+   "confidentWrongRate": 0.8567,
+   "silentConfidentWrongRate": 0.44,
+   "flaggedRate": 0
+  },
+  "bridgeInModel": {
+   "sessions": 300,
+   "top1": 0.9533,
+   "top1EquivAware": 0.9933,
+   "meanProbes": 1.74,
+   "confidentWrongRate": 0,
+   "silentConfidentWrongRate": 0,
+   "flaggedRate": 0
+  }
+ },
+ "rows": [
+  {
+   "name": "divider in-model single faults",
+   "fixture": "divider",
+   "group": "in-model",
+   "n": 300,
+   "top1": 0.5867,
+   "top1EquivAware": 0.9933,
+   "meanProbes": 1.34,
+   "confident": 39,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "divider in-model faults + 5% parts",
+   "fixture": "divider",
+   "group": "in-model+tol",
+   "n": 300,
+   "top1": 0.5033,
+   "top1EquivAware": 0.9933,
+   "meanProbes": 1.32,
+   "confident": 25,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "divider nominal + 5% parts",
+   "fixture": "divider",
+   "group": "nominal+tol",
+   "n": 200,
+   "top1": 1,
+   "top1EquivAware": 1,
+   "meanProbes": 1,
+   "confident": 200,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "divider OOM R x3",
+   "fixture": "divider",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1,
+   "confident": 0,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "divider OOM R x0.3",
+   "fixture": "divider",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1,
+   "confident": 0,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "divider OOM R x2",
+   "fixture": "divider",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1,
+   "confident": 299,
+   "confidentWrong": 299,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "divider OOM R x1.5",
+   "fixture": "divider",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1,
+   "confident": 300,
+   "confidentWrong": 300,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "series-parallel in-model single faults",
+   "fixture": "series-parallel",
+   "group": "in-model",
+   "n": 300,
+   "top1": 0.7567,
+   "top1EquivAware": 1,
+   "meanProbes": 1.29,
+   "confident": 160,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "series-parallel in-model faults + 5% parts",
+   "fixture": "series-parallel",
+   "group": "in-model+tol",
+   "n": 300,
+   "top1": 0.68,
+   "top1EquivAware": 0.9967,
+   "meanProbes": 1.37,
+   "confident": 143,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "series-parallel nominal + 5% parts",
+   "fixture": "series-parallel",
+   "group": "nominal+tol",
+   "n": 200,
+   "top1": 1,
+   "top1EquivAware": 1,
+   "meanProbes": 1,
+   "confident": 200,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "series-parallel OOM R x3",
+   "fixture": "series-parallel",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1,
+   "confident": 187,
+   "confidentWrong": 187,
+   "silentConfidentWrong": 60,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "series-parallel OOM R x0.3",
+   "fixture": "series-parallel",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1,
+   "confident": 295,
+   "confidentWrong": 295,
+   "silentConfidentWrong": 53,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "series-parallel OOM R x2",
+   "fixture": "series-parallel",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1,
+   "confident": 242,
+   "confidentWrong": 242,
+   "silentConfidentWrong": 80,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "series-parallel OOM R x1.5",
+   "fixture": "series-parallel",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1,
+   "confident": 275,
+   "confidentWrong": 275,
+   "silentConfidentWrong": 86,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "series-parallel OOM two faults",
+   "fixture": "series-parallel",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1.71,
+   "confident": 77,
+   "confidentWrong": 77,
+   "silentConfidentWrong": 77,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "bridge in-model single faults",
+   "fixture": "bridge",
+   "group": "in-model",
+   "n": 300,
+   "top1": 0.9533,
+   "top1EquivAware": 0.9933,
+   "meanProbes": 1.74,
+   "confident": 240,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "bridge in-model faults + 5% parts",
+   "fixture": "bridge",
+   "group": "in-model+tol",
+   "n": 300,
+   "top1": 0.8867,
+   "top1EquivAware": 0.9267,
+   "meanProbes": 1.74,
+   "confident": 249,
+   "confidentWrong": 18,
+   "silentConfidentWrong": 18,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "bridge nominal + 5% parts",
+   "fixture": "bridge",
+   "group": "nominal+tol",
+   "n": 200,
+   "top1": 1,
+   "top1EquivAware": 1,
+   "meanProbes": 1.2,
+   "confident": 200,
+   "confidentWrong": 0,
+   "silentConfidentWrong": 0,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "bridge OOM R x3",
+   "fixture": "bridge",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1.57,
+   "confident": 240,
+   "confidentWrong": 240,
+   "silentConfidentWrong": 80,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "bridge OOM R x0.3",
+   "fixture": "bridge",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1.53,
+   "confident": 258,
+   "confidentWrong": 258,
+   "silentConfidentWrong": 92,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "bridge OOM R x2",
+   "fixture": "bridge",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1.51,
+   "confident": 246,
+   "confidentWrong": 246,
+   "silentConfidentWrong": 165,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "bridge OOM R x1.5",
+   "fixture": "bridge",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1.64,
+   "confident": 241,
+   "confidentWrong": 241,
+   "silentConfidentWrong": 142,
+   "flaggedOutOfModel": 0
+  },
+  {
+   "name": "bridge OOM two faults",
+   "fixture": "bridge",
+   "group": "out-of-model",
+   "n": 300,
+   "top1": 0,
+   "top1EquivAware": 0,
+   "meanProbes": 1.62,
+   "confident": 300,
+   "confidentWrong": 300,
+   "silentConfidentWrong": 181,
+   "flaggedOutOfModel": 0
+  }
+ ],
+ "grounding": {
+  "summary": {
+   "cases": 50,
+   "mustAccept": 28,
+   "mustReject": 22,
+   "falseAccept": 17,
+   "falseAcceptRate": 0.773,
+   "falseReject": 2,
+   "falseRejectRate": 0.071
+  },
+  "falseAccepts": [
+   "VOUT is 7 V.",
+   "The supply is 10 V.",
+   "The loop current is 2.5 A.",
+   "Current is 5 A.",
+   "R2 is 2.5 \u03a9.",
+   "It drops 0.25 V.",
+   "It reads 99volts.",
+   "R is 1e5 ohms.",
+   "The node is at 6.02e23 V.",
+   "The current is 2.5e-3 A.",
+   "The load is 1 000 000 \u03a9.",
+   "The load is 10 000 000 \u03a9.",
+   "R1 dissipates 3 W.",
+   "The resistor burns 2.5 W.",
+   "The ratio is 1:3.",
+   "Step 9: the circuit is fine.",
+   "VOUT would be 3 V."
+  ],
+  "falseRejects": [
+   "The resistor dissipates 0.625 mW.",
+   "The source delivers 1.25 mW."
+  ],
+  "rows": [
+   {
+    "text": "VOUT is 2.5 V.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The loop current is 0.25 mA.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "R1 is 10 k\u03a9 and R2 is 10 k\u03a9.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Each resistor drops 2.5 V.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Step 1: the source supplies 5 V.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The source sees 20 k\u03a9 in total.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "That is 250 \u00b5A.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "VIN is 5.00 V.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "About 2.50 V appears at VOUT.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "I = 2.5e-4 A.",
+    "accept": true,
+    "why": "scientific notation of a true value",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "R = 10,000 \u03a9.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "R = 10 000 \u03a9.",
+    "accept": true,
+    "why": "space thousands separator",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "R = 10\u202f000 \u03a9.",
+    "accept": true,
+    "why": "narrow no-break space thousands separator",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The total is 20000 ohms.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Step 2: apply the divider rule.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Step 3: 0.25 mA flows through both resistors.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "It is 5V at the supply.",
+    "accept": true,
+    "why": "glued unit",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "I = 0.25mA.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The node sits at 2.5 volts.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Resistance is 10 kilohms.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The resistor dissipates 0.625 mW.",
+    "accept": true,
+    "ungrounded": [
+     "0.625"
+    ],
+    "accepted": false
+   },
+   {
+    "text": "The source delivers 1.25 mW.",
+    "accept": true,
+    "ungrounded": [
+     "1.25"
+    ],
+    "accepted": false
+   },
+   {
+    "text": "VOUT = 2.5 V, which is half of the 5 V supply.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "KVL: 5 V = 2.5 V + 2.5 V.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Ohm: 5 V / 20 k\u03a9 = 0.25 mA.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Rounded to 3 significant figures, VOUT = 2.50 V.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "With R1 and R2 equal, VOUT splits the supply evenly.",
+    "accept": true,
+    "why": "component ids are not numbers",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Step 4: disconnect power before measuring resistance.",
+    "accept": true,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "VOUT is 7 V.",
+    "accept": false,
+    "why": "free integer 0..10 allowed as a voltage",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The supply is 10 V.",
+    "accept": false,
+    "why": "10 is a resistance (k\u03a9), not a voltage",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The loop current is 2.5 A.",
+    "accept": false,
+    "why": "unit-blind: 2.5 exists only as volts",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Current is 5 A.",
+    "accept": false,
+    "why": "unit-blind: 5 exists only as volts",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "R2 is 2.5 \u03a9.",
+    "accept": false,
+    "why": "unit-blind: 2.5 V exists",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "It drops 0.25 V.",
+    "accept": false,
+    "why": "0.25 exists only as mA",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "It reads 99volts.",
+    "accept": false,
+    "why": "glued unit word escaped extraction",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "R is 1e5 ohms.",
+    "accept": false,
+    "why": "scientific notation escaped",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The node is at 6.02e23 V.",
+    "accept": false,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The current is 2.5e-3 A.",
+    "accept": false,
+    "why": "sci-notation wrong value",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The load is 1 000 000 \u03a9.",
+    "accept": false,
+    "why": "space thousands split into 1 / 000 / 000",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The load is 1,000,000 \u03a9.",
+    "accept": false,
+    "ungrounded": [
+     "1,000,000 \u03a9"
+    ],
+    "accepted": false
+   },
+   {
+    "text": "The load is 10 000 000 \u03a9.",
+    "accept": false,
+    "why": "splits into free integers",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The current is 2.5 mA.",
+    "accept": false,
+    "why": "wrong by 10x",
+    "ungrounded": [
+     "2.5 mA"
+    ],
+    "accepted": false
+   },
+   {
+    "text": "R1 is 5 k\u03a9.",
+    "accept": false,
+    "ungrounded": [
+     "5 k\u03a9"
+    ],
+    "accepted": false
+   },
+   {
+    "text": "R1 dissipates 3 W.",
+    "accept": false,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "The resistor burns 2.5 W.",
+    "accept": false,
+    "why": "2.5 only exists as volts",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Voltage drops by 50% across R1.",
+    "accept": false,
+    "why": "percentages are forbidden claims",
+    "ungrounded": [
+     "50"
+    ],
+    "accepted": false
+   },
+   {
+    "text": "The ratio is 1:3.",
+    "accept": false,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "Step 9: the circuit is fine.",
+    "accept": false,
+    "why": "step ordinal beyond the 5-step cap",
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "VOUT would be 3 V.",
+    "accept": false,
+    "ungrounded": [],
+    "accepted": true
+   },
+   {
+    "text": "It reads 0.5 V at the midpoint.",
+    "accept": false,
+    "ungrounded": [
+     "0.5 V"
+    ],
+    "accepted": false
+   }
+  ]
+ },
+ "solver": {
+  "cases": 2000,
+  "seed": 4242,
+  "worstViolation": 0.1238087810788913,
+  "over1e6": 331,
+  "silentOver1e6": 331,
+  "over1e3": 62,
+  "silentOver1e3": 62,
+  "flagged": 0,
+  "singularOrThrown": 0,
+  "tinyR1Violation": 0.11182158029987402,
+  "tinyR1Warnings": []
+ }
+}
