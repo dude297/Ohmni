@@ -3,12 +3,14 @@ import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
 import { consentMissing, CONSENT_MESSAGE } from '@/lib/server/consent';
 import { explain } from '../../../lib/explain';
+import { recordTraces } from '@/lib/persist/traces';
 
 const body = z.object({
   graph: z.unknown(),
   userConfirmed: z.unknown(),
   measuredVoltage: z.number().finite().optional(),
   aiConsent: z.unknown().optional(),
+  projectId: z.unknown().optional(), // optional: signed-in usage metering (model_traces)
 });
 
 const err = (status: number, code: string, message: string, details?: string[]) =>
@@ -36,6 +38,7 @@ async function handle(req: Request) {
   if (consentMissing(parsed.data.aiConsent === true)) return err(422, 'CONSENT_REQUIRED', CONSENT_MESSAGE);
   const out = await explain(graph, measuredVoltage);
   if (!out.ok) return err(out.status, out.code, out.message, out.details);
+  await recordTraces(req, parsed.data.projectId, '/api/explain', out.result.trace);
   return Response.json({ result: out.result });
 }
 
