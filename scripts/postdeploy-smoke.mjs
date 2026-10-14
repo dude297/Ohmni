@@ -56,6 +56,7 @@ const checks = [
     if (h.get('x-ohmni-tier') !== 'core') return `x-ohmni-tier ${h.get('x-ohmni-tier')}`;
     if (h.get('x-content-type-options') !== 'nosniff') return 'missing nosniff';
     if (!h.get('strict-transport-security')) return 'missing HSTS';
+    if (!/frame-ancestors 'none'/.test(h.get('content-security-policy') ?? '')) return 'missing enforcing CSP';
     return null;
   }],
 ];
