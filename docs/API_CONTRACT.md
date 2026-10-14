@@ -100,3 +100,6 @@ Supabase-backed persistence; design and invariants in docs/PERSISTENCE.md. Every
 - `POST /api/v1/investigations/:id/measurements` `{ node, volts, method: typed|voice|csv|instrument, instrument?, supersedes?, provenance? }` -> `{ measurement, probe }`; 422 `UNKNOWN_NODE`, 409 `INVESTIGATION_CLOSED`.
 - `POST /api/v1/investigations/:id/repair` -> repair result + `stored: [{ id, hypothesis_id, verification_node, expect_value, tolerance, status }]`; no proposals when the fit is poor.
 - `POST /api/v1/proposals/:id/verify` `{ volts, method, instrument? }` -> `{ verification, result, measurementId }`; the reading is stored as evidence (excluded from diagnosis) and judged against the server's expectation for the stored revision.
+
+## Shared rate limits (model routes)
+When Supabase is configured, `/api/extract`, `/api/explain` and `/api/review` POSTs are also counted in Postgres (`public.rate_hit`, service role only), so the per-IP limits and the per-route model budget hold across serverless instances. Same 429 `RATE_LIMITED` / `MODEL_BUDGET` responses with `Retry-After`. Keys are salted SHA-256 hashes of the client IP; counters expire within a day. Fails open to the in-memory limiter if the database is unavailable or slower than 1.5 s. `RATE_SHARED=off` disables it.

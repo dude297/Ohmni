@@ -147,6 +147,10 @@ export function check(method: string, pathname: string, headers: Headers, now = 
 /** Test hook: number of tracked keys. */
 export const trackedKeys = () => hits.size;
 
+/** For the shared (cross-instance) limiter: same rules, same budget, same client-IP logic. */
+export const sharedRules = (pathname: string) => (MODEL_ROUTES.has(pathname) ? rules(pathname) : []);
+export const modelBudgetPerMin = () => num('RATE_MODEL_GLOBAL_PER_MIN', 30);
+
 export function resetRateLimits() {
   hits.clear();
   modelHits.clear();
