@@ -52,13 +52,23 @@ export async function artifactUrl(c: Caller, id: string) {
   return { artifact, url: s.signedUrl, expiresIn: 60 };
 }
 
-/** Removes every stored object of a workspace (called before the database cascade). */
+/** Removes every stored object of a workspace (called before the database cascade). Pages through every folder. */
 export async function removeWorkspaceObjects(workspaceId: string) {
   const s = adminDb().storage.from(BUCKET);
-  const { data: projects } = await s.list(workspaceId, { limit: 1000 });
-  for (const p of projects ?? []) {
-    const { data: files } = await s.list(`${workspaceId}/${p.name}`, { limit: 1000 });
-    const paths = (files ?? []).map((f) => `${workspaceId}/${p.name}/${f.name}`);
-    if (paths.length) await s.remove(paths);
+  const listAll = async (prefix: string) => {
+    const names: string[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await s.list(prefix, { limit: 1000, offset });
+      if (error) throw new ApiError(502, 'STORAGE_ERROR', 'Could not list stored images; nothing was deleted.');
+      names.push(...(data ?? []).map((f) => f.name));
+      if (!data || data.length < 1000) return names;
+    }
+  };
+  for (const project of await listAll(workspaceId)) {
+    const paths = (await listAll(`${workspaceId}/${project}`)).map((f) => `${workspaceId}/${project}/${f}`);
+    for (let i = 0; i < paths.length; i += 1000) {
+      const { error } = await s.remove(paths.slice(i, i + 1000));
+      if (error) throw new ApiError(502, 'STORAGE_ERROR', 'Could not delete stored images; the workspace was not deleted.');
+    }
   }
 }
