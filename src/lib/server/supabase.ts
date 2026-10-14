@@ -2,8 +2,9 @@ import { createClient, type SupabaseClient, type User } from '@supabase/supabase
 
 // Server-only Supabase access for the persistence API (/api/v1/*).
 // - userDb(): anon key + the caller's JWT, so every read/write is enforced by RLS as that user.
-// - adminDb(): service role, ONLY for server-computed rows (hypotheses, proposals, verifications) after the caller's
-//   membership was proven through userDb(). The service-role key never leaves the server (no NEXT_PUBLIC_ prefix).
+// - adminDb(): service role, ONLY after the caller's access/role was proven through their RLS-scoped client, for writes
+//   clients have no policy for: engine output (hypotheses, proposals, verifications, traces), membership changes, and
+//   Storage objects. Prefer an RLS policy where one can express the rule. The key never leaves the server (no NEXT_PUBLIC_).
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public details?: unknown) {

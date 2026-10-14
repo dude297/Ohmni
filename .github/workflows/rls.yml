@@ -1,0 +1,35 @@
+name: rls-matrix
+# Tenant isolation: pending migrations + supabase/tests/rls_matrix.sql against the dev project in one rolled-back
+# transaction (scripts/rls-check.mjs). Skips cleanly until the owner adds the SUPABASE_ACCESS_TOKEN secret and the
+# SUPABASE_PROJECT_REF variable. Same-repo PRs only: fork PRs never get the token.
+on:
+  pull_request:
+    paths: ['supabase/**', 'scripts/rls-check.mjs', '.github/workflows/rls.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency: { group: rls-matrix, cancel-in-progress: false }
+jobs:
+  rls:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Credentials not configured
+        if: env.SUPABASE_ACCESS_TOKEN == '' || env.PROJECT_REF == ''
+        run: echo "::notice::SUPABASE_ACCESS_TOKEN secret / SUPABASE_PROJECT_REF variable not set; RLS matrix skipped."
+      - uses: actions/setup-node@v4
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+        with: { node-version: 24 }
+      - uses: supabase/setup-cli@v1
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+        with: { version: 2.101.0 }
+      - name: RLS matrix (rolled back)
+        if: env.SUPABASE_ACCESS_TOKEN != '' && env.PROJECT_REF != ''
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          node scripts/rls-check.mjs
