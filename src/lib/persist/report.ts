@@ -61,8 +61,9 @@ export function buildReport(d: ReportInput, engineVersion: string, generatedAt =
 export type Report = ReturnType<typeof buildReport>;
 
 const pct = (p: number) => `${(p * 100).toFixed(p >= 0.995 || p < 0.005 ? 1 : 0)}%`;
-// Table cells come from user-entered names; keep them from breaking the table or injecting markup.
-const cell = (s: unknown) => String(s).replace(/[|\r\n<>]/g, ' ');
+// User-entered text (titles, ids, node names): newlines/pipes/angle brackets become spaces; markdown syntax is
+// backslash-escaped so `[x](https://...)`, emphasis or code spans render as literal text in any viewer.
+const cell = (s: unknown) => String(s).replace(/[|\r\n<>]/g, ' ').replace(/[\\`*_[\]()#!~]/g, '\\$&');
 
 export function reportMarkdown(r: Report): string {
   const L: string[] = [];

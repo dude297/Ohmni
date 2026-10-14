@@ -11,7 +11,7 @@ describe('investigation report', () => {
   const measurements = [m('1', 'C', 0), m('2', 'A', 7.533), m('3', 'B', 5.22), m('4', 'B', 4.09, { provenance: { kind: 'verification' } })];
   const report = buildReport(
     {
-      investigation: { id: 'i', title: 'C reads 0 V | <b>', status: 'open', opened_at: 't0', closed_at: null },
+      investigation: { id: 'i', title: 'C reads 0 V | <b> [click](https://evil.example) *x*', status: 'open', opened_at: 't0', closed_at: null },
       revision: { revisionHash: 'rev_0123456789abcdef', graph: LOADED_BRIDGE_12V },
       measurements,
       probe: probeStep(LOADED_BRIDGE_12V, measurements.slice(0, 3).map((x) => ({ node: x.node, volts: x.value }))),
@@ -34,8 +34,9 @@ describe('investigation report', () => {
 
   it('renders markdown with user text neutralised', () => {
     const md = reportMarkdown(report);
-    expect(md).toContain('# C reads 0 V    b ');
+    expect(md).toContain(String.raw`# C reads 0 V    b  \[click\]\(https://evil.example\) \*x\*`);
     expect(md).not.toContain('<b>');
+    expect(md).not.toContain('[click](');
     expect(md).toContain('| R6 | resistor | 680 Ω | B | C |');
     expect(md).toContain('**verified**');
     expect(md).toContain('within tolerance');
