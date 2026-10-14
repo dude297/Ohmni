@@ -68,7 +68,7 @@ See docs/REPAIR_STUDIO.md. Request: `{ graph, userConfirmed, hypothesisId, measu
 - Every JSON route reads its body through a streaming byte cap (256 KB): 413 `TOO_LARGE` regardless of Content-Length/chunking; malformed JSON is 400 `BAD_JSON`.
 - `CircuitGraph`: at most 60 components; component ids and node names 1-32 chars of `A-Za-z0-9_+-.()/:~`. Violations are 422 `INVALID_GRAPH` with messages (also applies to twin `observed` and imported netlists).
 - 429 `MODEL_BUDGET` (with `Retry-After`) when the instance-wide budget for /api/extract, /api/explain, /api/review (30/min, `RATE_MODEL_GLOBAL_PER_MIN`) is spent.
-- /api/ac: whole analysis (queue wait + all fault sims) has a 20 s deadline; exceeded -> 504 `TIMEOUT` with `partial: false` (no partial result). Queue overflow remains 429 `BUSY`.
+- /api/ac: whole analysis (queue wait + all fault sims) has a 20 s deadline; exceeded -> 504 `TIMEOUT` with `partial: false` (no partial result). Queue overflow remains 429 `BUSY`; a second concurrent analysis from the same client (trusted IP) is also 429 `BUSY` (one at a time per client, per instance).
 
 ## Observability (P0)
 - Every `/api/*` route handler is wrapped by `observe()` (src/lib/server/observe.ts). Every response it returns carries `x-request-id`: the incoming `x-request-id` if it matches `[A-Za-z0-9_-]{1,64}`, otherwise a fresh UUID.
