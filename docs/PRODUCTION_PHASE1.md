@@ -39,7 +39,7 @@ Single-attempt provider calls with no retry on 5xx; `/api/extract` error envelop
 
 ### Checked clean
 
-AC netlist is built from typed tokens only (no user text reaches ngspice; no `.control`/`.shell`); netlist/KiCad importers reject directives and file includes, parse 64 KB in milliseconds, iterative (no recursion bomb); CSV import capped (256 KB / 500 rows); firmware "code" is regex-scanned, never executed (8 KB cap); no `NEXT_PUBLIC_*` or env in client components; provider error text not copied into traces; no `dangerouslySetInnerHTML`; singular/conflicting circuits refused with `SolveError`, never garbage.
+AC netlist is built from typed tokens only (no user text reaches ngspice; no `.control`/`.shell`); netlist/KiCad importers reject directives and file includes, parse 64 KB in milliseconds, iterative (no recursion bomb); CSV import capped (256 KB / 500 rows); firmware "code" is regex-scanned, never executed (8 KB cap); no `NEXT_PUBLIC_*` or env in client components (revised 2026-10-14 for saved-investigation sign-in: exactly two public values are allowed, `NEXT_PUBLIC_SUPABASE_URL` and the publishable `NEXT_PUBLIC_SUPABASE_ANON_KEY`, which Supabase designs to be public and which grant nothing beyond RLS; no secret may ever use the prefix); provider error text not copied into traces; no `dangerouslySetInnerHTML`; singular/conflicting circuits refused with `SolveError`, never garbage.
 
 ## Capability classification
 
