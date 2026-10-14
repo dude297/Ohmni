@@ -92,6 +92,8 @@ select pg_temp.expect_err('B cannot graft a w2 revision onto w1 project',
 select pg_temp.expect_err('B cannot open a w2 investigation on a w1 revision',
   $q$insert into investigations (workspace_id, project_id, revision_id, title, opened_by) values ('10000000-0000-4000-a000-000000000002', '20000000-0000-4000-a000-000000000002', '30000000-0000-4000-a000-000000000001', 'x', '00000000-0000-4000-a000-00000000000b')$q$, array['23503']);
 select pg_temp.expect_rows('B cannot update w1 project', $q$update projects set name = 'pwned' where workspace_id = '10000000-0000-4000-a000-000000000001'$q$, 0);
+select pg_temp.expect_err('B cannot look up users by email', $q$select public.user_id_by_email('rls-a@test.invalid')$q$, array['42501']);
+select pg_temp.expect_err('B cannot list another workspace''s member emails', $q$select count(*) from public.workspace_member_list('10000000-0000-4000-a000-000000000001')$q$, array['42501']);
 select pg_temp.expect_err('B cannot create a workspace as someone else',
   $q$insert into workspaces (name, created_by) values ('x', '00000000-0000-4000-a000-00000000000a')$q$, array['42501']);
 reset role;

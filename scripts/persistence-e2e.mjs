@@ -37,7 +37,7 @@ async function user(tag) {
   if (error) throw error;
   const { data: s, error: e2 } = await createClient(url, anon, opts).auth.signInWithPassword({ email, password });
   if (e2) throw e2;
-  return { id: data.user.id, token: s.session.access_token };
+  return { id: data.user.id, token: s.session.access_token, email };
 }
 
 const call = async (token, method, path, body) => {
@@ -119,6 +119,37 @@ try {
   check('B cannot verify A proposal', bVer.status === 404, `${bVer.status}`);
   const bRep = await call(B.token, 'POST', `/api/v1/investigations/${invId}/repair`);
   check('B cannot trigger repair on A investigation', bRep.status === 404, `${bRep.status}`);
+
+  // Membership: viewer reads but cannot write; editor writes; only owners manage; last owner is protected.
+  const members = `/api/v1/workspaces/${wsId}/members`;
+  const nobody = await call(A.token, 'POST', members, { email: 'nobody-e2e@test.invalid', role: 'viewer' });
+  check('add unknown email -> 404 USER_NOT_FOUND', nobody.status === 404 && nobody.json?.error?.code === 'USER_NOT_FOUND');
+  const addV = await call(A.token, 'POST', members, { email: B.email, role: 'viewer' });
+  check('A adds B as viewer', addV.status === 200 && addV.json?.member?.role === 'viewer', `${addV.status}`);
+  const bRead = await call(B.token, 'GET', `/api/v1/investigations/${invId}`);
+  check('viewer B reads the investigation', bRead.status === 200 && bRead.json?.measurements?.length === 5);
+  const bWrite = await call(B.token, 'POST', `/api/v1/investigations/${invId}/measurements`, { node: 'C', volts: 0.01, method: 'typed' });
+  check('viewer B cannot add evidence', bWrite.status === 403, `${bWrite.status}`);
+  const bRepair = await call(B.token, 'POST', `/api/v1/investigations/${invId}/repair`);
+  check('viewer B cannot trigger repair', bRepair.status === 403, `${bRepair.status}`);
+  const bManage = await call(B.token, 'POST', members, { email: B.email, role: 'owner' });
+  check('viewer B cannot promote self', bManage.status === 403, `${bManage.status}`);
+  const list2 = await call(B.token, 'GET', members);
+  check('member list shows both emails', list2.json?.members?.length === 2 && list2.json.members.some((m) => m.email === A.email && m.role === 'owner'));
+  const lastOwner = await call(A.token, 'POST', members, { email: A.email, role: 'editor' });
+  check('last owner cannot demote self', lastOwner.status === 409 && lastOwner.json?.error?.code === 'LAST_OWNER');
+  const leaveOwner = await call(A.token, 'DELETE', `${members}/${A.id}`);
+  check('last owner cannot leave', leaveOwner.status === 409);
+  const promote = await call(A.token, 'POST', members, { email: B.email, role: 'editor' });
+  check('A promotes B to editor', promote.json?.member?.role === 'editor');
+  const bWrite2 = await call(B.token, 'POST', `/api/v1/investigations/${invId}/measurements`, { node: 'C', volts: 0.01, method: 'typed' });
+  check('editor B adds evidence', bWrite2.status === 200 && bWrite2.json?.measurement?.node === 'C', `${bWrite2.status}`);
+  const bRemoveA = await call(B.token, 'DELETE', `${members}/${A.id}`);
+  check('editor B cannot remove the owner', bRemoveA.status === 403, `${bRemoveA.status}`);
+  const leave = await call(B.token, 'DELETE', `${members}/${B.id}`);
+  check('B leaves the workspace', leave.status === 200);
+  const bAfter = await call(B.token, 'GET', `/api/v1/investigations/${invId}`);
+  check('after leaving, B cannot read', bAfter.status === 404, `${bAfter.status}`);
 
   const closed = await call(A.token, 'POST', `/api/v1/investigations/${invId}/close`, { status: 'resolved' });
   check('A resolves investigation', closed.json?.investigation?.status === 'resolved');

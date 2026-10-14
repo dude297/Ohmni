@@ -10,11 +10,11 @@ Workspace → Project → Design Revision (immutable confirmed graph) → Invest
 - **Confirmation is data:** `design_revisions.confirmed_by` is the authenticated caller; there is no client flag.
 - **Append-only evidence:** no client update/delete on measurements; corrections use `supersedes`.
 - **Server authority:** hypotheses, proposals and verifications have no client insert policy. The server recomputes them from **stored** evidence and writes them with the service role only after the caller's own RLS-scoped read/insert succeeded. Verification readings are stored as evidence (`provenance.kind = 'verification'`) but excluded from diagnosis.
-- **Roles:** owner/editor write evidence, viewer reads. Members are added server-side only (no invite API yet).
+- **Roles:** owner/editor write evidence, viewer reads. Owners manage members through `/api/v1/workspaces/:id/members` (existing accounts only, by email; no invitation emails). Email lookup and member listing use service-role-only SQL functions; a workspace always keeps at least one owner.
 
 ## Verification
 - `supabase/tests/rls_matrix.sql`: owner / editor / viewer / outsider / anon across all 12 tables, cross-tenant grafting, append-only, server-only tables and cascading workspace deletion. Runs in a rolled-back transaction: `supabase db query --linked -f supabase/tests/rls_matrix.sql` → `RLS MATRIX: ALL PASS`. Shown to fail when a policy is loosened or the cascade migration is missing.
-- `scripts/persistence-e2e.mjs`: two throwaway users against a running app; confirm → measure (bridge C=0, A=7.533, B=5.22 → R6 open) → reload → repair → verify (off-target and on-target) → isolation (outsider gets 404/403 on every route) → close. Deletes everything it created and fails if cleanup fails. `node --env-file=.env.local scripts/persistence-e2e.mjs http://localhost:3000`.
+- `scripts/persistence-e2e.mjs`: two throwaway users against a running app; confirm → measure (bridge C=0, A=7.533, B=5.22 → R6 open) → reload → repair → verify (off-target and on-target) → isolation (outsider gets 404/403 on every route) → membership (viewer reads but cannot write, editor writes, non-owners cannot manage, last owner protected, leaving revokes access) → close. Deletes everything it created and fails if cleanup fails. `node --env-file=.env.local scripts/persistence-e2e.mjs http://localhost:3000`.
 - `tests/server/v1.test.ts`: network-free checks (503 when unconfigured, 401 token shapes, shared rate rule, tier).
 - Supabase advisors (security + performance): no issues.
 
@@ -27,6 +27,6 @@ Set server-only env vars (never `NEXT_PUBLIC_` for the service key): `SUPABASE_U
 - Show `probe.fit === 'poor'` / `unmodeled` as "no modeled fault fits"; `stored` is empty in that case.
 
 ## Known gaps
-- No invite/member-management API, no workspace delete API, no artifact (file) upload yet; `reports` and `model_traces` tables are unused.
+- No invitation emails (members must have signed in once), no workspace delete API, no artifact (file) upload yet; `reports` and `model_traces` tables are unused.
 - Deleting an auth user who authored rows in a workspace that still exists fails (`created_by`/`entered_by` reference `auth.users`): account deletion needs a policy decision (reassign vs delete workspaces).
 - Hypothesis snapshots store the top 12 hypotheses (plus any ≥ 1 %) per reading; the full posterior is recomputable from stored evidence.
