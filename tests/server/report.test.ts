@@ -42,4 +42,23 @@ describe('investigation report', () => {
     expect(md).toContain('within tolerance');
     expect(md).toContain('Ohmni performs no physical change');
   });
+
+  it('says whether the stored verdict reproduces from stored evidence', () => {
+    const base = {
+      investigation: { id: 'i', title: 't', status: 'open', opened_at: 't0', closed_at: null },
+      revision: { revisionHash: 'rev_0123456789abcdef', graph: LOADED_BRIDGE_12V },
+      measurements: measurements.slice(0, 3),
+      probe: probeStep(LOADED_BRIDGE_12V, measurements.slice(0, 3).map((x) => ({ node: x.node, volts: x.value }))),
+      proposals: [],
+      verifications: [],
+    };
+    const snap = (probability: number, ids = ['1', '2', '3']) =>
+      base.probe.hypotheses.slice(0, 3).map((h, i) => ({ hypothesis_key: h.id, probability: i === 0 ? probability : h.probability, engine_version: 'old1234', evidence_measurement_ids: ids }));
+    const ok = buildReport({ ...base, latestHypotheses: snap(base.probe.hypotheses[0].probability) }, 'new5678');
+    expect(ok.diagnosis.reproducibility).toMatchObject({ status: 'reproduced', snapshotEngine: 'old1234', currentEngine: 'new5678' });
+    expect(reportMarkdown(ok)).toContain('gives the stored verdict');
+    expect(buildReport({ ...base, latestHypotheses: snap(0.5) }, 'x').diagnosis.reproducibility.status).toBe('differs');
+    expect(buildReport({ ...base, latestHypotheses: snap(1, ['1', '2']) }, 'x').diagnosis.reproducibility.status).toBe('stale_snapshot');
+    expect(buildReport(base, 'x').diagnosis.reproducibility.status).toBe('no_snapshot');
+  });
 });
