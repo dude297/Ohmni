@@ -9,8 +9,8 @@ import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '@/lib/ci
 
 const MAX = 5 * 1024 * 1024;
 
-const err = (status: number, code: string, message: string) =>
-  Response.json({ error: { code, message } }, { status });
+const err = (status: number, code: string, message: string, details?: string[]) =>
+  Response.json({ error: { code, message, ...(details && { details }) } }, { status });
 
 async function handle(req: Request) {
   let file: unknown;
@@ -22,14 +22,14 @@ async function handle(req: Request) {
   } catch (e) {
     return bodyErrorResponse(e);
   }
-  if (consentMissing(consent)) return err(422, 'CONSENT_REQUIRED', CONSENT_MESSAGE);
-  if (!(file instanceof File)) return err(400, 'MISSING_IMAGE', 'Field "image" is required');
-  if (file.size > MAX) return err(413, 'TOO_LARGE', 'Image must be 5MB or smaller');
+  if (consentMissing(consent)) return err(422, 'CONSENT_REQUIRED', CONSENT_MESSAGE, ['aiConsent: must be "true"']);
+  if (!(file instanceof File)) return err(400, 'MISSING_IMAGE', 'Field "image" is required', ['image: required file field']);
+  if (file.size > MAX) return err(413, 'TOO_LARGE', 'Image must be 5MB or smaller', [`image: ${file.size} bytes, limit ${MAX}`]);
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   // Never trust the declared file.type: sniff magic bytes and pass the sniffed MIME downstream.
   const mime = sniffImage(bytes);
-  if (!mime) return err(415, 'UNSUPPORTED_MEDIA', 'Image content must be png, jpeg or webp');
+  if (!mime) return err(415, 'UNSUPPORTED_MEDIA', 'Image content must be png, jpeg or webp', ['image: magic bytes are not png, jpeg or webp (declared type is ignored)']);
   const trace: ModelTraceEvent[] = [];
   let extraction: CandidateExtraction;
 
