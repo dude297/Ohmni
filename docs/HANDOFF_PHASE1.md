@@ -5,7 +5,9 @@ Full audit, architecture and release gates are in [PRODUCTION_PHASE1.md](PRODUCT
 
 ## Update 2026-10-14 (day run)
 
-**Merge queue (owner):** #79, #82, #83 in any order; the persistence stack in order #80 → #81 → #85 (usage metering) → #86 (export/delete) → #87 (shared cross-instance model-route limits). Stacked PRs retarget to main as their base merges. #79-#83 verified conflict-free together (typecheck, 712 tests, live persistence e2e); #85 has no conflicts with #79/#83.
+**Merge queue (owner):** #79 and #83 in any order; #82 → #88 (ohmmeter readings, stacked); the persistence stack in order #80 → #81 → #85 (usage metering) → #86 (export/delete) → #87 (shared cross-instance model-route limits) → #89 (saved schematic images). Stacked PRs retarget to main as their base merges. Full combination verified (main + all of the above): typecheck clean, 725 tests pass, live persistence e2e ALL PASS; the only conflict is `docs/API_CONTRACT.md` between #88 and the stack (keep both sections).
+
+**Next once merged:** accept resistance readings in saved investigations (DB already has `quantity`/`unit`; needs #88's observation union in `src/lib/persist`). Stacked PRs retarget to main as their base merges. #79-#83 verified conflict-free together (typecheck, 712 tests, live persistence e2e); #85 has no conflicts with #79/#83.
 
 **Owner actions to turn on saved investigations:**
 1. Vercel env (server-only): `SUPABASE_URL=https://oyiwnfcbdiakzmqpufaf.supabase.co`, `SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_ROLE_KEY` (legacy `service_role` or dashboard secret key; the CLI masks `sb_secret_`). Public: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Also `RATE_SALT` (random string; salts hashed IP keys of the shared limiter, #87). Check with `/api/health` → `persistence.configured`.
