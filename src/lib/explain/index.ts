@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { fence, FENCE_RULE } from '../ai/fence';
 import { z } from 'zod';
 import { validateGraph } from '../circuit/validate';
 import { solveDC, SolveError } from '../circuit/solve';
@@ -136,6 +137,7 @@ Rules:
 - If a measured voltage and hypotheses are given, explain why the measurement may differ, using the hypotheses only; call them hypotheses, not confirmed faults.
 - Safety: always say to disconnect power before measuring resistance. Give no unsafe advice.
 - Reply with JSON only: {"summary": string, "steps": [{"title": string, "text": string}]}.
+- ${FENCE_RULE}
 FACTS:
 `;
 
@@ -155,7 +157,7 @@ async function callModel(facts: unknown): Promise<{ explanation: Explanation | n
       hang,
       new GoogleGenAI({ apiKey }).models.generateContent({
         model,
-        contents: [{ role: 'user', parts: [{ text: PROMPT + JSON.stringify(facts, (_k, v) => (typeof v === 'number' ? +v.toPrecision(4) : v)) }] }],
+        contents: [{ role: 'user', parts: [{ text: PROMPT + fence(JSON.stringify(facts, (_k, v) => (typeof v === 'number' ? +v.toPrecision(4) : v))) }] }],
         config: { temperature: 0.2, responseMimeType: 'application/json', abortSignal: ctrl.signal },
       }),
     ]);

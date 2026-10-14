@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import type { CandidateExtraction, ModelTraceEvent } from '../circuit/types';
 import { EXTRACTION_PROMPT, responseJsonSchema, toCandidateExtraction } from './extractionSchema';
 import type { FailureReason } from './vision';
+import { retryOnce } from './retry';
 
 // Owner: Agent B. Gemini vision -> CandidateExtraction (zod-validated). Server-only.
 const TIMEOUT_MS = 20_000;
@@ -13,12 +14,18 @@ function failed(warning: string): CandidateExtraction {
 // Single source of truth for the Gemini default (health route and fallback adapter read this too).
 export const geminiModel = () => process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 
-export async function extractCircuit(
-  image: Uint8Array,
-  mimeType: string,
-): Promise<{ extraction: CandidateExtraction; event: ModelTraceEvent; failure?: FailureReason }> {
+type GeminiResult = { extraction: CandidateExtraction; event: ModelTraceEvent; failure?: FailureReason; retryable?: boolean };
+
+/** Gemini vision extraction: 20s timeout per attempt; one retry on 5xx/network error (retry.ts). */
+export async function extractCircuit(image: Uint8Array, mimeType: string): Promise<GeminiResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_NOT_CONFIGURED');
+  const r = await retryOnce(() => extractOnce(apiKey, image, mimeType));
+  delete r.retryable; // internal signal, not part of the result
+  return r;
+}
+
+async function extractOnce(apiKey: string, image: Uint8Array, mimeType: string): Promise<GeminiResult> {
   const model = geminiModel();
   const started = Date.now();
   const ctrl = new AbortController();
@@ -70,6 +77,7 @@ export async function extractCircuit(
       extraction: failed(timedOut ? 'Extraction timed out; enter the circuit manually.' : 'Extraction failed; enter the circuit manually.'),
       event,
       failure,
+      retryable: !timedOut && (status === undefined || (typeof status === 'number' && status >= 500)), // 5xx or network error
     };
   } finally {
     clearTimeout(timer);
