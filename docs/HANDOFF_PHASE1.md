@@ -5,7 +5,7 @@ Full audit, architecture and release gates are in [PRODUCTION_PHASE1.md](PRODUCT
 
 ## Update 2026-10-14 (day run)
 
-**Merge queue (owner):** #79, #80 then #81 (stacked; retargets to main after #80), #82, #83. Any order otherwise; verified conflict-free together (typecheck, 712 tests, live persistence e2e).
+**Merge queue (owner):** #79, #82, #83 in any order; the persistence stack in order #80 → #81 → #85 (usage metering) → #86 (export/delete). Stacked PRs retarget to main as their base merges. #79-#83 verified conflict-free together (typecheck, 712 tests, live persistence e2e); #85 has no conflicts with #79/#83.
 
 **Owner actions to turn on saved investigations:**
 1. Vercel env (server-only): `SUPABASE_URL=https://oyiwnfcbdiakzmqpufaf.supabase.co`, `SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_ROLE_KEY` (legacy `service_role` or dashboard secret key; the CLI masks `sb_secret_`). Public: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
