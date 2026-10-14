@@ -28,6 +28,9 @@ Set server-only env vars (never `NEXT_PUBLIC_` for the service key): `SUPABASE_U
 - Show `probe.fit === 'poor'` / `unmodeled` as "no modeled fault fits"; `stored` is empty in that case.
 - Export: `GET /investigations/:id/report` (markdown download) or `?format=json` (`ohmni.report.v1`). `/teams` currently reads the browser-only `ohmni.evidence.v1` packet; importing the server report there is a UI follow-up.
 
+## Saved images
+Opt-in per upload: `POST /projects/:id/artifacts` stores the schematic in the private `artifacts` bucket (`<workspace>/<project>/<sha256>.<ext>`, migration `20261014040000_artifacts_bucket.sql`, no `storage.objects` policies) and records an `artifacts` row; revisions can point to it (`sourceArtifactId`, same-workspace FK). Members get 60 s signed URLs; viewers can download but not upload. Workspace deletion removes the files before the row cascade. The workspace export lists artifact rows, not file bytes.
+
 ## Data lifecycle
 Owners and editors can download a full workspace export (`/workspaces/:id/export`, includes the member list); viewers read in the app but cannot bulk-export. Owners delete a workspace permanently by typing its exact name (`/workspaces/:id/delete`); the UI should offer the export first. Deletion cascades through every table (`20261014010000_cascade_intra_workspace_fks.sql`).
 

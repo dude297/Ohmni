@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { adminDb, ApiError, dbFail, type Caller } from '../server/supabase';
+import { removeWorkspaceObjects } from './artifacts';
 
 // Workspace data lifecycle: full export (owners/editors, RLS reads) and permanent deletion (owner, typed confirmation).
 // Viewers can read records in the app but not bulk-download them (contractor/auditor seats).
@@ -43,6 +44,7 @@ export async function deleteWorkspace(c: Caller, workspaceId: string, b: z.infer
   const { data: ws, error } = await c.db.from('workspaces').select('name').eq('id', workspaceId).single();
   if (error) dbFail(error, 'load workspace');
   if (b.confirm !== ws.name) throw new ApiError(422, 'CONFIRMATION_MISMATCH', 'Type the workspace name exactly to confirm deletion.');
+  await removeWorkspaceObjects(workspaceId); // stored images first: the cascade removes the rows that point to them
   const { error: e2 } = await adminDb().from('workspaces').delete().eq('id', workspaceId);
   if (e2) dbFail(e2, 'delete workspace');
   return { deleted: workspaceId };

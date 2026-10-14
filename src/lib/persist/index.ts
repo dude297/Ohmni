@@ -18,6 +18,7 @@ export const schemas = {
     graph: z.unknown(),
     source: z.enum(['image_extraction', 'netlist_import', 'manual', 'fixture']),
     parentId: z.uuid().optional(),
+    sourceArtifactId: z.uuid().optional(), // saved schematic image this circuit was read from (same workspace, FK-enforced)
   }),
   investigation: z.object({ revisionId: z.uuid(), title: z.string().trim().min(1).max(200) }),
   close: z.object({ status: z.enum(['resolved', 'abandoned']) }),
@@ -82,10 +83,10 @@ export async function confirmRevision(c: Caller, projectId: string, b: z.infer<t
   if (!v.ok) throw new ApiError(422, 'INVALID_GRAPH', 'Circuit graph is invalid', v.errors);
   const project = await one(c.db.from('projects').select('id, workspace_id').eq('id', projectId).maybeSingle(), 'project');
   const revision_hash = revisionId(v.graph);
-  const cols = 'id, project_id, parent_id, revision_hash, source, graph, confirmed_by, confirmed_at';
+  const cols = 'id, project_id, parent_id, source_artifact_id, revision_hash, source, graph, confirmed_by, confirmed_at';
   const { data, error } = await c.db
     .from('design_revisions')
-    .insert({ workspace_id: project.workspace_id, project_id: projectId, parent_id: b.parentId, revision_hash, source: b.source, graph: v.graph, confirmed_by: c.user.id })
+    .insert({ workspace_id: project.workspace_id, project_id: projectId, parent_id: b.parentId, source_artifact_id: b.sourceArtifactId, revision_hash, source: b.source, graph: v.graph, confirmed_by: c.user.id })
     .select(cols)
     .single();
   if (error?.code === '23505')
