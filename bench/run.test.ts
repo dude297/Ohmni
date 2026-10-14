@@ -7,7 +7,7 @@ import { solveDC } from '../src/lib/circuit/solve';
 import { stress, tinyR1, kclViolation } from './solver-stress';
 
 // Run: BENCH=1 BENCH_LABEL=after npx vitest run bench   (writes bench/report/<label>.json, git-ignored)
-const SEED = 20261012;
+const SEED = Number(process.env.BENCH_SEED) || 20261012; // BENCH_SEED: held-out split for tuning checks
 it.skipIf(!process.env.BENCH)('bench: probe calibration + grounding corpus', () => {
   const rows = buildSets(SEED, 300).map((s, i) => runSet(probeStep, s, SEED + i));
   const report = { label: process.env.BENCH_LABEL ?? 'run', seed: SEED, summary: summarize(rows), rows, grounding: evaluateGrounding(CORPUS), solver: { ...stress(solveDC), tinyR1Violation: kclViolation(tinyR1(), solveDC(tinyR1())), tinyR1Warnings: solveDC(tinyR1()).warnings ?? [] } };
