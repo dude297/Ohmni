@@ -192,6 +192,7 @@ try {
   check('markdown report', mdRes.status === 200 && mdRes.headers.get('content-type')?.startsWith('text/markdown') && md.includes('Status **resolved**') && md.includes('R6'));
   const rj = await call(A.token, 'GET', `/api/v1/investigations/${invId}/report?format=json`);
   check('json report', rj.json?.schema === 'ohmni.report.v1' && rj.json?.repairs?.[0]?.checks?.length === 2 && rj.json?.measurements?.filter((x) => x.role === 'verification').length === 2);
+  check('stored verdict reproduces from stored evidence', rj.json?.diagnosis?.reproducibility?.status === 'reproduced', JSON.stringify(rj.json?.diagnosis?.reproducibility));
   const bReport = await call(B.token, 'GET', `/api/v1/investigations/${invId}/report?format=json`);
   check('outsider cannot fetch report', bReport.status === 404, `${bReport.status}`);
   const late = await call(A.token, 'POST', `/api/v1/investigations/${invId}/measurements`, { node: 'C', volts: 1, method: 'typed' });
