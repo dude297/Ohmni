@@ -7,7 +7,7 @@ export const TIERS: Record<string, Tier> = {
   '/review': 'experimental', '/multi-fault': 'experimental', '/twin': 'experimental', '/studio': 'experimental',
   '/ac': 'experimental', '/teams': 'experimental',
   '/api/review': 'experimental', '/api/probe-multi': 'experimental', '/api/twin': 'experimental', '/api/ac': 'experimental',
-  '/api/topology': 'experimental', '/api/firmware': 'experimental', '/api/explain': 'experimental',
+  '/api/topology': 'experimental', '/api/v1': 'experimental', '/api/firmware': 'experimental', '/api/explain': 'experimental',
   '/learn': 'demo', '/tracks': 'demo', '/for-the-larp': 'demo',
 };
 

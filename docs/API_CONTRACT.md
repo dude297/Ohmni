@@ -79,3 +79,13 @@ See docs/REPAIR_STUDIO.md. Request: `{ graph, userConfirmed, hypothesisId, measu
 Responses on tiered routes carry `x-ohmni-tier: core|experimental|demo`. A tier disabled via `OHMNI_DISABLED_TIERS` returns 404 `{ error: { code: "FEATURE_DISABLED" } }` on API routes. See SECURITY.md.
 ## AI consent gate (P0)
 With `REQUIRE_AI_CONSENT=1`, routes that send user content to an AI provider require consent: `/api/extract` multipart field `aiConsent=true`; `/api/explain` and `/api/review` (only when `mentor` is present) JSON `"aiConsent": true`. Otherwise 422 `CONSENT_REQUIRED` before any provider call. Unset: no gate. Data flows in docs/PRIVACY.md.
+
+## Saved investigations: /api/v1/* (experimental)
+Supabase-backed persistence; design and invariants in docs/PERSISTENCE.md. Every request needs `Authorization: Bearer <Supabase access token>`; unset Supabase env -> 503 `PERSISTENCE_DISABLED`; bad/missing token -> 401 `UNAUTHENTICATED`; RLS denial -> 403 `FORBIDDEN`; invisible or foreign ids -> 404 `NOT_FOUND`. Errors use the shared envelope with `requestId`. POSTs share one rate rule (`RATE_PERSIST_PER_MIN`, default 120/min/IP).
+- `GET|POST /api/v1/workspaces` `{ name }` -> `{ workspaces: [{ role, workspace }] }` / `{ workspace }` (creator becomes owner).
+- `GET /api/v1/projects?workspaceId=` / `POST /api/v1/projects` `{ workspaceId, name, description? }`.
+- `GET|POST /api/v1/projects/:id/revisions` `{ graph, source: image_extraction|netlist_import|manual|fixture, parentId? }` -> `{ revision, existing }`. POST **is** the human confirmation (`confirmed_by` = caller); same circuit returns the existing revision.
+- `POST /api/v1/investigations` `{ revisionId, title }`; `GET /api/v1/investigations/:id` -> `{ investigation, revision{id, revisionHash, graph}, measurements, latestHypotheses, probe, proposals, verifications }` (`probe` is recomputed from stored evidence on every read); `POST /api/v1/investigations/:id/close` `{ status: resolved|abandoned }`.
+- `POST /api/v1/investigations/:id/measurements` `{ node, volts, method: typed|voice|csv|instrument, instrument?, supersedes?, provenance? }` -> `{ measurement, probe }`; 422 `UNKNOWN_NODE`, 409 `INVESTIGATION_CLOSED`.
+- `POST /api/v1/investigations/:id/repair` -> repair result + `stored: [{ id, hypothesis_id, verification_node, expect_value, tolerance, status }]`; no proposals when the fit is poor.
+- `POST /api/v1/proposals/:id/verify` `{ volts, method, instrument? }` -> `{ verification, result, measurementId }`; the reading is stored as evidence (excluded from diagnosis) and judged against the server's expectation for the stored revision.

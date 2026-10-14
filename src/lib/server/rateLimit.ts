@@ -30,10 +30,15 @@ const RULES: Record<string, () => Rule[]> = {
   '/api/repair/verify': () => perMin('repair-verify-min', 'RATE_LOCAL_PER_MIN', 60),
   '/api/twin': () => perMin('twin-min', 'RATE_LOCAL_PER_MIN', 60),
   '/api/firmware/adc': () => perMin('adc-min', 'RATE_LOCAL_PER_MIN', 60),
+  // persistence API: every /api/v1/* path shares one rule, so ids in the path cannot grow the rule cache
+  '/api/v1': () => perMin('v1-min', 'RATE_PERSIST_PER_MIN', 120),
 };
 export const LIMITED_ROUTES = Object.keys(RULES);
 const ruleCache = new Map<string, Rule[]>();
-const rules = (pathname: string): Rule[] => {
+/** Rule key for a request path: /api/v1/* collapses to '/api/v1'. */
+export const limitKey = (pathname: string) => (pathname.startsWith('/api/v1/') ? '/api/v1' : pathname);
+const rules = (path: string): Rule[] => {
+  const pathname = limitKey(path);
   let r = ruleCache.get(pathname);
   if (!r) ruleCache.set(pathname, (r = RULES[pathname]?.() ?? []));
   return r;
