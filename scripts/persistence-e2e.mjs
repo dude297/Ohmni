@@ -5,7 +5,7 @@
 // --with-model adds ONE real /api/explain call (free-tier Gemini) to check usage metering (model_traces).
 // Needs SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY. Never run against a production database.
 import { createClient } from '@supabase/supabase-js';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 const base = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'http://localhost:3000';
 const withModel = process.argv.includes('--with-model');
@@ -24,6 +24,16 @@ const BRIDGE = {
   ],
   groundNode: 'GND',
   measureNode: 'C',
+};
+
+// 1x1 PNG for the saved-image (artifact) flow.
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+const upload = async (token, projectId) => {
+  const fd = new FormData();
+  fd.set('image', new File([PNG], 'schematic.png', { type: 'image/png' }));
+  fd.set('aiConsent', 'true');
+  const res = await fetch(`${base}/api/v1/projects/${projectId}/artifacts`, { method: 'POST', headers: { authorization: `Bearer ${token}` }, body: fd });
+  return { status: res.status, json: await res.json().catch(() => null) };
 };
 
 let failures = 0;
@@ -76,8 +86,16 @@ try {
 
   const bad = await call(A.token, 'POST', `/api/v1/projects/${projectId}/revisions`, { graph: { ...BRIDGE, components: [] }, source: 'fixture' });
   check('invalid graph -> 422 INVALID_GRAPH', bad.status === 422 && bad.json?.error?.code === 'INVALID_GRAPH');
-  const rev = await call(A.token, 'POST', `/api/v1/projects/${projectId}/revisions`, { graph: BRIDGE, source: 'fixture' });
-  check('A confirms revision', rev.status === 200 && /^rev_[0-9a-f]{16}$/.test(rev.json?.revision?.revision_hash ?? '') && rev.json.revision.confirmed_by === A.id, `${rev.status}`);
+  const art = await upload(A.token, projectId);
+  check('A saves the schematic image', art.status === 200 && art.json?.artifact?.sha256 === createHash('sha256').update(PNG).digest('hex') && art.json.artifact.ai_processing_consent === true, `${art.status}`);
+  const artId = art.json.artifact.id;
+  const signed = await call(A.token, 'GET', `/api/v1/artifacts/${artId}`);
+  const dl = signed.json?.url ? Buffer.from(await (await fetch(signed.json.url)).arrayBuffer()) : null;
+  check('signed download returns the same bytes', !!dl && dl.equals(PNG) && signed.json.artifact.storage_path === undefined);
+  const anonList = await createClient(url, anon, opts).storage.from('artifacts').list(wsId);
+  check('anon key cannot list stored images', !anonList.data?.length);
+  const rev = await call(A.token, 'POST', `/api/v1/projects/${projectId}/revisions`, { graph: BRIDGE, source: 'image_extraction', sourceArtifactId: artId });
+  check('A confirms revision', rev.status === 200 && /^rev_[0-9a-f]{16}$/.test(rev.json?.revision?.revision_hash ?? '') && rev.json.revision.confirmed_by === A.id && rev.json.revision.source_artifact_id === artId, `${rev.status}`);
   const again = await call(A.token, 'POST', `/api/v1/projects/${projectId}/revisions`, { graph: { ...BRIDGE, components: [...BRIDGE.components].reverse() }, source: 'fixture' });
   check('same circuit (reordered) -> existing revision', again.json?.existing === true && again.json?.revision?.id === rev.json.revision.id);
 
@@ -113,6 +131,8 @@ try {
   check('B cannot read A investigation', bGet.status === 404, `${bGet.status}`);
   const bAdd = await call(B.token, 'POST', `/api/v1/investigations/${invId}/measurements`, { node: 'C', volts: 1, method: 'typed' });
   check('B cannot add evidence to A investigation', bAdd.status === 404, `${bAdd.status}`);
+  check('outsider cannot get image URL', (await call(B.token, 'GET', `/api/v1/artifacts/${artId}`)).status === 404);
+  check('outsider cannot save into A project', (await upload(B.token, projectId)).status === 404);
   const bProj = await call(B.token, 'GET', `/api/v1/projects?workspaceId=${wsId}`);
   check('B lists no projects in A workspace', bProj.status === 200 && bProj.json?.projects?.length === 0);
   const bNew = await call(B.token, 'POST', '/api/v1/projects', { workspaceId: wsId, name: 'intrude' });
@@ -132,6 +152,8 @@ try {
   check('viewer B reads the investigation', bRead.status === 200 && bRead.json?.measurements?.length === 5);
   const bWrite = await call(B.token, 'POST', `/api/v1/investigations/${invId}/measurements`, { node: 'C', volts: 0.01, method: 'typed' });
   check('viewer B cannot add evidence', bWrite.status === 403, `${bWrite.status}`);
+  check('viewer B cannot save images', (await upload(B.token, projectId)).status === 403);
+  check('viewer B can download images', (await call(B.token, 'GET', `/api/v1/artifacts/${artId}`)).status === 200);
   const bRepair = await call(B.token, 'POST', `/api/v1/investigations/${invId}/repair`);
   check('viewer B cannot trigger repair', bRepair.status === 403, `${bRepair.status}`);
   const bManage = await call(B.token, 'POST', members, { email: B.email, role: 'owner' });
@@ -189,6 +211,8 @@ try {
   const del = await call(A.token, 'POST', `/api/v1/workspaces/${wsId}/delete`, { confirm: 'e2e bench' });
   check('owner deletes workspace', del.status === 200 && del.json?.deleted === wsId, `${del.status}`);
   check('deleted investigation is gone', (await call(A.token, 'GET', `/api/v1/investigations/${invId}`)).status === 404);
+  const left = await admin.storage.from('artifacts').list(`${wsId}/${projectId}`);
+  check('stored images removed with the workspace', !left.data?.length);
   check('deleted workspace not listed', !(await call(A.token, 'GET', '/api/v1/workspaces')).json?.workspaces?.some((w) => w.workspace?.id === wsId));
 } finally {
   for (const w of workspaces) {

@@ -33,4 +33,15 @@ describe('browser API client', () => {
     const api = createOhmniApi(async () => 'tok', (async () => new Response('# Report', { headers: { 'content-type': 'text/markdown; charset=utf-8' } })) as unknown as typeof fetch);
     expect(await api.investigations.reportMarkdown('i')).toBe('# Report');
   });
+
+  it('uploads images as multipart without forcing a JSON content type', async () => {
+    const f = vi.fn(async () => json(200, { artifact: { id: 'a' } }));
+    const api = createOhmniApi(async () => 'tok', f as unknown as typeof fetch);
+    await api.artifacts.upload('p', new Blob([new Uint8Array([1])], { type: 'image/png' }), true);
+    const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('/api/v1/projects/p/artifacts');
+    expect(init.body).toBeInstanceOf(FormData);
+    expect((init.body as FormData).get('aiConsent')).toBe('true');
+    expect((init.headers as Record<string, string>)['content-type']).toBeUndefined();
+  });
 });
