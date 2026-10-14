@@ -1,3 +1,4 @@
+import { sharedLimited } from '@/lib/server/sharedLimit';
 import { observe } from '@/lib/server/observe';
 import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
@@ -54,4 +55,5 @@ async function handle(req: Request) {
   return Response.json({ result: { advisory: true, disclaimer: REVIEW_DISCLAIMER, findings: review.findings, solution: review.solution, mentor: mentorOut, trace } });
 }
 
-export const POST = observe('/api/review', handle);
+// Shared (cross-instance) model limits; in-memory limits run in src/proxy.ts.
+export const POST = observe('/api/review', sharedLimited('/api/review', handle));

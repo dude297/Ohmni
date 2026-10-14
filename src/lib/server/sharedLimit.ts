@@ -3,7 +3,8 @@ import { adminDb, persistenceConfigured } from './supabase';
 import { clientIp, modelBudgetPerMin, sharedRules, type Block } from './rateLimit';
 
 // Cross-instance limits for model-calling routes, backed by public.rate_hit (Postgres, service role).
-// The in-memory limiter still runs first; this adds the counts other serverless instances see.
+// The in-memory limiter still runs first (src/proxy.ts); this adds the counts other serverless instances see.
+// Applied per route via sharedLimited() so the proxy stays synchronous.
 // Fails OPEN (returns null) when Supabase is not configured, RATE_SHARED=off, or the call errors/takes > 1.5 s:
 // the in-memory limits and the per-instance model budget still apply, so a database hiccup never takes the app down.
 const TIMEOUT_MS = 1500;
@@ -38,4 +39,13 @@ export async function checkShared(method: string, pathname: string, headers: Hea
     console.error(JSON.stringify({ msg: 'shared_rate_limit_unavailable', route: pathname, error: e instanceof Error ? e.message : 'unknown' }));
     return null;
   }
+}
+
+/** Wraps a model route's POST handler: shared limits run before the handler (the sync proxy keeps the in-memory ones). */
+export function sharedLimited<A extends unknown[]>(pathname: string, handler: (req: Request, ...rest: A) => Promise<Response>) {
+  return async (req: Request, ...rest: A): Promise<Response> => {
+    const b = await checkShared(req.method, pathname, req.headers);
+    if (!b) return handler(req, ...rest);
+    return Response.json({ error: { code: b.code, message: b.message } }, { status: b.status, headers: b.retryAfter ? { 'Retry-After': String(b.retryAfter) } : undefined });
+  };
 }

@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { check } from '@/lib/server/rateLimit';
-import { checkShared } from '@/lib/server/sharedLimit';
 import { disabledTiers, tierOf } from '@/lib/features';
 
-export async function proxy(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const tier = tierOf(path);
   const tierHeader = tier ? { 'x-ohmni-tier': tier } : undefined;
@@ -12,7 +11,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.json({ error: { code: 'FEATURE_DISABLED', message: 'This feature is not available on this deployment.' } }, { status: 404, headers: tierHeader });
     return new NextResponse('Not found', { status: 404, headers: { 'content-type': 'text/plain', ...tierHeader } });
   }
-  const b = check(req.method, path, req.headers) ?? (await checkShared(req.method, path, req.headers));
+  const b = check(req.method, path, req.headers);
   if (!b) {
     const res = NextResponse.next();
     if (tier) res.headers.set('x-ohmni-tier', tier);

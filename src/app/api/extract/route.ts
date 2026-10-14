@@ -1,3 +1,4 @@
+import { sharedLimited } from '@/lib/server/sharedLimit';
 import { observe } from '@/lib/server/observe';
 import { extractWithFallback } from '@/lib/ai/vision';
 import { routeExtraction } from '@/lib/ai/jev';
@@ -63,4 +64,5 @@ async function handle(req: Request) {
   return Response.json({ extraction, route: routed.route, trace });
 }
 
-export const POST = observe('/api/extract', handle);
+// Shared (cross-instance) model limits; in-memory limits run in src/proxy.ts.
+export const POST = observe('/api/extract', sharedLimited('/api/extract', handle));

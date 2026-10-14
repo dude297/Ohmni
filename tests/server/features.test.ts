@@ -32,28 +32,28 @@ describe('tierOf', () => {
 describe('proxy tier gating', () => {
   const req = (path: string, method = 'GET') => new NextRequest(`http://localhost${path}`, { method, headers: { 'x-forwarded-for': '9.9.9.9' } });
 
-  it('tags responses and serves everything when nothing is disabled', async () => {
+  it('tags responses and serves everything when nothing is disabled', () => {
     delete process.env.OHMNI_DISABLED_TIERS;
     delete process.env.OHMNI_EXPERIMENTAL;
-    const r = (await proxy(req('/twin')));
+    const r = proxy(req('/twin'));
     expect(r.status).toBe(200);
     expect(r.headers.get('x-ohmni-tier')).toBe('experimental');
-    expect((await proxy(req('/'))).headers.get('x-ohmni-tier')).toBeNull();
+    expect(proxy(req('/')).headers.get('x-ohmni-tier')).toBeNull();
   });
 
   it('404s disabled API routes with FEATURE_DISABLED JSON and disabled pages with plain 404', async () => {
     process.env.OHMNI_DISABLED_TIERS = 'experimental';
-    const api = (await proxy(req('/api/twin', 'POST')));
+    const api = proxy(req('/api/twin', 'POST'));
     expect(api.status).toBe(404);
     expect((await api.json()).error.code).toBe('FEATURE_DISABLED');
-    expect((await proxy(req('/studio'))).status).toBe(404);
-    expect((await proxy(req('/api/solve', 'POST'))).status).toBe(200);
-    expect((await proxy(req('/learn'))).status).toBe(200);
+    expect(proxy(req('/studio')).status).toBe(404);
+    expect(proxy(req('/api/solve', 'POST')).status).toBe(200);
+    expect(proxy(req('/learn')).status).toBe(200);
   });
 
-  it('keeps rate limiting on core routes and tags the 429', async () => {
-    for (let i = 0; i < 6; i++) (await proxy(req('/api/extract', 'POST')));
-    const r = (await proxy(req('/api/extract', 'POST')));
+  it('keeps rate limiting on core routes and tags the 429', () => {
+    for (let i = 0; i < 6; i++) proxy(req('/api/extract', 'POST'));
+    const r = proxy(req('/api/extract', 'POST'));
     expect(r.status).toBe(429);
     expect(r.headers.get('x-ohmni-tier')).toBe('core');
   });
