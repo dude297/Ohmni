@@ -75,3 +75,7 @@ See docs/REPAIR_STUDIO.md. Request: `{ graph, userConfirmed, hypothesisId, measu
 - An unhandled throw becomes 500 `{ error: { code: "INTERNAL", message: "Internal server error", requestId } }`; no stack or exception message is returned.
 - One JSON log line per request: `ts, requestId, route, method, status, ms`, plus `code` (error code) and `error` (exception class name only) when present. Bodies, images, graphs, tokens, keys, IPs and provider responses are never logged.
 - Responses produced by `src/proxy.ts` before the handler runs (rate-limit 429, oversized 413) do not yet carry `x-request-id`.
+## Feature tiers
+Responses on tiered routes carry `x-ohmni-tier: core|experimental|demo`. A tier disabled via `OHMNI_DISABLED_TIERS` returns 404 `{ error: { code: "FEATURE_DISABLED" } }` on API routes. See SECURITY.md.
+## AI consent gate (P0)
+With `REQUIRE_AI_CONSENT=1`, routes that send user content to an AI provider require consent: `/api/extract` multipart field `aiConsent=true`; `/api/explain` and `/api/review` (only when `mentor` is present) JSON `"aiConsent": true`. Otherwise 422 `CONSENT_REQUIRED` before any provider call. Unset: no gate. Data flows in docs/PRIVACY.md.
