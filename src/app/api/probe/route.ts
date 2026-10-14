@@ -7,7 +7,16 @@ import { probeStep } from '../../../lib/probe';
 const body = z.object({
   graph: z.unknown(),
   userConfirmed: z.unknown(),
-  observations: z.array(z.object({ node: z.string().min(1), volts: z.number().finite() })).max(50).default([]),
+  observations: z
+    .array(
+      z.union([
+        z.object({ kind: z.literal('resistance'), a: z.string().min(1), b: z.string().min(1), ohms: z.number().finite().nonnegative() }),
+        z.object({ node: z.string().min(1), volts: z.number().finite() }),
+      ]),
+    )
+    .max(50)
+    .default([]),
+  ohmmeter: z.boolean().optional(), // let the guide ask for power-off resistance readings (next.kind === 'resistance')
 });
 
 const err = (status: number, code: string, message: string, details?: string[]) =>
@@ -27,7 +36,7 @@ async function handle(req: Request) {
   const v = validateGraph(parsed.data.graph);
   if (!v.ok) return err(422, 'INVALID_GRAPH', 'Circuit graph is invalid', v.errors);
   const t0 = performance.now();
-  const result = probeStep(v.graph, parsed.data.observations);
+  const result = probeStep(v.graph, parsed.data.observations, { ohmmeter: parsed.data.ohmmeter });
   return Response.json({
     result: {
       ...result,
