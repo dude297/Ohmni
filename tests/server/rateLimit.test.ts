@@ -73,7 +73,7 @@ describe('proxy', () => {
 describe('route coverage', () => {
   it('proxy matcher covers every limited route and every POST API route', async () => {
     const { config } = await import('../../src/proxy');
-    const { LIMITED_ROUTES } = await import('../../src/lib/server/rateLimit');
+    const { LIMITED_ROUTES, limitKey } = await import('../../src/lib/server/rateLimit');
     const matched = (p: string) => config.matcher.some((m) => new RegExp(`^${m}$`).test(p));
     expect(LIMITED_ROUTES.filter((r) => !matched(r))).toEqual([]);
     expect(matched('/_next/static/chunk.js') || matched('/samples/clear-divider.png')).toBe(false);
@@ -89,7 +89,7 @@ describe('route coverage', () => {
       }
     };
     walk('src/app/api');
-    expect(posts.filter((r) => !LIMITED_ROUTES.includes(r))).toEqual([]);
+    expect(posts.filter((r) => !LIMITED_ROUTES.includes(limitKey(r)))).toEqual([]);
   });
   it('limits /api/review at 10/min', () => {
     resetRateLimits();

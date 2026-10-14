@@ -1,3 +1,4 @@
+import { sharedLimited } from '@/lib/server/sharedLimit';
 import { observe } from '@/lib/server/observe';
 import { extractWithFallback } from '@/lib/ai/vision';
 import { routeExtraction } from '@/lib/ai/jev';
@@ -5,31 +6,34 @@ import { verifyTopology } from '@/lib/ai/secondary';
 import { readFormData, sniffImage, bodyErrorResponse } from '@/lib/server/readBody';
 import { consentMissing, CONSENT_MESSAGE } from '@/lib/server/consent';
 import { validateGraph } from '@/lib/circuit/validate';
+import { recordTraces } from '@/lib/persist/traces';
 import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '@/lib/circuit/types';
 
 const MAX = 5 * 1024 * 1024;
 
-const err = (status: number, code: string, message: string) =>
-  Response.json({ error: { code, message } }, { status });
+const err = (status: number, code: string, message: string, details?: string[]) =>
+  Response.json({ error: { code, message, ...(details && { details }) } }, { status });
 
 async function handle(req: Request) {
   let file: unknown;
   let consent = false;
+  let projectId: unknown;
   try {
     const fd = await readFormData(req);
     file = fd.get('image');
     consent = fd.get('aiConsent') === 'true';
+    projectId = fd.get('projectId'); // optional: signed-in usage metering (model_traces)
   } catch (e) {
     return bodyErrorResponse(e);
   }
-  if (consentMissing(consent)) return err(422, 'CONSENT_REQUIRED', CONSENT_MESSAGE);
-  if (!(file instanceof File)) return err(400, 'MISSING_IMAGE', 'Field "image" is required');
-  if (file.size > MAX) return err(413, 'TOO_LARGE', 'Image must be 5MB or smaller');
+  if (consentMissing(consent)) return err(422, 'CONSENT_REQUIRED', CONSENT_MESSAGE, ['aiConsent: must be "true"']);
+  if (!(file instanceof File)) return err(400, 'MISSING_IMAGE', 'Field "image" is required', ['image: required file field']);
+  if (file.size > MAX) return err(413, 'TOO_LARGE', 'Image must be 5MB or smaller', [`image: ${file.size} bytes, limit ${MAX}`]);
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   // Never trust the declared file.type: sniff magic bytes and pass the sniffed MIME downstream.
   const mime = sniffImage(bytes);
-  if (!mime) return err(415, 'UNSUPPORTED_MEDIA', 'Image content must be png, jpeg or webp');
+  if (!mime) return err(415, 'UNSUPPORTED_MEDIA', 'Image content must be png, jpeg or webp', ['image: magic bytes are not png, jpeg or webp (declared type is ignored)']);
   const trace: ModelTraceEvent[] = [];
   let extraction: CandidateExtraction;
 
@@ -39,6 +43,7 @@ async function handle(req: Request) {
   if (!r.ok) {
     // Every provider failed: skip Jev (nothing to route) and say so honestly in the trace.
     trace.push({ step: 'route', provider: 'jev', durationMs: 0, status: 'skipped', note: 'no extraction available', chosenRoute: 'ask_user' });
+    await recordTraces(req, projectId, '/api/extract', trace);
     return Response.json({ extraction, route: 'ask_user' satisfies RouteChoice, trace });
   }
 
@@ -55,7 +60,9 @@ async function handle(req: Request) {
     trace.push(v.event);
     if (v.extraction) extraction = v.extraction;
   }
+  await recordTraces(req, projectId, '/api/extract', trace);
   return Response.json({ extraction, route: routed.route, trace });
 }
 
-export const POST = observe('/api/extract', handle);
+// Shared (cross-instance) model limits; in-memory limits run in src/proxy.ts.
+export const POST = observe('/api/extract', sharedLimited('/api/extract', handle));

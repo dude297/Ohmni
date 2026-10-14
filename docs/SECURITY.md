@@ -19,14 +19,14 @@
 - Env limits are read once per process.
 
 ## Known limitation
-All limits are **per server instance** (in-memory). Serverless instances count separately, so aggregate throughput scales with instance count. A shared store (Vercel KV / Upstash) is required for a true global limit; until then treat these as best-effort abuse damping, not a guarantee. Platform firewall rules (Vercel) are the backstop.
+In-memory limits are **per server instance**. For the model-calling routes (`/api/extract`, `/api/explain`, `/api/review`) a **shared Postgres counter** (`src/lib/server/sharedLimit.ts`, `public.rate_hit`, migration `20261014030000_shared_rate_limit.sql`) enforces the same per-IP limits and per-route model budget across instances whenever Supabase is configured. It fails open to the in-memory limits (database down or > 1.5 s), so it is abuse damping plus quota protection, not a hard guarantee. Other routes (local engines) remain per instance. Platform firewall rules (Vercel) are the backstop.
 
 ## Feature tiers (`src/lib/features.ts`, `src/proxy.ts`)
 Every page and API route listed in `TIERS` gets `x-ohmni-tier: core|experimental|demo` (tier list in PRODUCTION_PHASE1.md). `OHMNI_DISABLED_TIERS=experimental,demo` (or `OHMNI_EXPERIMENTAL=off`) makes those API routes return 404 `FEATURE_DISABLED` JSON and those pages a plain 404. Unset = everything served. Core can't be disabled.
 
 ## Security headers (`next.config.ts`)
 All routes: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy: microphone=(self), camera=(), geolocation=(), payment=(), usb=()` (Voice Lab needs the microphone), `Strict-Transport-Security: max-age=63072000; includeSubDomains`.
-CSP ships as **`Content-Security-Policy-Report-Only`** (self-only, `'unsafe-inline'` scripts/styles for Next, `'wasm-unsafe-eval'` for ngspice, `blob:` workers, `frame-ancestors 'none'`). Not enforced yet: switch to `Content-Security-Policy` after checking the browser console on every route.
+CSP is **enforced** (`Content-Security-Policy`): self-only sources, `'unsafe-inline'` scripts/styles (required by Next's inline scripts; without it the app breaks with 100+ violations), `img-src data: blob:` for upload previews, no `unsafe-eval`, no `wasm-unsafe-eval` (ngspice runs server-side), no workers, `object-src 'none'`, `frame-ancestors 'none'`. Verified with `scripts/csp-smoke.mjs` against a production build: every page route, safe sample/example interactions, zero violations and zero page errors. The only blocked action is zod v4's `Function('')` feature probe, which zod catches and falls back to its non-JIT validator (`z.config({ jitless: true })` in client code would silence it). Re-run after adding pages, third-party scripts, fonts, workers or WASM in the browser: `node scripts/csp-smoke.mjs <url>` (needs Playwright; see the script header). `--force-enforce` with `CSP_OVERRIDE` tests a candidate policy without rebuilding. The post-deploy smoke fails if the enforcing header disappears.
 
 ## Post-deploy smoke
 `.github/workflows/postdeploy.yml` (push to main, no secrets) runs `npm run smoke:postdeploy -- <url> <sha>`: waits up to 10 min for `/api/health` `build` to equal the pushed commit, then checks `/api/solve` (divider = 2.5 V, bad JSON = 400) and `/probe` headers. No model calls.
