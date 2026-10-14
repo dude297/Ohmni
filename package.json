@@ -15,6 +15,7 @@
   "dependencies": {
     "@google/genai": "^2.28.0",
     "@react-three/fiber": "^9.8.1",
+    "@supabase/supabase-js": "^2.117.3",
     "@types/three": "^0.186.0",
     "eecircuit-engine": "^1.8.0",
     "lucide-react": "^1.55.0",
