@@ -9,8 +9,9 @@ two faults), so the guide scores a fixed extra hypothesis and gates its conclusi
   resistor moving +5 % (independent uniform errors). Meter sigma stays 2 % + 10 mV.
 - **`fit: 'good' | 'poor'`**: poor when the best modeled hypothesis misses a reading by more than 3 sigma_total, or `unmodeled` out-ranks it.
   `outOfModelProbability` is the posterior of `unmodeled`. Both are additive response fields.
-- **`done`** needs `fit: 'good'`, posterior >= 0.9, and a confirming reading: at least 2 resistor-dependent nodes measured, or all of them when the answer is
-  "nominal" (a nominal verdict is a claim about every node). When fit is poor, `done` is false: the guide proposes the most informative unmeasured node, and when
+- **`done`** needs `fit: 'good'`, posterior >= 0.9, and every resistor-dependent node measured (fault conclusions cap at `MAX_CONFIRM` = 6
+  readings, taken where the leader differs most from the other hypotheses). Any verdict, "nominal" or "R6 open", is a claim about every node, and a
+  second unmodeled fault often shows only at a node not yet probed. When fit is poor, `done` is false: the guide proposes the most informative unmeasured node, and when
   none is left says to power off and use an ohmmeter.
 - probe-multi uses the same scorer; its pair-equivalence merge tolerance is 0.5 meter sigma per node (was 1e-9 V).
 

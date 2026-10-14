@@ -36,7 +36,7 @@ export const UNMODELED_WIDTH = 0.1;
 export const PARTS_TOL = 0.05; // resistor tolerance assumed when the user gives none
 export const DONE_P = 0.9;
 export const MIN_BITS = 0.05;
-export const MIN_READINGS = 2;
+export const MAX_CONFIRM = 6; // most readings a fault conclusion waits for (see decide)
 export const SAFETY =
   'Low-voltage DC only. Measure node voltages with the black probe on GND. Disconnect power before measuring resistance or touching parts. These are hypotheses, not confirmed faults.';
 
@@ -166,12 +166,16 @@ export function decide(
 
   const base = { hypotheses, fitWarning, fit, outOfModelProbability, safety: SAFETY };
   if (!bestModeled) return { ...base, next: null, done: true, reason: 'Circuit could not be solved.' };
-  // A conclusion needs a confirming second reading: one voltage can coincide with a modeled fault by chance.
+  // Any conclusion ("matches the diagram" or "R6 is open") is a claim about every node: a second, unmodeled fault often
+  // shows up only at a node not yet probed (bench: out-of-model detectable confident-wrong 1.86% -> 1.10%). So every
+  // resistor-dependent node is measured before concluding; confirmation probes go where the leader differs most.
   const measured = new Set(obs.map((o) => o.node));
-  // "Matches the diagram" is a claim about every node, so it needs all resistor-dependent nodes measured.
   const pinned = new Set(graph.components.filter((c) => c.kind === 'dc_voltage' && c.negativeNode === graph.groundNode).map((c) => c.positiveNode));
   const measuredFree = obs.filter((o) => !pinned.has(o.node)).length;
-  const need = best.id === 'nominal' ? nodes.filter((n) => !pinned.has(n)).length : MIN_READINGS;
+  const free = nodes.filter((n) => !pinned.has(n)).length;
+  // ponytail: fault conclusions cap at MAX_CONFIRM readings so a 60-part board is not a 30-probe chore; past the cap the
+  // most discriminating nodes are covered, not all. Raise it (or drop the cap) if large-board out-of-model misses matter.
+  const need = best.id === 'nominal' ? free : Math.min(free, MAX_CONFIRM);
   const confirm = !poor && best.probability >= DONE_P && measuredFree < need && nodes.some((n) => !measured.has(n) && !pinned.has(n));
   if (!poor && best.probability >= DONE_P && !confirm)
     return {
