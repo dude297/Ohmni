@@ -25,6 +25,7 @@ Set server-only env vars (never `NEXT_PUBLIC_` for the service key): `SUPABASE_U
 - Client auth: `@supabase/supabase-js` in the browser with `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable key; safe to expose). Sign in, then send `Authorization: Bearer ${session.access_token}` to `/api/v1/*`. The browser never talks to the tables directly.
 - Flow: after the user confirms a circuit in `/lab` → `POST /projects/:id/revisions` (this replaces the `userConfirmed` flag) → `POST /investigations` → each reading `POST /investigations/:id/measurements` (render `probe` from the response) → `POST .../repair` → `POST /proposals/:id/verify`. Reload = `GET /investigations/:id`.
 - Show `probe.fit === 'poor'` / `unmodeled` as "no modeled fault fits"; `stored` is empty in that case.
+- Export: `GET /investigations/:id/report` (markdown download) or `?format=json` (`ohmni.report.v1`). `/teams` currently reads the browser-only `ohmni.evidence.v1` packet; importing the server report there is a UI follow-up.
 
 ## Known gaps
 - No invitation emails (members must have signed in once), no workspace delete API, no artifact (file) upload yet; `reports` and `model_traces` tables are unused.

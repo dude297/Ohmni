@@ -153,6 +153,13 @@ try {
 
   const closed = await call(A.token, 'POST', `/api/v1/investigations/${invId}/close`, { status: 'resolved' });
   check('A resolves investigation', closed.json?.investigation?.status === 'resolved');
+  const mdRes = await fetch(`${base}/api/v1/investigations/${invId}/report`, { headers: { authorization: `Bearer ${A.token}` } });
+  const md = await mdRes.text();
+  check('markdown report', mdRes.status === 200 && mdRes.headers.get('content-type')?.startsWith('text/markdown') && md.includes('Status **resolved**') && md.includes('R6'));
+  const rj = await call(A.token, 'GET', `/api/v1/investigations/${invId}/report?format=json`);
+  check('json report', rj.json?.schema === 'ohmni.report.v1' && rj.json?.repairs?.[0]?.checks?.length === 2 && rj.json?.measurements?.filter((x) => x.role === 'verification').length === 2);
+  const bReport = await call(B.token, 'GET', `/api/v1/investigations/${invId}/report?format=json`);
+  check('outsider cannot fetch report', bReport.status === 404, `${bReport.status}`);
   const late = await call(A.token, 'POST', `/api/v1/investigations/${invId}/measurements`, { node: 'C', volts: 1, method: 'typed' });
   check('closed investigation rejects evidence', late.status === 409);
 } finally {
