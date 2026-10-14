@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { adminDb, ApiError, dbFail, type Caller } from '../server/supabase';
 
-// Workspace data lifecycle: full export (any member, RLS reads) and permanent deletion (owner, typed confirmation).
+// Workspace data lifecycle: full export (owners/editors, RLS reads) and permanent deletion (owner, typed confirmation).
+// Viewers can read records in the app but not bulk-download them (contractor/auditor seats).
 
-const TABLES = ['projects', 'artifacts', 'design_revisions', 'investigations', 'measurements', 'hypotheses', 'repair_proposals', 'verifications', 'model_traces', 'reports'] as const;
+const TABLES = ['workspace_members', 'projects', 'artifacts', 'design_revisions', 'investigations', 'measurements', 'hypotheses', 'repair_proposals', 'verifications', 'model_traces', 'reports'] as const;
 const PAGE = 1000; // PostgREST default max_rows
 const MAX_PER_TABLE = 50_000; // ponytail: synchronous export; move to a background job + Storage file past this
 
@@ -14,16 +15,16 @@ async function role({ user, db }: Caller, workspaceId: string) {
   return data.role as string;
 }
 
-/** Every row of the workspace the caller can read (RLS), table by table, paged. */
+/** Every row of the workspace (RLS reads), table by table, paged. Owners and editors only. */
 export async function exportWorkspace(c: Caller, workspaceId: string) {
-  await role(c, workspaceId);
+  if ((await role(c, workspaceId)) === 'viewer') throw new ApiError(403, 'FORBIDDEN', 'Viewers cannot export a workspace; ask an owner or editor.');
   const { data: workspace, error } = await c.db.from('workspaces').select('id, name, created_at').eq('id', workspaceId).single();
   if (error) dbFail(error, 'load workspace');
   const tables: Record<string, unknown[]> = {};
   for (const t of TABLES) {
     const rows: unknown[] = [];
     for (let from = 0; from < MAX_PER_TABLE; from += PAGE) {
-      const { data, error: e } = await c.db.from(t).select('*').eq('workspace_id', workspaceId).order('id').range(from, from + PAGE - 1);
+      const { data, error: e } = await c.db.from(t).select('*').eq('workspace_id', workspaceId).order(t === 'workspace_members' ? 'user_id' : 'id').range(from, from + PAGE - 1);
       if (e) dbFail(e, `export ${t}`);
       rows.push(...(data ?? []));
       if (!data || data.length < PAGE) break;

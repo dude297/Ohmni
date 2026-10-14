@@ -178,9 +178,10 @@ try {
   // Data lifecycle: export (members) then permanent delete (owner + typed name).
   const exp = await call(A.token, 'GET', `/api/v1/workspaces/${wsId}/export`);
   const t = exp.json?.tables ?? {};
-  check('export has every table', exp.status === 200 && exp.json?.schema === 'ohmni.workspace-export.v1' && t.measurements?.length === 6 && t.repair_proposals?.length >= 1 && t.verifications?.length === 2, `${exp.status} m=${t.measurements?.length}`);
+  check('export has every table', exp.status === 200 && exp.json?.schema === 'ohmni.workspace-export.v1' && t.measurements?.length === 6 && t.repair_proposals?.length >= 1 && t.verifications?.length === 2 && t.workspace_members?.length === 1, `${exp.status} m=${t.measurements?.length}`);
   check('outsider cannot export', (await call(B.token, 'GET', `/api/v1/workspaces/${wsId}/export`)).status === 404);
   await call(A.token, 'POST', `/api/v1/workspaces/${wsId}/members`, { email: B.email, role: 'viewer' });
+  check('viewer cannot bulk-export', (await call(B.token, 'GET', `/api/v1/workspaces/${wsId}/export`)).status === 403);
   const vDel = await call(B.token, 'POST', `/api/v1/workspaces/${wsId}/delete`, { confirm: 'e2e bench' });
   check('viewer cannot delete workspace', vDel.status === 403, `${vDel.status}`);
   const badConfirm = await call(A.token, 'POST', `/api/v1/workspaces/${wsId}/delete`, { confirm: 'e2e Bench' });
