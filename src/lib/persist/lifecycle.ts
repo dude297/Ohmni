@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { adminDb, ApiError, dbFail, type Caller } from '../server/supabase';
+import { ApiError, dbFail, type Caller } from '../server/supabase';
 
 // Workspace data lifecycle: full export (owners/editors, RLS reads) and permanent deletion (owner, typed confirmation).
 // Viewers can read records in the app but not bulk-download them (contractor/auditor seats).
