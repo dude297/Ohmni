@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type * as P from '../persist';
 import type * as M from '../persist/members';
 import type { Report } from '../persist/report';
+import type * as A from '../persist/artifacts';
 
 // Browser client for saved investigations (/api/v1/*). Sign-in uses Supabase Auth directly; all data goes through
 // the Ohmni API with the session's access token. Needs NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -36,10 +37,11 @@ export function createOhmniApi(getToken: () => Promise<string | null>, fetchImpl
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     const token = await getToken();
     if (!token) throw new OhmniApiError(401, 'UNAUTHENTICATED', 'Sign in to save investigations.');
+    const form = body instanceof FormData;
     const res = await fetchImpl(`/api/v1${path}`, {
       method,
-      headers: { authorization: `Bearer ${token}`, ...(body !== undefined && { 'content-type': 'application/json' }) },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: { authorization: `Bearer ${token}`, ...(body !== undefined && !form && { 'content-type': 'application/json' }) },
+      body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     });
     if (res.headers.get('content-type')?.startsWith('text/markdown')) return (await res.text()) as T;
     const json = await res.json().catch(() => null);
@@ -76,6 +78,17 @@ export function createOhmniApi(getToken: () => Promise<string | null>, fetchImpl
       repair: (inv: string) => call<Get<typeof P.proposeRepair>>('POST', `/investigations/${id(inv)}/repair`),
       reportMarkdown: (inv: string) => call<string>('GET', `/investigations/${id(inv)}/report`),
       reportJson: (inv: string) => call<Report>('GET', `/investigations/${id(inv)}/report?format=json`),
+    },
+    artifacts: {
+      /** Opt-in: save the schematic image with the project (editors). */
+      upload: (project: string, image: Blob, aiConsent: boolean) => {
+        const fd = new FormData();
+        fd.set('image', image);
+        if (aiConsent) fd.set('aiConsent', 'true');
+        return call<{ artifact: Get<typeof A.uploadArtifact> }>('POST', `/projects/${id(project)}/artifacts`, fd);
+      },
+      /** Metadata + 60 s signed download URL. */
+      get: (artifact: string) => call<Get<typeof A.artifactUrl>>('GET', `/artifacts/${id(artifact)}`),
     },
     proposals: {
       verify: (proposal: string, b: Body<'verify'>) => call<Get<typeof P.verifyProposal>>('POST', `/proposals/${id(proposal)}/verify`, b),
