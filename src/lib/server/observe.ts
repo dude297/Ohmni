@@ -7,10 +7,15 @@ export function requestIdOf(req: Request): string {
   return incoming && SAFE_ID.test(incoming) ? incoming : crypto.randomUUID();
 }
 
+const ids = new WeakMap<Request, string>();
+/** The id observe() assigned to this request (same value as the x-request-id response header). */
+export const requestIdFor = (req: Request) => ids.get(req) ?? requestIdOf(req);
+
 export function observe<A extends unknown[]>(route: string, handler: (req: Request, ...rest: A) => Response | Promise<Response>) {
   return async (req: Request, ...rest: A): Promise<Response> => {
     const t0 = performance.now();
     const requestId = requestIdOf(req);
+    ids.set(req, requestId);
     let res: Response;
     let code: string | undefined;
     let errorName: string | undefined;

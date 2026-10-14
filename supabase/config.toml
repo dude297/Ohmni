@@ -1,0 +1,2 @@
+# Minimal CLI config so `supabase link` / `supabase db query --linked` work from this repo (see scripts/rls-check.mjs).
+project_id = "ohmni"

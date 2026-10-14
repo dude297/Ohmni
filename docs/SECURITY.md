@@ -19,7 +19,7 @@
 - Env limits are read once per process.
 
 ## Known limitation
-All limits are **per server instance** (in-memory). Serverless instances count separately, so aggregate throughput scales with instance count. A shared store (Vercel KV / Upstash) is required for a true global limit; until then treat these as best-effort abuse damping, not a guarantee. Platform firewall rules (Vercel) are the backstop.
+In-memory limits are **per server instance**. For the model-calling routes (`/api/extract`, `/api/explain`, `/api/review`) a **shared Postgres counter** (`src/lib/server/sharedLimit.ts`, `public.rate_hit`, migration `20261014030000_shared_rate_limit.sql`) enforces the same per-IP limits and per-route model budget across instances whenever Supabase is configured. It fails open to the in-memory limits (database down or > 1.5 s), so it is abuse damping plus quota protection, not a hard guarantee. Other routes (local engines) remain per instance. Platform firewall rules (Vercel) are the backstop.
 
 ## Feature tiers (`src/lib/features.ts`, `src/proxy.ts`)
 Every page and API route listed in `TIERS` gets `x-ohmni-tier: core|experimental|demo` (tier list in PRODUCTION_PHASE1.md). `OHMNI_DISABLED_TIERS=experimental,demo` (or `OHMNI_EXPERIMENTAL=off`) makes those API routes return 404 `FEATURE_DISABLED` JSON and those pages a plain 404. Unset = everything served. Core can't be disabled.
