@@ -46,7 +46,7 @@ export type SolveResponse = {
 ~~~
 
 ## Endpoint contracts (implemented)
-- **POST /api/extract** multipart `image` JPEG/PNG/WebP <=5 MB -> { extraction: CandidateExtraction, route: RouteChoice, trace: ModelTraceEvent[] }. Every candidate requires user review. Typed errors: 400 (`INVALID_FORM`, `MISSING_IMAGE`, `UNSUPPORTED_TYPE`), 413 `TOO_LARGE`, 429 `RATE_LIMITED` (per-IP guard in src/proxy.ts: 6/min, 40/h; bodies >6 MB get 413 there). If all providers fail the response is still 200 with `graph: null` and route `ask_user` (manual fallback).
+- **POST /api/extract** multipart `image` JPEG/PNG/WebP <=5 MB -> { extraction: CandidateExtraction, route: RouteChoice, trace: ModelTraceEvent[] }. Every candidate requires user review. Content is sniffed by magic bytes (declared `file.type` is not trusted). Typed errors: 400 (`INVALID_FORM`, `MISSING_IMAGE`), 413 `TOO_LARGE` (streamed byte count, not Content-Length), 415 `UNSUPPORTED_MEDIA`, 429 `RATE_LIMITED` / `MODEL_BUDGET` (per-IP guard in src/proxy.ts: 6/min, 40/h; bodies >6 MB get 413 there). If all providers fail the response is still 200 with `graph: null` and route `ask_user` (manual fallback).
 - **POST /api/solve** JSON { graph: CircuitGraph, userConfirmed: true, measuredVoltage?: number } -> { result: SolveResponse }; 400 `BAD_JSON`, 422 `NOT_CONFIRMED` (missing confirmation), `INVALID_GRAPH` or `UNSOLVABLE`; 429 above 60/min per IP.
 - **POST /api/probe** JSON { graph, userConfirmed: true, observations?: { node, volts }[] } -> { result: { hypotheses, next, done, reason, fitWarning?, safety, trace } }; same error codes as /api/solve. Probe Guide, no model calls; spec in MOONSHOT.md.
 - **GET /api/health** -> { status:"ok", build, providers: { gemini, groq, jev } } where each provider is { configured: boolean, model: string }. Reports env presence only, never key values, and does not call providers.
@@ -59,3 +59,12 @@ V1 5V VIN-GND; R1 10k VIN-VOUT; R2 10k VOUT-GND -> VOUT=2.5V. With R2=1k -> VOUT
 
 ## Contract changes
 Update this doc, shared src/lib/circuit/types.ts, Zod schema, fixtures and UI consumer as a coordinated reviewed change. No silent drift.
+
+## /api/repair/verify (server-authoritative)
+See docs/REPAIR_STUDIO.md. Request: `{ graph, userConfirmed, hypothesisId, measured, revisionId? }`; client expectVolts/toleranceVolts are ignored. Response adds `node, expectVolts, toleranceVolts, hypothesisId, revisionId, basis:"server_recomputed"`. Errors: 422 UNKNOWN_HYPOTHESIS / UNKNOWN_NODE, 409 REVISION_MISMATCH. `/api/repair` result now includes `revisionId`.
+
+## Workload ceilings (P0)
+- Every JSON route reads its body through a streaming byte cap (256 KB): 413 `TOO_LARGE` regardless of Content-Length/chunking; malformed JSON is 400 `BAD_JSON`.
+- `CircuitGraph`: at most 60 components; component ids and node names 1-32 chars of `A-Za-z0-9_+-.()/:~`. Violations are 422 `INVALID_GRAPH` with messages (also applies to twin `observed` and imported netlists).
+- 429 `MODEL_BUDGET` (with `Retry-After`) when the instance-wide budget for /api/extract, /api/explain, /api/review (30/min, `RATE_MODEL_GLOBAL_PER_MIN`) is spent.
+- /api/ac: whole analysis (queue wait + all fault sims) has a 20 s deadline; exceeded -> 504 `TIMEOUT` with `partial: false` (no partial result). Queue overflow remains 429 `BUSY`.

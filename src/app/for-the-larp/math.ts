@@ -81,7 +81,10 @@ function gauss(A0: number[][], b0: number[]): number[] {
 const sigma = (v: number) => 0.02 * Math.abs(v) + 0.01;
 const entropy = (ps: number[]) => -ps.reduce((s, p) => (p > 0 ? s + p * Math.log2(p) : s), 0);
 
-export function expectedBits(hs: FaultHypothesis[], node: string): number {
+export function expectedBits(all: FaultHypothesis[], node: string): number {
+  // the out-of-model 'unmodeled' hypothesis has no predictions: gain is computed among modeled faults, renormalized (as probeStep does)
+  const mz = all.reduce((s, h) => s + (h.id === "unmodeled" ? 0 : h.probability), 0) || 1;
+  const hs = all.filter((h) => h.id !== "unmodeled").map((h) => ({ ...h, probability: h.conditionalProbability ?? h.probability / mz }));
   const sorted = hs.filter((h) => h.probability > 1e-3).sort((a, b) => a.predicted[node] - b.predicted[node]);
   const groups: { volts: number; ps: number[] }[] = [];
   for (const h of sorted) {

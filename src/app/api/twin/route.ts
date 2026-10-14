@@ -1,3 +1,4 @@
+import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
 import { circuitGraphSchema, validateGraph } from '../../../lib/circuit/validate';
 import { importNetlist } from '../../../lib/netlist';
@@ -24,9 +25,9 @@ const err = (status: number, code: string, message: string, details?: string[]) 
 export async function POST(req: Request) {
   let raw: unknown;
   try {
-    raw = await req.json();
-  } catch {
-    return err(400, 'BAD_JSON', 'Request body must be valid JSON');
+    raw = await readJson(req);
+  } catch (e) {
+    return bodyErrorResponse(e);
   }
   const parsed = body.safeParse(raw);
   if (!parsed.success)
