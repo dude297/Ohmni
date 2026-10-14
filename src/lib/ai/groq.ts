@@ -1,8 +1,9 @@
 import type { CandidateExtraction, ModelTraceEvent } from '../circuit/types';
 import { EXTRACTION_PROMPT, responseJsonSchema, toCandidateExtraction } from './extractionSchema';
 import type { FailureReason, VisionResult } from './vision';
+import { retryOnce } from './retry';
 
-// GroqCloud vision (OpenAI-compatible). Single attempt, no retries. Server-only.
+// GroqCloud vision (OpenAI-compatible). One retry on 5xx/network error (retry.ts). Server-only.
 const TIMEOUT_MS = 20_000;
 export const DEFAULT_GROQ_MODEL = 'qwen/qwen3.8-27b';
 const ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
@@ -20,10 +21,13 @@ function classify(status: number, msg: string): FailureReason {
   return 'other';
 }
 
-export type GroqRaw = { event: ModelTraceEvent; failure?: FailureReason; raw?: unknown };
+export type GroqRaw = { event: ModelTraceEvent; failure?: FailureReason; raw?: unknown; retryable?: boolean };
 
-/** One Groq vision call returning parsed JSON (not yet normalised). Single attempt, 20s timeout. */
-export async function callGroq(step: string, instruction: string, image: Uint8Array, mimeType: string): Promise<GroqRaw> {
+/** Groq vision call returning parsed JSON (not yet normalised). 20s timeout per attempt; one retry on 5xx/network error. */
+export const callGroq = (step: string, instruction: string, image: Uint8Array, mimeType: string): Promise<GroqRaw> =>
+  retryOnce(() => callGroqOnce(step, instruction, image, mimeType));
+
+async function callGroqOnce(step: string, instruction: string, image: Uint8Array, mimeType: string): Promise<GroqRaw> {
   const model = groqModel();
   const event: ModelTraceEvent = { step, provider: 'groq', model, durationMs: 0, status: 'ok' };
   const apiKey = process.env.GROQ_API_KEY;
@@ -66,7 +70,7 @@ export async function callGroq(step: string, instruction: string, image: Uint8Ar
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       const f = classify(res.status, body);
-      return fail(f, `groq ${f} (${res.status})`);
+      return { ...fail(f, `groq ${f} (${res.status})`), retryable: res.status >= 500 };
     }
     const j = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
@@ -85,7 +89,7 @@ export async function callGroq(step: string, instruction: string, image: Uint8Ar
     // ponytail: error text not copied into trace (could echo request details)
     return ctrl.signal.aborted
       ? fail('timeout', `groq timeout (request timed out after ${TIMEOUT_MS / 1000}s)`)
-      : fail('other', 'groq other (network error)');
+      : { ...fail('other', 'groq other (network error)'), retryable: true };
   } finally {
     clearTimeout(timer);
     event.durationMs = Date.now() - started;
