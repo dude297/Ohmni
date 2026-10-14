@@ -3,6 +3,17 @@
 Status snapshot for whoever picks this up next (Claude, ChatGPT Work, or the owner).
 Full audit, architecture and release gates are in [PRODUCTION_PHASE1.md](PRODUCTION_PHASE1.md).
 
+## Update 2026-10-14 (day run)
+
+**Merge queue (owner):** #79, #80 then #81 (stacked; retargets to main after #80), #82, #83. Any order otherwise; verified conflict-free together (typecheck, 712 tests, live persistence e2e).
+
+**Owner actions to turn on saved investigations:**
+1. Vercel env (server-only): `SUPABASE_URL=https://oyiwnfcbdiakzmqpufaf.supabase.co`, `SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_ROLE_KEY` (legacy `service_role` or dashboard secret key; the CLI masks `sb_secret_`). Public: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+2. Supabase Auth: enable email magic link; add the production URL to the redirect allow-list.
+3. Vercel connector in this session is logged into a different account, so Claude could not set these.
+
+**UI handoff additions (ChatGPT Work):** `src/lib/client/ohmni.ts` is ready (sign-in + typed `/api/v1` wrappers); flow in docs/PERSISTENCE.md. Optional: `z.config({ jitless: true })` in client code silences Zod's harmless CSP eval probe on /twin, /studio, /teams, /for-the-larp.
+
 ## Update 2026-10-14 (overnight run)
 
 - **Merged** (owner-approved): #73 -> `5c90656`, #74 -> `fe74394`, #75 -> `e16a270`. Production serves `e16a270`. Remote force-push is blocked by policy, so branches were updated by merging main, then squash-merged.

@@ -2,12 +2,15 @@
 
 Repo: https://github.com/dude297/Ohmni. Production: https://multimodal-hackathon-sage.vercel.app (Vercel project "ohmni"; URL unchanged). Hard deadline: 5:30 PM PDT, October 11, 2026.
 
-## Current state (main at 925f7c6, 2026-10-14)
-- **Production** https://multimodal-hackathon-sage.vercel.app `/api/health` reports build `e16a270`; gemini/groq/jev configured (Vercel `GEMINI_MODEL` = `gemini-3.5-flash-lite`).
+## Current state (main at 51e5327, 2026-10-14 day)
+- **Production** https://multimodal-hackathon-sage.vercel.app `/api/health` reports build `51e5327`; gemini/groq/jev configured (Vercel `GEMINI_MODEL` = `gemini-3.5-flash-lite`).
 - **Merged 2026-10-13/14:** #73 server-authoritative `/api/repair/verify` (`5c90656`), #74 workload ceilings (`fe74394`), #75 diagnosis honesty (`e16a270`; includes a merge fix so verify reads nodes from the top *modeled* hypothesis, since `unmodeled` has no predicted voltages).
 - **Merged 2026-10-14:** #76 AI consent gate (`1c52178`, `REQUIRE_AI_CONSENT` off by default) + docs/PRIVACY.md; #77 feature tiers + security headers + post-deploy smoke (`3fea355`; postdeploy workflow green against production); #78 request id, JSON logs, `INTERNAL` catch-all (`925f7c6`).
 - **Demo numbers changed by #75:** ladder B=0, A=5 -> R2 open 99.7% (was 100%); bridge C=0, A=7.533 -> R6 open 88.5% and the guide asks for B; B=5.22 -> R6 open ~100%.
-- **Known gaps:** proxy-generated 429/413 lack `x-request-id`; out-of-model confident-wrong 7.4% (target < 5%); Supabase schema unapplied; UI does not yet send `aiConsent`/`revisionId` or render `fit: poor`.
+- **Merged:** #72 docs/audit (`51e5327`).
+- **Supabase project `ohmni` (`oyiwnfcbdiakzmqpufaf`) is live with 4 migrations applied** (schema, private RLS helpers, cascade FKs, member lookup). `supabase/tests/rls_matrix.sql` ALL PASS on the live schema; advisors: no issues. Not connected to Vercel yet (owner sets env vars).
+- **Open PRs, CI green, awaiting owner merge** (agent merges are blocked by policy): #79 backend P1 hardening; #80 Supabase persistence API (`/api/v1/*`, 503 until env set); #81 members + investigation report + browser client (stacked on #80); #82 Probe Guide confirms every node (out-of-model confident-wrong 7.12% -> 6.19% held-out, in-model 98.78% unchanged; <5% blocked by a ~4.6% indistinguishable floor); #83 enforcing CSP (all 14 routes clean). All five merged together locally: typecheck clean, 712 tests pass, persistence e2e ALL PASS.
+- **Known gaps:** out-of-model floor (needs ohmmeter/current readings or equivalence lists); no invitation emails; persistence not enabled on Vercel; UI does not yet sign in, send `aiConsent`/`revisionId`, or render `fit: poor`.
 
 ## Snapshot (main at d7e38f5, 2026-10-11, superseded)
 - **Merged to main** (see `git log`): scaffold and stubs (#1, #2), docs and north star (#3, #5, #17), UI (#4, #19), solver and `/api/solve` (#8), Gemini extraction (#6), Jev routing (#10, #15, #16), measurement-driven diagnosis (#7, #13), docs/README/demo script (#18, #20, #21), smoke script (#22), demo samples (#23), per-IP abuse guard (#24), Probe Guide backend (#25), Groq vision fallback and verifier (#26), single-source model defaults (#27).
