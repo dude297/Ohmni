@@ -133,7 +133,18 @@ insert into repair_proposals (id, workspace_id, investigation_id, revision_id, h
   ('70000000-0000-4000-a000-000000000001', '10000000-0000-4000-a000-000000000001', '40000000-0000-4000-a000-000000000001', '30000000-0000-4000-a000-000000000001', '60000000-0000-4000-a000-000000000001', '{}', '{}', '{}', 'B', 4.087, 0.09);
 insert into verifications (workspace_id, repair_proposal_id, measurement_id, revision_id, verified, delta, engine_version) values
   ('10000000-0000-4000-a000-000000000001', '70000000-0000-4000-a000-000000000001', '50000000-0000-4000-a000-000000000001', '30000000-0000-4000-a000-000000000001', true, 0, 'test');
-delete from workspaces where id = '10000000-0000-4000-a000-000000000001';
+select pg_temp.as_user('00000000-0000-4000-a000-00000000000e');
+set local role authenticated;
+select pg_temp.expect_rows('editor cannot delete the workspace', $q$delete from workspaces where id = '10000000-0000-4000-a000-000000000001'$q$, 0);
+reset role;
+select pg_temp.as_user('00000000-0000-4000-a000-00000000000b');
+set local role authenticated;
+select pg_temp.expect_rows('outsider cannot delete the workspace', $q$delete from workspaces where id = '10000000-0000-4000-a000-000000000001'$q$, 0);
+reset role;
+select pg_temp.as_user('00000000-0000-4000-a000-00000000000a');
+set local role authenticated;
+select pg_temp.expect_rows('owner deletes the workspace via RLS', $q$delete from workspaces where id = '10000000-0000-4000-a000-000000000001'$q$, 1);
+reset role;
 select pg_temp.expect_count('workspace delete cascades', $q$select (select count(*) from projects where workspace_id = '10000000-0000-4000-a000-000000000001') + (select count(*) from measurements where workspace_id = '10000000-0000-4000-a000-000000000001') + (select count(*) from verifications where workspace_id = '10000000-0000-4000-a000-000000000001')$q$, 0);
 
 select 'RLS MATRIX: ALL PASS' as result;
