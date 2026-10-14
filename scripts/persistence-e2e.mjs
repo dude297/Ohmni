@@ -1,12 +1,14 @@
 // End-to-end check of the persistence API (/api/v1/*) against a running Ohmni and a real Supabase project.
 // Creates two throwaway users, runs the loaded-bridge investigation through confirm -> measure -> diagnose -> repair
 // -> verify, checks tenant isolation, then deletes everything it created.
-// Usage: node --env-file=.env.local scripts/persistence-e2e.mjs [baseUrl=http://localhost:3000]
+// Usage: node --env-file=.env.local scripts/persistence-e2e.mjs [baseUrl=http://localhost:3000] [--with-model]
+// --with-model adds ONE real /api/explain call (free-tier Gemini) to check usage metering (model_traces).
 // Needs SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY. Never run against a production database.
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes } from 'node:crypto';
 
-const base = process.argv[2] ?? 'http://localhost:3000';
+const base = process.argv.slice(2).find((a) => !a.startsWith('--')) ?? 'http://localhost:3000';
+const withModel = process.argv.includes('--with-model');
 const { SUPABASE_URL: url, SUPABASE_ANON_KEY: anon, SUPABASE_SERVICE_ROLE_KEY: service } = process.env;
 if (!url || !anon || !service) throw new Error('SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are required');
 const opts = { auth: { persistSession: false, autoRefreshToken: false } };
@@ -150,6 +152,16 @@ try {
   check('B leaves the workspace', leave.status === 200);
   const bAfter = await call(B.token, 'GET', `/api/v1/investigations/${invId}`);
   check('after leaving, B cannot read', bAfter.status === 404, `${bAfter.status}`);
+
+  if (withModel) {
+    const ex = await call(A.token, 'POST', '/api/explain', { graph: BRIDGE, userConfirmed: true, aiConsent: true, projectId });
+    check('explain with projectId', ex.status === 200, `${ex.status}`);
+    const usage = await call(A.token, 'GET', `/api/v1/workspaces/${wsId}/usage`);
+    const g = usage.json?.models?.find((m) => m.provider === 'google');
+    check('usage metered (calls, tokens, no content)', usage.status === 200 && g?.calls === 1, JSON.stringify(g));
+  }
+  const usageB = await call(B.token, 'GET', `/api/v1/workspaces/${wsId}/usage`);
+  check('outsider cannot read usage', usageB.status === 404, `${usageB.status}`);
 
   const closed = await call(A.token, 'POST', `/api/v1/investigations/${invId}/close`, { status: 'resolved' });
   check('A resolves investigation', closed.json?.investigation?.status === 'resolved');
