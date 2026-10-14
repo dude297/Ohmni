@@ -3,8 +3,8 @@
 Production: https://multimodal-hackathon-sage.vercel.app (Vercel project `ohmni`, auto-deploys `main`). Database: Supabase project `ohmni` (`oyiwnfcbdiakzmqpufaf`, us-west-2). Items marked *(after merge)* depend on open PRs listed in HANDOFF_PHASE1.md.
 
 ## Is production healthy?
-1. `curl -s <prod>/api/health` → `status: ok`, `build` = the short SHA of `main`, providers `configured: true`, `persistence.configured` *(after #85)*.
-2. GitHub Actions `postdeploy` on every push to `main` waits for that SHA, then checks the solver, bad-JSON handling, tier and security headers (enforcing CSP *(after #83)*). A red `postdeploy` means the deploy is wrong or not live.
+1. `curl -s <prod>/api/health` → `status: ok`, `build` = the short SHA of `main`, providers `configured: true`, `persistence.configured`.
+2. GitHub Actions `postdeploy` on every push to `main` waits for that SHA, then checks the solver, bad-JSON handling, tier and security headers (enforcing CSP). A red `postdeploy` means the deploy is wrong or not live.
 3. Logs: one JSON line per API request (`requestId, route, status, ms, code`). A user quoting `error.requestId` maps to exactly one line. Bodies, images, keys and IPs are never logged.
 
 ## Required environment (Vercel, server-only unless noted)
@@ -32,7 +32,7 @@ Production: https://multimodal-hackathon-sage.vercel.app (Vercel project `ohmni`
 
 ## Backups and deletion
 - Supabase backups follow the plan (Free: daily, short retention; Pro adds point-in-time recovery). Not yet restore-tested: do one restore into a scratch project before paid beta.
-- Workspace deletion is permanent (owner + typed name), removes stored images first, then cascades through every table *(after #86/#89)*. Offer the export first.
+- Workspace deletion is permanent (owner + typed name), removes stored images first, then cascades through every table. Offer the export first.
 
 ## Incidents
 | Symptom | First check | Mitigation |

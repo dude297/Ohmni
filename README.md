@@ -55,7 +55,7 @@ Hardening after submission, details in [docs/PRODUCTION_PHASE1.md](docs/PRODUCTI
 - Repair verification is recomputed on the server and bound to the circuit revision; the diagnosis says when **no modeled fault fits** instead of forcing an answer.
 - Workload ceilings (60 parts, streamed body caps, image sniffing, shared model budget), request ids and JSON logs, feature tiers (core / experimental / demo), security headers and a post-deploy smoke check.
 - Optional AI consent gate (`REQUIRE_AI_CONSENT`) and a plain data-flow statement: [docs/PRIVACY.md](docs/PRIVACY.md).
-- In review: saved investigations on Supabase with per-workspace row-level security ([docs/PERSISTENCE.md](docs/PERSISTENCE.md)), and an enforcing Content Security Policy.
+- Experimental, off until Supabase env is set on Vercel: saved investigations on Supabase with per-workspace row-level security ([docs/PERSISTENCE.md](docs/PERSISTENCE.md)), and an enforcing Content Security Policy.
 
 ## Trust and safety
 
