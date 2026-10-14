@@ -20,3 +20,13 @@
 
 ## Known limitation
 All limits are **per server instance** (in-memory). Serverless instances count separately, so aggregate throughput scales with instance count. A shared store (Vercel KV / Upstash) is required for a true global limit; until then treat these as best-effort abuse damping, not a guarantee. Platform firewall rules (Vercel) are the backstop.
+
+## Feature tiers (`src/lib/features.ts`, `src/proxy.ts`)
+Every page and API route listed in `TIERS` gets `x-ohmni-tier: core|experimental|demo` (tier list in PRODUCTION_PHASE1.md). `OHMNI_DISABLED_TIERS=experimental,demo` (or `OHMNI_EXPERIMENTAL=off`) makes those API routes return 404 `FEATURE_DISABLED` JSON and those pages a plain 404. Unset = everything served. Core can't be disabled.
+
+## Security headers (`next.config.ts`)
+All routes: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy: microphone=(self), camera=(), geolocation=(), payment=(), usb=()` (Voice Lab needs the microphone), `Strict-Transport-Security: max-age=63072000; includeSubDomains`.
+CSP ships as **`Content-Security-Policy-Report-Only`** (self-only, `'unsafe-inline'` scripts/styles for Next, `'wasm-unsafe-eval'` for ngspice, `blob:` workers, `frame-ancestors 'none'`). Not enforced yet: switch to `Content-Security-Policy` after checking the browser console on every route.
+
+## Post-deploy smoke
+`.github/workflows/postdeploy.yml` (push to main, no secrets) runs `npm run smoke:postdeploy -- <url> <sha>`: waits up to 10 min for `/api/health` `build` to equal the pushed commit, then checks `/api/solve` (divider = 2.5 V, bad JSON = 400) and `/probe` headers. No model calls.
