@@ -8,7 +8,10 @@ import { clientIp, modelBudgetPerMin, sharedRules, type Block } from './rateLimi
 // Fails OPEN (returns null) when Supabase is not configured, RATE_SHARED=off, or the call errors/takes > 1.5 s:
 // the in-memory limits and the per-instance model budget still apply, so a database hiccup never takes the app down.
 const TIMEOUT_MS = 1500;
-const ipKey = (ip: string) => createHash('sha256').update(`${process.env.RATE_SALT ?? 'ohmni'}:${ip}`).digest('hex').slice(0, 24);
+// Salt: RATE_SALT, else derived from the server-only service-role key, so it is never a public constant (a known salt
+// would let anyone with database access brute-force the IPv4 space back from the hashes).
+const salt = () => process.env.RATE_SALT || createHash('sha256').update(`ohmni-rate:${process.env.SUPABASE_SERVICE_ROLE_KEY}`).digest('hex');
+const ipKey = (ip: string) => createHash('sha256').update(`${salt()}:${ip}`).digest('hex').slice(0, 24);
 
 async function hit(key: string, windowS: number, max: number): Promise<number> {
   const { data, error } = await adminDb().rpc('rate_hit', { p_key: key, p_window_s: windowS, p_max: max });
@@ -42,9 +45,9 @@ export async function checkShared(method: string, pathname: string, headers: Hea
 }
 
 /** Wraps a model route's POST handler: shared limits run before the handler (the sync proxy keeps the in-memory ones). */
-export function sharedLimited<A extends unknown[]>(pathname: string, handler: (req: Request, ...rest: A) => Promise<Response>) {
+export function sharedLimited<A extends unknown[]>(pathname: string, handler: (req: Request, ...rest: A) => Promise<Response>, check = checkShared) {
   return async (req: Request, ...rest: A): Promise<Response> => {
-    const b = await checkShared(req.method, pathname, req.headers);
+    const b = await check(req.method, pathname, req.headers);
     if (!b) return handler(req, ...rest);
     return Response.json({ error: { code: b.code, message: b.message } }, { status: b.status, headers: b.retryAfter ? { 'Retry-After': String(b.retryAfter) } : undefined });
   };
