@@ -1,14 +1,16 @@
 import type { NextConfig } from "next";
 
-// ponytail: CSP is Report-Only until verified against every route (Next inline scripts, R3F/WebGL, ngspice WASM); enforce once the console is clean.
+// Enforced CSP, verified on every page route with scripts/csp-smoke.mjs (no violations, no page errors).
+// ponytail: 'unsafe-inline' scripts/styles stay because Next's inline RSC/bootstrap scripts need them and nonces would force
+// dynamic rendering of the static pages; upgrade path = nonce via proxy + dynamic rendering if XSS risk grows.
+// No 'wasm-unsafe-eval' or worker-src: ngspice WASM runs server-side (/api/ac) and the client starts no workers.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "connect-src 'self'",
-  "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -22,7 +24,7 @@ const SECURITY_HEADERS = [
   // Voice Lab uses speech recognition (microphone, same origin only). Nothing uses the camera.
   { key: "Permissions-Policy", value: "microphone=(self), camera=(), geolocation=(), payment=(), usb=()" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
-  { key: "Content-Security-Policy-Report-Only", value: CSP },
+  { key: "Content-Security-Policy", value: CSP },
 ];
 
 const nextConfig: NextConfig = {
