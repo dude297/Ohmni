@@ -3,6 +3,18 @@
 Status snapshot for whoever picks this up next (Claude, ChatGPT Work, or the owner).
 Full audit, architecture and release gates are in [PRODUCTION_PHASE1.md](PRODUCTION_PHASE1.md).
 
+## Update 2026-10-14 (overnight run)
+
+- **Merged** (owner-approved): #73 -> `5c90656`, #74 -> `fe74394`, #75 -> `e16a270`. Production serves `e16a270`. Remote force-push is blocked by policy, so branches were updated by merging main, then squash-merged.
+- **Remaining P0 #1-#4 are implemented** as PRs, CI green, **not merged** (main auto-deploys production; left for owner):
+  - #76 `p0/ai-consent`: `REQUIRE_AI_CONSENT=1` -> 422 `CONSENT_REQUIRED` on /api/extract (form `aiConsent=true`), /api/explain and /api/review mentor (JSON `aiConsent: true`); docs/PRIVACY.md.
+  - #77 `p0/tiers-headers`: src/lib/features.ts, `x-ohmni-tier`, `OHMNI_DISABLED_TIERS` -> 404 `FEATURE_DISABLED`; nosniff/referrer/XFO DENY/HSTS/Permissions-Policy (mic self); CSP **report-only**; `scripts/postdeploy-smoke.mjs` + `.github/workflows/postdeploy.yml`. Proxy matcher now covers all pages.
+  - #78 `p0/observability`: `observe()` wrapper on every API route: `x-request-id`, `error.requestId`, one JSON log line (no bodies/IPs), 500 `INTERNAL` catch-all.
+  - All gates are **off by default**: merging changes no user-visible behaviour except headers and the request id.
+  - Merge order: any; after the first, the others need main merged in with a docs/API_CONTRACT.md conflict (keep both sections). Verified combined: typecheck clean, 696 tests pass.
+- **Next after merge:** turn on `REQUIRE_AI_CONSENT=1` only after the UI sends `aiConsent`; switch CSP to enforcing after a clean console on every route; add `x-request-id` to proxy 429/413.
+- **Blocked on UI (ChatGPT Work):** consent checkbox + `aiConsent`; `revisionId` on verify; `fit: poor`/`unmodeled` state on /probe; experimental badges. **Blocked on owner:** merges, Supabase dev project, `GEMINI_MODEL` choice, real-mic Voice Lab test.
+
 ## Where things stand
 
 | Ref | State |

@@ -2,7 +2,14 @@
 
 Repo: https://github.com/dude297/Ohmni. Production: https://multimodal-hackathon-sage.vercel.app (Vercel project "ohmni"; URL unchanged). Hard deadline: 5:30 PM PDT, October 11, 2026.
 
-## Current state (main at d7e38f5, 2026-10-11)
+## Current state (main at e16a270, 2026-10-14)
+- **Production** https://multimodal-hackathon-sage.vercel.app `/api/health` reports build `e16a270`; gemini/groq/jev configured (Vercel `GEMINI_MODEL` = `gemini-3.5-flash-lite`).
+- **Merged 2026-10-13/14:** #73 server-authoritative `/api/repair/verify` (`5c90656`), #74 workload ceilings (`fe74394`), #75 diagnosis honesty (`e16a270`; includes a merge fix so verify reads nodes from the top *modeled* hypothesis, since `unmodeled` has no predicted voltages).
+- **Open, CI green, not merged (owner approval):** #76 AI consent gate (`REQUIRE_AI_CONSENT`, off by default) + docs/PRIVACY.md; #77 feature tiers (`x-ohmni-tier`, `OHMNI_DISABLED_TIERS`, off by default), security headers (CSP report-only), post-deploy smoke workflow; #78 request id, JSON logs, `INTERNAL` catch-all. Combined merge of #76+#77+#78 on `e16a270`: typecheck clean, vitest 696 passed / 7 expected-fail / 3 skipped; only conflict is docs/API_CONTRACT.md (append both sections).
+- **Demo numbers changed by #75:** ladder B=0, A=5 -> R2 open 99.7% (was 100%); bridge C=0, A=7.533 -> R6 open 88.5% and the guide asks for B; B=5.22 -> R6 open ~100%.
+- **Known gaps:** proxy-generated 429/413 lack `x-request-id`; out-of-model confident-wrong 7.4% (target < 5%); Supabase schema unapplied; UI does not yet send `aiConsent`/`revisionId` or render `fit: poor`.
+
+## Snapshot (main at d7e38f5, 2026-10-11, superseded)
 - **Merged to main** (see `git log`): scaffold and stubs (#1, #2), docs and north star (#3, #5, #17), UI (#4, #19), solver and `/api/solve` (#8), Gemini extraction (#6), Jev routing (#10, #15, #16), measurement-driven diagnosis (#7, #13), docs/README/demo script (#18, #20, #21), smoke script (#22), demo samples (#23), per-IP abuse guard (#24), Probe Guide backend (#25), Groq vision fallback and verifier (#26), single-source model defaults (#27).
 - **Pipeline (all real, none stubbed):** Gemini `gemini-3.5-flash` reads the image; on 429/quota/503/timeout/5xx/not configured/malformed output Groq `qwen/qwen3.8-27b` reads it instead; Zod + structural validation; Jev `jev-1.13-free` (BeatAPI only, paid ids refused, paced 1 call/min, `Retry-After` honoured) picks `review_extraction` / `verify_topology` / `ask_user`; `verify_topology` runs the Groq verifier; user confirms; local MNA solver; measured-voltage diagnosis. OpenAI and the TypeSafe direct path are removed.
 - **Endpoints:** `POST /api/extract`, `POST /api/solve`, `POST /api/probe` (Probe Guide, backend only), `GET /api/health` (build + `providers {gemini, groq, jev}` configured/model). Wire shapes in API_CONTRACT.md.
