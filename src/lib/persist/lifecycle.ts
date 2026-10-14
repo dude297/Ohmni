@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { adminDb, ApiError, dbFail, type Caller } from '../server/supabase';
+import { ApiError, dbFail, type Caller } from '../server/supabase';
 import { removeWorkspaceObjects } from './artifacts';
 
 // Workspace data lifecycle: full export (owners/editors, RLS reads) and permanent deletion (owner, typed confirmation).
@@ -45,7 +45,9 @@ export async function deleteWorkspace(c: Caller, workspaceId: string, b: z.infer
   if (error) dbFail(error, 'load workspace');
   if (b.confirm !== ws.name) throw new ApiError(422, 'CONFIRMATION_MISMATCH', 'Type the workspace name exactly to confirm deletion.');
   await removeWorkspaceObjects(workspaceId); // stored images first: the cascade removes the rows that point to them
-  const { error: e2 } = await adminDb().from('workspaces').delete().eq('id', workspaceId);
+  // Through the caller's RLS client: the owner-only delete policy is the database backstop for the role check above.
+  const { data: gone, error: e2 } = await c.db.from('workspaces').delete().eq('id', workspaceId).select('id');
   if (e2) dbFail(e2, 'delete workspace');
+  if (!gone?.length) throw new ApiError(403, 'FORBIDDEN', 'Only workspace owners can delete a workspace.');
   return { deleted: workspaceId };
 }
