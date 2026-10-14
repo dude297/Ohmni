@@ -2,7 +2,7 @@
 
 **Photo of a circuit in, testable diagnosis out. Several models, one deterministic solver, a human in the loop.**
 
-Primary: https://ohmni.cloud.anbaric.ai (Anbaric Cloud, needs an Anbaric login; judges need organizer/Anbaric access) · Public fallback: https://multimodal-hackathon-sage.vercel.app (no signup; frozen at `d5a0035`, lacks only `/api/topology` and newest docs) · Demo flow: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
+Production: https://multimodal-hackathon-sage.vercel.app (no signup; deploys `main` automatically; `/api/health` shows the build) · Hackathon submission build: Anbaric https://ohmni.cloud.anbaric.ai (login-gated) and the frozen branch `release/frozen-2026-10-11-1600-pdt` · Demo flow: [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
 
 ## The problem
 
@@ -48,6 +48,14 @@ flowchart LR
 Two models agreeing is not proof of electrical correctness, which is why a human confirmation gate sits before the solver. Development-time Claude Code / ChatGPT Work activity is not counted as runtime multimodel.
 
 Measured on the Vercel host (2026-10-11 12:51 PDT, earlier build `d1096b7`, clean 10k/10k divider `public/samples/clear-divider.png`): Groq extraction ok in 839 ms (1208 in / 211 out tokens) with an exact graph; Jev ok in 711 ms, `review_extraction`, p=1.00. A minute later Groq returned 429 on `ambiguous-smudged.png`, Gemini `gemini-3.5-flash-lite` took over (1140 ms) and Jev chose `ask_user` (recorded: [docs/demo/README.md](docs/demo/README.md)). Earlier, Gemini-primary run: Gemini ok in 3790 ms, Jev 440 ms `review_extraction`; `/api/solve` gave VOUT 2.5 V, and a measured 0.45 V ranked "R2 may be 1 kΩ instead of 10 kΩ" first. Evidence ledger: [docs/MODEL_ACCESS.md](docs/MODEL_ACCESS.md).
+
+## Since the hackathon (production phase 1)
+
+Hardening after submission, details in [docs/PRODUCTION_PHASE1.md](docs/PRODUCTION_PHASE1.md) and [docs/HANDOFF_PHASE1.md](docs/HANDOFF_PHASE1.md):
+- Repair verification is recomputed on the server and bound to the circuit revision; the diagnosis says when **no modeled fault fits** instead of forcing an answer.
+- Workload ceilings (60 parts, streamed body caps, image sniffing, shared model budget), request ids and JSON logs, feature tiers (core / experimental / demo), security headers and a post-deploy smoke check.
+- Optional AI consent gate (`REQUIRE_AI_CONSENT`) and a plain data-flow statement: [docs/PRIVACY.md](docs/PRIVACY.md).
+- Experimental, off until Supabase env is set on Vercel: saved investigations on Supabase with per-workspace row-level security ([docs/PERSISTENCE.md](docs/PERSISTENCE.md)), and an enforcing Content Security Policy.
 
 ## Trust and safety
 
