@@ -1,3 +1,4 @@
+import { observe } from '@/lib/server/observe';
 import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
 import { circuitGraphSchema, validateGraph } from '../../../lib/circuit/validate';
@@ -22,7 +23,7 @@ const body = z.object({
 const err = (status: number, code: string, message: string, details?: string[]) =>
   Response.json({ error: { code, message, ...(details && { details }) } }, { status });
 
-export async function POST(req: Request) {
+async function handle(req: Request) {
   let raw: unknown;
   try {
     raw = await readJson(req);
@@ -76,3 +77,5 @@ export async function POST(req: Request) {
     return err(422, 'UNSOLVABLE', e instanceof Error ? e.message : 'Intended circuit could not be solved');
   }
 }
+
+export const POST = observe('/api/twin', handle);

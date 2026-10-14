@@ -1,3 +1,4 @@
+import { observe } from '@/lib/server/observe';
 import { extractWithFallback } from '@/lib/ai/vision';
 import { routeExtraction } from '@/lib/ai/jev';
 import { verifyTopology } from '@/lib/ai/secondary';
@@ -11,7 +12,7 @@ const MAX = 5 * 1024 * 1024;
 const err = (status: number, code: string, message: string) =>
   Response.json({ error: { code, message } }, { status });
 
-export async function POST(req: Request) {
+async function handle(req: Request) {
   let file: unknown;
   let consent = false;
   try {
@@ -56,3 +57,5 @@ export async function POST(req: Request) {
   }
   return Response.json({ extraction, route: routed.route, trace });
 }
+
+export const POST = observe('/api/extract', handle);
