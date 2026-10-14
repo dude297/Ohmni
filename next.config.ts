@@ -10,7 +10,8 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  // Supabase Auth from the browser (saved investigations sign-in, docs/PERSISTENCE.md); data still goes through /api/v1.
+  "connect-src 'self' https://*.supabase.co",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
