@@ -31,6 +31,7 @@ export type ModelTraceEvent = {
   confidence?: number;
   usage?: { inputTokens?: number; outputTokens?: number };
   note?: string;
+  attempts?: number; // present (2) only when a transient 5xx/network failure was retried once
 };
 export type SolveResponse = {
   voltages: Record<string, number>;
