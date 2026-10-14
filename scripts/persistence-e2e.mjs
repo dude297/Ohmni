@@ -174,6 +174,22 @@ try {
   check('outsider cannot fetch report', bReport.status === 404, `${bReport.status}`);
   const late = await call(A.token, 'POST', `/api/v1/investigations/${invId}/measurements`, { node: 'C', volts: 1, method: 'typed' });
   check('closed investigation rejects evidence', late.status === 409);
+
+  // Data lifecycle: export (members) then permanent delete (owner + typed name).
+  const exp = await call(A.token, 'GET', `/api/v1/workspaces/${wsId}/export`);
+  const t = exp.json?.tables ?? {};
+  check('export has every table', exp.status === 200 && exp.json?.schema === 'ohmni.workspace-export.v1' && t.measurements?.length === 6 && t.repair_proposals?.length >= 1 && t.verifications?.length === 2 && t.workspace_members?.length === 1, `${exp.status} m=${t.measurements?.length}`);
+  check('outsider cannot export', (await call(B.token, 'GET', `/api/v1/workspaces/${wsId}/export`)).status === 404);
+  await call(A.token, 'POST', `/api/v1/workspaces/${wsId}/members`, { email: B.email, role: 'viewer' });
+  check('viewer cannot bulk-export', (await call(B.token, 'GET', `/api/v1/workspaces/${wsId}/export`)).status === 403);
+  const vDel = await call(B.token, 'POST', `/api/v1/workspaces/${wsId}/delete`, { confirm: 'e2e bench' });
+  check('viewer cannot delete workspace', vDel.status === 403, `${vDel.status}`);
+  const badConfirm = await call(A.token, 'POST', `/api/v1/workspaces/${wsId}/delete`, { confirm: 'e2e Bench' });
+  check('wrong confirmation -> 422', badConfirm.status === 422 && badConfirm.json?.error?.code === 'CONFIRMATION_MISMATCH');
+  const del = await call(A.token, 'POST', `/api/v1/workspaces/${wsId}/delete`, { confirm: 'e2e bench' });
+  check('owner deletes workspace', del.status === 200 && del.json?.deleted === wsId, `${del.status}`);
+  check('deleted investigation is gone', (await call(A.token, 'GET', `/api/v1/investigations/${invId}`)).status === 404);
+  check('deleted workspace not listed', !(await call(A.token, 'GET', '/api/v1/workspaces')).json?.workspaces?.some((w) => w.workspace?.id === wsId));
 } finally {
   for (const w of workspaces) {
     const { error } = await admin.from('workspaces').delete().eq('id', w);

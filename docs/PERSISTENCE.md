@@ -28,10 +28,13 @@ Set server-only env vars (never `NEXT_PUBLIC_` for the service key): `SUPABASE_U
 - Show `probe.fit === 'poor'` / `unmodeled` as "no modeled fault fits"; `stored` is empty in that case.
 - Export: `GET /investigations/:id/report` (markdown download) or `?format=json` (`ohmni.report.v1`). `/teams` currently reads the browser-only `ohmni.evidence.v1` packet; importing the server report there is a UI follow-up.
 
+## Data lifecycle
+Owners and editors can download a full workspace export (`/workspaces/:id/export`, includes the member list); viewers read in the app but cannot bulk-export. Owners delete a workspace permanently by typing its exact name (`/workspaces/:id/delete`); the UI should offer the export first. Deletion cascades through every table (`20261014010000_cascade_intra_workspace_fks.sql`).
+
 ## Usage metering
 Signed-in calls to `/api/extract` / `/api/explain` with a `projectId` store trace metadata in `model_traces`; `GET /api/v1/workspaces/:id/usage` aggregates it. First measured point (2026-10-14, local dev against Gemini free tier): one `/api/explain` = 570 input + 349 output tokens on `gemini-3.5-flash-lite`, 1.7 s. `scripts/persistence-e2e.mjs --with-model` repeats this check (one model call).
 
 ## Known gaps
-- No invitation emails (members must have signed in once), no workspace delete API, no artifact (file) upload yet; the `reports` table is unused (reports are generated on demand).
+- No invitation emails (members must have signed in once), no artifact (file) upload yet; the `reports` table is unused (reports are generated on demand).
 - Deleting an auth user who authored rows in a workspace that still exists fails (`created_by`/`entered_by` reference `auth.users`): account deletion needs a policy decision (reassign vs delete workspaces).
 - Hypothesis snapshots store the top 12 hypotheses (plus any ≥ 1 %) per reading; the full posterior is recomputable from stored evidence.
