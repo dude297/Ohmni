@@ -1,5 +1,6 @@
 import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
+import { consentMissing, CONSENT_MESSAGE } from '@/lib/server/consent';
 import { reviewCircuit, mentorExplain, REVIEW_DISCLAIMER } from '../../../lib/review';
 import type { ModelTraceEvent } from '../../../lib/circuit/types';
 
@@ -16,6 +17,7 @@ const body = z.object({
       hintIndex: z.number().int().min(0).max(2).optional(),
     })
     .optional(),
+  aiConsent: z.unknown().optional(),
 });
 
 const err = (status: number, code: string, message: string, details?: string[]) =>
@@ -40,6 +42,8 @@ export async function POST(req: Request) {
     { step: 'review', provider: 'local', model: 'rules+mna-dc', durationMs: Math.round(performance.now() - t0), status: 'ok' },
   ];
   let mentorOut;
+  // Only the mentor sends the circuit to a model; the deterministic review needs no consent.
+  if (mentor && consentMissing(parsed.data.aiConsent === true)) return err(422, 'CONSENT_REQUIRED', CONSENT_MESSAGE);
   if (mentor) {
     const finding = review.findings.find((f) => f.id === mentor.findingId);
     if (!finding) return err(422, 'FINDING_NOT_FOUND', `No finding with id "${mentor.findingId}"`);

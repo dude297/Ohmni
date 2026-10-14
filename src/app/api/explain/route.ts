@@ -1,11 +1,13 @@
 import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
+import { consentMissing, CONSENT_MESSAGE } from '@/lib/server/consent';
 import { explain } from '../../../lib/explain';
 
 const body = z.object({
   graph: z.unknown(),
   userConfirmed: z.unknown(),
   measuredVoltage: z.number().finite().optional(),
+  aiConsent: z.unknown().optional(),
 });
 
 const err = (status: number, code: string, message: string, details?: string[]) =>
@@ -29,6 +31,8 @@ export async function POST(req: Request) {
   }
   const { graph, userConfirmed, measuredVoltage } = parsed.data;
   if (userConfirmed !== true) return err(422, 'NOT_CONFIRMED', 'User must confirm the circuit before explaining');
+  // The circuit graph is sent to Gemini for the narrative.
+  if (consentMissing(parsed.data.aiConsent === true)) return err(422, 'CONSENT_REQUIRED', CONSENT_MESSAGE);
   const out = await explain(graph, measuredVoltage);
   if (!out.ok) return err(out.status, out.code, out.message, out.details);
   return Response.json({ result: out.result });

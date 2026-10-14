@@ -71,3 +71,5 @@ See docs/REPAIR_STUDIO.md. Request: `{ graph, userConfirmed, hypothesisId, measu
 
 ## Feature tiers
 Responses on tiered routes carry `x-ohmni-tier: core|experimental|demo`. A tier disabled via `OHMNI_DISABLED_TIERS` returns 404 `{ error: { code: "FEATURE_DISABLED" } }` on API routes. See SECURITY.md.
+## AI consent gate (P0)
+With `REQUIRE_AI_CONSENT=1`, routes that send user content to an AI provider require consent: `/api/extract` multipart field `aiConsent=true`; `/api/explain` and `/api/review` (only when `mentor` is present) JSON `"aiConsent": true`. Otherwise 422 `CONSENT_REQUIRED` before any provider call. Unset: no gate. Data flows in docs/PRIVACY.md.
