@@ -2,6 +2,7 @@ import type { CandidateExtraction, ModelTraceEvent } from '../circuit/types';
 import { validateGraph } from '../circuit/validate';
 import { groqModel, callGroq } from './groq';
 import { toCandidateExtraction } from './extractionSchema';
+import { fence, FENCE_RULE } from './fence';
 
 // Secondary topology verifier: Groq vision (free tier), only when Jev picks verify_topology.
 // Output goes through the same zod normaliser + validateGraph as the primary extraction.
@@ -24,7 +25,8 @@ export async function verifyTopology(
     'You are verifying a circuit image. A first pass extracted the circuit below, with some connections unresolved. ' +
     'Re-read the image independently and return the full circuit. Extract ONLY what is visible; never guess. ' +
     'Components use kind "resistor" or "dc_voltage" (positiveNode is the + terminal), values as printed, ground node "GND", measureNode only if explicitly labelled VOUT.\n' +
-    'First pass: ' + JSON.stringify({ ...prior, unresolvedConnections: extraction.unresolvedConnections });
+    FENCE_RULE + '\n' +
+    'First pass: ' + fence(JSON.stringify({ ...prior, unresolvedConnections: extraction.unresolvedConnections }));
   const r = await callGroq('verify_topology', instruction, image, mimeType);
   const keep = (note: string) => ({ event: { ...r.event, status: 'error' as const, note } });
   if (r.failure === 'not_configured') return { event: r.event };

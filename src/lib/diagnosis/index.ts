@@ -13,6 +13,7 @@ const OPEN_ABOVE = 1e7;
 const SHORT_BELOW = 1;
 const OPEN_SHORT_SCORE = 0.5;
 const HEDGE = 'This is a hypothesis, not a confirmed fault.';
+export const NO_FIT_TITLE = 'No single modeled fault fits this reading';
 
 const log10 = Math.log10;
 
@@ -135,6 +136,17 @@ export function diagnoseWith(graph: CircuitGraph, measured: number, solve: Solve
       });
     }
   }
+
+  // Nothing in the single-fault model reproduces the reading: say so instead of returning an empty list.
+  // ponytail: only the "no candidate at all" case; a poor-but-present best fit is still ranked (probe/ has the fit gate).
+  if (!found.length)
+    return [
+      {
+        title: NO_FIT_TITLE,
+        rationale: `${obs} No single resistor change, open, short or supply change in this model reproduces that reading. The built circuit may differ from the diagram (wiring, a missing or extra part), more than one part may be faulty, or the reading itself may be off.`,
+        nextMeasurement: `Check the meter range, probe points and ground reference first, then compare the built wiring against the diagram node by node.`,
+      },
+    ];
 
   return found
     .sort((x, y) => x.score - y.score)

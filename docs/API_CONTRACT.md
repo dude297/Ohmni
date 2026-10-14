@@ -35,6 +35,7 @@ export type ModelTraceEvent = {
   confidence?: number; // only if returned by provider
   usage?: { inputTokens?: number; outputTokens?: number };
   note?: string; // sanitized
+  attempts?: number; // 2 when a transient 5xx/network failure was retried once (never 429/quota, never timeouts)
 };
 export type SolveResponse = {
   voltages: Record<string, number>; // volts
@@ -67,14 +68,20 @@ See docs/REPAIR_STUDIO.md. Request: `{ graph, userConfirmed, hypothesisId, measu
 - Every JSON route reads its body through a streaming byte cap (256 KB): 413 `TOO_LARGE` regardless of Content-Length/chunking; malformed JSON is 400 `BAD_JSON`.
 - `CircuitGraph`: at most 60 components; component ids and node names 1-32 chars of `A-Za-z0-9_+-.()/:~`. Violations are 422 `INVALID_GRAPH` with messages (also applies to twin `observed` and imported netlists).
 - 429 `MODEL_BUDGET` (with `Retry-After`) when the instance-wide budget for /api/extract, /api/explain, /api/review (30/min, `RATE_MODEL_GLOBAL_PER_MIN`) is spent.
-- /api/ac: whole analysis (queue wait + all fault sims) has a 20 s deadline; exceeded -> 504 `TIMEOUT` with `partial: false` (no partial result). Queue overflow remains 429 `BUSY`.
+- /api/ac: whole analysis (queue wait + all fault sims) has a 20 s deadline; exceeded -> 504 `TIMEOUT` with `partial: false` (no partial result). Queue overflow remains 429 `BUSY`; a second concurrent analysis from the same client (trusted IP) is also 429 `BUSY` (one at a time per client, per instance).
 
 ## Observability (P0)
 - Every `/api/*` route handler is wrapped by `observe()` (src/lib/server/observe.ts). Every response it returns carries `x-request-id`: the incoming `x-request-id` if it matches `[A-Za-z0-9_-]{1,64}`, otherwise a fresh UUID.
 - Error bodies keep `{ error: { code, message, details? } }` and add `error.requestId`; quote it when reporting a problem.
 - An unhandled throw becomes 500 `{ error: { code: "INTERNAL", message: "Internal server error", requestId } }`; no stack or exception message is returned.
 - One JSON log line per request: `ts, requestId, route, method, status, ms`, plus `code` (error code) and `error` (exception class name only) when present. Bodies, images, graphs, tokens, keys, IPs and provider responses are never logged.
-- Responses produced by `src/proxy.ts` before the handler runs (rate-limit 429, oversized 413) do not yet carry `x-request-id`.
+- Responses produced by `src/proxy.ts` before the handler runs (rate-limit 429, oversized 413, `FEATURE_DISABLED` 404) carry the same `x-request-id` header and `error.requestId`; they are not logged by `observe()`.
+
+## Model prompts and provider retries (P1)
+- User- or image-derived text in model prompts (explain/mentor facts, verifier first pass, Jev state) is wrapped in `<untrusted_data>` delimiters with the delimiter stripped from the payload, and every prompt tells the model not to follow instructions inside it.
+- Gemini and Groq calls retry once on 5xx or network error with 200-500 ms jitter; 429/quota and timeouts are not retried (timeouts already fall back to the other provider). The retry shows as `attempts: 2` on the trace event.
+- /api/extract errors now include `details` (e.g. `["image: required file field"]`), like the other routes.
+- `diagnose()` returns a single "No single modeled fault fits this reading" hypothesis when no single-component change reproduces the measurement, instead of an empty list.
 ## Feature tiers
 Responses on tiered routes carry `x-ohmni-tier: core|experimental|demo`. A tier disabled via `OHMNI_DISABLED_TIERS` returns 404 `{ error: { code: "FEATURE_DISABLED" } }` on API routes. See SECURITY.md.
 ## AI consent gate (P0)

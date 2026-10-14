@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { fence, FENCE_RULE } from '../ai/fence';
 import { z } from 'zod';
 import { validateGraph } from '../circuit/validate';
 import { solveDC, SolveError, type DCSolution } from '../circuit/solve';
@@ -28,6 +29,7 @@ const RULES = `Rules:
 - You explain exactly ONE finding. Never report additional problems, faults or findings.
 - Do not claim LED or semiconductor behaviour; only resistors and DC sources are modelled.
 - Give no unsafe advice; say to disconnect power before changing wiring.
+- ${FENCE_RULE}
 `;
 const explainPrompt = (level: Level) => `You are an electronics mentor reviewing a student's DC circuit. ${LEVEL[level]}
 ${RULES}Answer: (1) what is wrong, (2) why it matters, (3) which principle applies, (4) what evidence in FACTS shows it, (5) what to check next, (6) what would change if fixed.
@@ -73,7 +75,7 @@ async function callModel(
       hang,
       new GoogleGenAI({ apiKey }).models.generateContent({
         model,
-        contents: [{ role: 'user', parts: [{ text: prompt + JSON.stringify(facts, (_k, v) => (typeof v === 'number' ? +v.toPrecision(4) : v)) }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt + fence(JSON.stringify(facts, (_k, v) => (typeof v === 'number' ? +v.toPrecision(4) : v))) }] }],
         config: { temperature: 0.2, responseMimeType: 'application/json', abortSignal: ctrl.signal },
       }),
     ]);
