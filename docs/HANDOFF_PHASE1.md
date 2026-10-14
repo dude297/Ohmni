@@ -5,10 +5,10 @@ Full audit, architecture and release gates are in [PRODUCTION_PHASE1.md](PRODUCT
 
 ## Update 2026-10-14 (day run)
 
-**Merge queue (owner):** #79, #82, #83 in any order; the persistence stack in order #80 → #81 → #85 (usage metering) → #86 (export/delete). Stacked PRs retarget to main as their base merges. #79-#83 verified conflict-free together (typecheck, 712 tests, live persistence e2e); #85 has no conflicts with #79/#83.
+**Merge queue (owner):** #79, #82, #83 in any order; the persistence stack in order #80 → #81 → #85 (usage metering) → #86 (export/delete) → #87 (shared cross-instance model-route limits). Stacked PRs retarget to main as their base merges. #79-#83 verified conflict-free together (typecheck, 712 tests, live persistence e2e); #85 has no conflicts with #79/#83.
 
 **Owner actions to turn on saved investigations:**
-1. Vercel env (server-only): `SUPABASE_URL=https://oyiwnfcbdiakzmqpufaf.supabase.co`, `SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_ROLE_KEY` (legacy `service_role` or dashboard secret key; the CLI masks `sb_secret_`). Public: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+1. Vercel env (server-only): `SUPABASE_URL=https://oyiwnfcbdiakzmqpufaf.supabase.co`, `SUPABASE_ANON_KEY` (publishable), `SUPABASE_SERVICE_ROLE_KEY` (legacy `service_role` or dashboard secret key; the CLI masks `sb_secret_`). Public: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Also `RATE_SALT` (random string; salts hashed IP keys of the shared limiter, #87). Check with `/api/health` → `persistence.configured`.
 2. Supabase Auth: enable email magic link; add the production URL to the redirect allow-list.
 3. Vercel connector in this session is logged into a different account, so Claude could not set these.
 
