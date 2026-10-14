@@ -1,19 +1,29 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { check } from '@/lib/server/rateLimit';
+import { disabledTiers, tierOf } from '@/lib/features';
 
 export function proxy(req: NextRequest) {
-  const b = check(req.method, req.nextUrl.pathname, req.headers);
-  if (!b) return NextResponse.next();
+  const path = req.nextUrl.pathname;
+  const tier = tierOf(path);
+  const tierHeader = tier ? { 'x-ohmni-tier': tier } : undefined;
+  if (tier && disabledTiers().has(tier)) {
+    if (path.startsWith('/api/'))
+      return NextResponse.json({ error: { code: 'FEATURE_DISABLED', message: 'This feature is not available on this deployment.' } }, { status: 404, headers: tierHeader });
+    return new NextResponse('Not found', { status: 404, headers: { 'content-type': 'text/plain', ...tierHeader } });
+  }
+  const b = check(req.method, path, req.headers);
+  if (!b) {
+    const res = NextResponse.next();
+    if (tier) res.headers.set('x-ohmni-tier', tier);
+    return res;
+  }
   return NextResponse.json(
     { error: { code: b.code, message: b.message } },
-    { status: b.status, headers: b.retryAfter ? { 'Retry-After': String(b.retryAfter) } : undefined },
+    { status: b.status, headers: { ...tierHeader, ...(b.retryAfter && { 'Retry-After': String(b.retryAfter) }) } },
   );
 }
 
-// Next requires a static matcher; keep in sync with LIMITED_ROUTES (tests/server/rateLimit.test.ts checks).
+// Every page and API route; skips Next internals and static files (anything with a dot). tests/server/rateLimit.test.ts checks coverage.
 export const config = {
-  matcher: [
-    '/api/extract', '/api/solve', '/api/explain', '/api/review', '/api/ac', '/api/probe', '/api/probe-multi',
-    '/api/topology', '/api/repair', '/api/repair/verify', '/api/twin', '/api/firmware/adc',
-  ],
+  matcher: ['/((?!_next/|.*\\..*).*)'],
 };
