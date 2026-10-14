@@ -6,7 +6,7 @@ Full audit, architecture and release gates are in [PRODUCTION_PHASE1.md](PRODUCT
 ## Update 2026-10-14 (overnight run)
 
 - **Merged** (owner-approved): #73 -> `5c90656`, #74 -> `fe74394`, #75 -> `e16a270`. Production serves `e16a270`. Remote force-push is blocked by policy, so branches were updated by merging main, then squash-merged.
-- **Remaining P0 #1-#4 are implemented** as PRs, CI green, **not merged** (main auto-deploys production; left for owner):
+- **Remaining P0 #1-#4 implemented and merged 2026-10-14** (owner go-ahead): #76 `1c52178`, #77 `3fea355`, #78 `925f7c6`:
   - #76 `p0/ai-consent`: `REQUIRE_AI_CONSENT=1` -> 422 `CONSENT_REQUIRED` on /api/extract (form `aiConsent=true`), /api/explain and /api/review mentor (JSON `aiConsent: true`); docs/PRIVACY.md.
   - #77 `p0/tiers-headers`: src/lib/features.ts, `x-ohmni-tier`, `OHMNI_DISABLED_TIERS` -> 404 `FEATURE_DISABLED`; nosniff/referrer/XFO DENY/HSTS/Permissions-Policy (mic self); CSP **report-only**; `scripts/postdeploy-smoke.mjs` + `.github/workflows/postdeploy.yml`. Proxy matcher now covers all pages.
   - #78 `p0/observability`: `observe()` wrapper on every API route: `x-request-id`, `error.requestId`, one JSON log line (no bodies/IPs), 500 `INTERNAL` catch-all.

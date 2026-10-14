@@ -2,10 +2,10 @@
 
 Repo: https://github.com/dude297/Ohmni. Production: https://multimodal-hackathon-sage.vercel.app (Vercel project "ohmni"; URL unchanged). Hard deadline: 5:30 PM PDT, October 11, 2026.
 
-## Current state (main at e16a270, 2026-10-14)
+## Current state (main at 925f7c6, 2026-10-14)
 - **Production** https://multimodal-hackathon-sage.vercel.app `/api/health` reports build `e16a270`; gemini/groq/jev configured (Vercel `GEMINI_MODEL` = `gemini-3.5-flash-lite`).
 - **Merged 2026-10-13/14:** #73 server-authoritative `/api/repair/verify` (`5c90656`), #74 workload ceilings (`fe74394`), #75 diagnosis honesty (`e16a270`; includes a merge fix so verify reads nodes from the top *modeled* hypothesis, since `unmodeled` has no predicted voltages).
-- **Open, CI green, not merged (owner approval):** #76 AI consent gate (`REQUIRE_AI_CONSENT`, off by default) + docs/PRIVACY.md; #77 feature tiers (`x-ohmni-tier`, `OHMNI_DISABLED_TIERS`, off by default), security headers (CSP report-only), post-deploy smoke workflow; #78 request id, JSON logs, `INTERNAL` catch-all. Combined merge of #76+#77+#78 on `e16a270`: typecheck clean, vitest 696 passed / 7 expected-fail / 3 skipped; only conflict is docs/API_CONTRACT.md (append both sections).
+- **Merged 2026-10-14:** #76 AI consent gate (`1c52178`, `REQUIRE_AI_CONSENT` off by default) + docs/PRIVACY.md; #77 feature tiers + security headers + post-deploy smoke (`3fea355`; postdeploy workflow green against production); #78 request id, JSON logs, `INTERNAL` catch-all (`925f7c6`).
 - **Demo numbers changed by #75:** ladder B=0, A=5 -> R2 open 99.7% (was 100%); bridge C=0, A=7.533 -> R6 open 88.5% and the guide asks for B; B=5.22 -> R6 open ~100%.
 - **Known gaps:** proxy-generated 429/413 lack `x-request-id`; out-of-model confident-wrong 7.4% (target < 5%); Supabase schema unapplied; UI does not yet send `aiConsent`/`revisionId` or render `fit: poor`.
 
