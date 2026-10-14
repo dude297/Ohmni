@@ -1,6 +1,6 @@
 # bench: diagnosis-honesty benchmarks
 
-Deterministic (fixed seeds), no network, no models. Run: `BENCH=1 BENCH_LABEL=after npx vitest run bench/run.test.ts` (`BENCH_SEED=777` = held-out split)
+Deterministic (fixed seeds), no network, no models. Run: `BENCH=1 BENCH_LABEL=after npx vitest run bench/run.test.ts` (`BENCH_SEED=777` = held-out split, `BENCH_OHM=1` = the simulated user also takes the ohmmeter readings the guide asks for)
 (writes `bench/report/<label>.json`, git-ignored). Without `BENCH=1` the run is skipped. `baseline-main-d6bc997.json` is the
 same report taken on origin/main d6bc997 before this change.
 
@@ -41,3 +41,26 @@ and a x1.5 drift sits inside meter + part tolerance of "nominal". Any rule that 
 in-model case too: raising `UNMODELED_PRIOR` to 0.25 / 0.4 gives 5.26 % / 4.69 % out-of-model but drops in-model top-1 to 97.78 % / 95.89 % (below
 the 98 % bar), so the prior stays 0.15. Lowering the floor needs a different measurement (ohmmeter, current) or reporting electrically
 equivalent alternatives instead of one label. Grounding false-accept 0 and silent KCL violations 0 are unchanged.
+
+## Ohmmeter mode results (2026-10-14, opt-in power-off resistance readings, docs/PROBE_GUIDE.md)
+Same sessions with `BENCH_OHM=1`: when the guide asks, the simulated user reads the true power-off resistance between two nodes with 1 % + 0.5 Ω
+noise. New metrics: `meanOhm` (resistance readings per session, included in `meanProbes`) and `inCircuitDetectableRate` (confident-wrong where
+the chosen hypothesis differs from the truth at some node voltage OR some power-off pair resistance by > 3 meter sigma). Constants were set on
+the tuning seed only; held-out = `BENCH_SEED=777`.
+
+| | tuning, voltage only | tuning, ohmmeter | held-out, voltage only | held-out, ohmmeter |
+|---|---|---|---|---|
+| out-of-model confident-wrong | 6.57 % | 3.83 % | 6.19 % | **3.93 %** |
+| of which in-circuit detectable | 6.57 % | 1.67 % | 6.19 % | 1.81 % |
+| of which identical in-circuit (floor) | 0 % | 2.16 % | 0 % | 2.12 % |
+| in-model top-1 (equivalence-aware) | 98.44 % | 99.78 % | 98.78 % | 100 % |
+| in-model + 5 % parts (equivalence-aware) | 97.78 % | 99.67 % | 98.00 % | 99.67 % |
+| mean readings, in-model (of which resistance) | 1.73 | 4.29 (2.70) | 1.74 | 4.38 (2.79) |
+| mean readings, nominal + 5 % parts | 1.67 | 4.95 (3.28) | 1.66 | 4.95 (3.28) |
+
+Voltage-only numbers are unchanged from the every-node-confirmation table above (the mode is opt-in). With voltages only, every out-of-model
+miss would have been visible to some in-circuit reading; the ohmmeter removes about three quarters of those. Most of the remaining 3.9 % is a
+new floor: faults identical at every node and every pair in-circuit, almost all `R2 x3` in the series-parallel fixture (600 Ω parallel to
+R3 300 Ω equals R2 200 Ω with R3 open). Only lifting a lead, or reporting electrically equivalent alternatives, separates them. Cost: about 2.6
+more readings per session, each needing the power off. Tuning steps on the tuning seed: coverage threshold 3 → 5 sigma (5.74 % → 5.14 %), two
+covering readings per resistor (→ 3.83 %), faulted part tested halfway back to its design value (fixes `R5 x3` read as `R5 x10`).

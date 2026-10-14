@@ -1,19 +1,19 @@
 import { solveDC } from '../src/lib/circuit/solve';
 import { DIVIDER_10K_10K, LOADED_BRIDGE_12V, SERIES_PARALLEL_12V } from '../src/lib/circuit/fixtures';
 import type { CircuitGraph } from '../src/lib/circuit/types';
-import type { Observation, ProbeStep } from '../src/lib/probe';
+import { resistanceBetween, R_MAX, type Reading, type ProbeStep } from '../src/lib/probe';
 
 // Deterministic Probe Guide calibration simulation. A simulated user follows the guide's next-probe advice;
 // readings are truth voltages + Gaussian meter noise (sigma = 2 % + 10 mV, the guide's own meter model).
 // Case schema: { truth graph, label (the hypothesis id that is "right") }; sets group cases by regime.
 
-export type ProbeFn = (g: CircuitGraph, obs: Observation[]) => ProbeStep & { fit?: 'good' | 'poor' };
+export type ProbeFn = (g: CircuitGraph, obs: Reading[]) => ProbeStep & { fit?: 'good' | 'poor' };
 export type CalCase = { truth: CircuitGraph; label: string };
 export type CalSet = { name: string; fixture: string; group: 'in-model' | 'in-model+tol' | 'nominal+tol' | 'out-of-model'; model: CircuitGraph; cases: CalCase[]; n: number };
 export type CalRow = {
   name: string; fixture: string; group: CalSet['group']; n: number;
-  top1: number; top1EquivAware: number; meanProbes: number;
-  confident: number; confidentWrong: number; silentConfidentWrong: number; detectableConfidentWrong: number; flaggedOutOfModel: number;
+  top1: number; top1EquivAware: number; meanProbes: number; meanOhm: number;
+  confident: number; confidentWrong: number; silentConfidentWrong: number; detectableConfidentWrong: number; inCircuitDetectableConfidentWrong: number; flaggedOutOfModel: number;
 };
 
 export function rng(seed: number) {
@@ -62,15 +62,20 @@ export function buildSets(seed = 20261012, n = 300): CalSet[] {
 
 export function runSet(probe: ProbeFn, set: CalSet, seed: number): CalRow {
   const r = rng(seed);
-  let top1 = 0, eq = 0, probes = 0, conf = 0, confWrong = 0, silent = 0, detect = 0, flagged = 0;
+  let top1 = 0, eq = 0, probes = 0, ohms = 0, conf = 0, confWrong = 0, silent = 0, detect = 0, inCircuit = 0, flagged = 0;
   for (let i = 0; i < set.n; i++) {
     const c = set.cases[Math.floor(r.u() * set.cases.length)];
     const t = solveDC(c.truth).voltages;
-    const obs: Observation[] = [];
+    const obs: Reading[] = [];
     let step = probe(set.model, obs);
     while (!step.done && step.next && obs.length < 20) {
-      const node = step.next.node;
-      obs.push({ node, volts: t[node] + r.gauss() * sigma(t[node]) });
+      const nx = step.next;
+      if (nx.kind === 'resistance') {
+        // ohmmeter: 1 % of reading + 0.5 Ω noise on the true power-off resistance; over-range reads OL (sent as 1e9)
+        const R = resistanceBetween(c.truth, nx.a!, nx.b!);
+        ohms++;
+        obs.push({ kind: 'resistance', a: nx.a!, b: nx.b!, ohms: R >= R_MAX ? 1e9 : Math.max(0, R * (1 + 0.01 * r.gauss()) + 0.5 * r.gauss()) });
+      } else obs.push({ node: nx.node, volts: t[nx.node] + r.gauss() * sigma(t[nx.node]) });
       step = probe(set.model, obs);
     }
     probes += obs.length;
@@ -91,23 +96,35 @@ export function runSet(probe: ProbeFn, set: CalSet, seed: number): CalRow {
         // detectable: the chosen hypothesis contradicts the true voltages (> 3 meter sigma) at some node,
         // i.e. a complete set of readings would have exposed it. Undetectable misses are limits of the meter.
         if (keys.some((k) => Math.abs(best.predicted[k] - t[k]) > 3 * sigma(t[k]))) detect++;
+        // in-circuit detectable: some node voltage OR some power-off pair resistance of the chosen hypothesis differs from the
+        // truth by > 3 meter sigma. The rest are electrically identical in-circuit (e.g. R2 x3 parallel to R3 = R3 open):
+        // only lifting a lead could tell them apart.
+        const hg = best.id === 'nominal' ? set.model : setv(set.model, best.id.split(':')[0], FV[best.id.split(':')[1]](set.model.components.find((k) => k.id === best.id.split(':')[0])!.value));
+        const ts = [set.model.groundNode, ...keys.filter((k) => k !== set.model.groundNode)];
+        const ohmDiff = ts.some((a, i) =>
+          ts.slice(i + 1).some((b) => {
+            const rt = resistanceBetween(c.truth, a, b), rh = resistanceBetween(hg, a, b);
+            return Math.abs(Math.log(Math.max(1, rh)) - Math.log(Math.max(1, rt))) > 3 * ((0.01 * Math.max(1, rt) + 0.5) / Math.max(1, rt));
+          }),
+        );
+        if (ohmDiff || keys.some((k) => Math.abs(best.predicted[k] - t[k]) > 3 * sigma(t[k]))) inCircuit++;
         if (!step.fitWarning && step.fit !== 'poor') silent++;
       }
     }
   }
   const f = (x: number) => +(x / set.n).toFixed(4);
   return {
-    name: set.name, fixture: set.fixture, group: set.group, n: set.n, top1: f(top1), top1EquivAware: f(eq), meanProbes: +(probes / set.n).toFixed(2),
-    confident: conf, confidentWrong: confWrong, silentConfidentWrong: silent, detectableConfidentWrong: detect, flaggedOutOfModel: flagged,
+    name: set.name, fixture: set.fixture, group: set.group, n: set.n, top1: f(top1), top1EquivAware: f(eq), meanProbes: +(probes / set.n).toFixed(2), meanOhm: +(ohms / set.n).toFixed(2),
+    confident: conf, confidentWrong: confWrong, silentConfidentWrong: silent, detectableConfidentWrong: detect, inCircuitDetectableConfidentWrong: inCircuit, flaggedOutOfModel: flagged,
   };
 }
 
 export function summarize(rows: CalRow[]) {
   const pool = (g: (r: CalRow) => boolean) => {
     const rs = rows.filter(g), n = rs.reduce((s, r) => s + r.n, 0);
-    const w = (k: 'top1' | 'top1EquivAware' | 'meanProbes') => +(rs.reduce((s, r) => s + r[k] * r.n, 0) / n).toFixed(4);
-    const sum = (k: 'confident' | 'confidentWrong' | 'silentConfidentWrong' | 'detectableConfidentWrong' | 'flaggedOutOfModel') => rs.reduce((s, r) => s + r[k], 0);
-    return { sessions: n, top1: w('top1'), top1EquivAware: w('top1EquivAware'), meanProbes: w('meanProbes'), confidentWrongRate: +(sum('confidentWrong') / n).toFixed(4), silentConfidentWrongRate: +(sum('silentConfidentWrong') / n).toFixed(4), detectableConfidentWrongRate: +(sum('detectableConfidentWrong') / n).toFixed(4), flaggedRate: +(sum('flaggedOutOfModel') / n).toFixed(4) };
+    const w = (k: 'top1' | 'top1EquivAware' | 'meanProbes' | 'meanOhm') => +(rs.reduce((s, r) => s + r[k] * r.n, 0) / n).toFixed(4);
+    const sum = (k: 'confident' | 'confidentWrong' | 'silentConfidentWrong' | 'detectableConfidentWrong' | 'inCircuitDetectableConfidentWrong' | 'flaggedOutOfModel') => rs.reduce((s, r) => s + r[k], 0);
+    return { sessions: n, top1: w('top1'), top1EquivAware: w('top1EquivAware'), meanProbes: w('meanProbes'), meanOhm: w('meanOhm'), confidentWrongRate: +(sum('confidentWrong') / n).toFixed(4), silentConfidentWrongRate: +(sum('silentConfidentWrong') / n).toFixed(4), detectableConfidentWrongRate: +(sum('detectableConfidentWrong') / n).toFixed(4), inCircuitDetectableRate: +(sum('inCircuitDetectableConfidentWrong') / n).toFixed(4), flaggedRate: +(sum('flaggedOutOfModel') / n).toFixed(4) };
   };
   return {
     inModel: pool((r) => r.group === 'in-model'),
