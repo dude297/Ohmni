@@ -1,6 +1,6 @@
 # bench: diagnosis-honesty benchmarks
 
-Deterministic (fixed seeds), no network, no models. Run: `BENCH=1 BENCH_LABEL=after npx vitest run bench/run.test.ts`
+Deterministic (fixed seeds), no network, no models. Run: `BENCH=1 BENCH_LABEL=after npx vitest run bench/run.test.ts` (`BENCH_SEED=777` = held-out split)
 (writes `bench/report/<label>.json`, git-ignored). Without `BENCH=1` the run is skipped. `baseline-main-d6bc997.json` is the
 same report taken on origin/main d6bc997 before this change.
 
@@ -22,3 +22,22 @@ voltage by > 3 meter sigma at some node; the rest are faults no voltage probe ca
 ## Solver stress (`solver-stress.ts`, seed 4242, 2000 random 6-node networks, 1 mOhm - 1 TOhm)
 Independent worst-node KCL imbalance of the returned currents / largest current. `silentOver1e6` = violations above 1e-6 with no
 `warnings: ['ill_conditioned']`. Also the audit's R1 = 1e-12 ohm case.
+
+## Out-of-model results (2026-10-14, every-node confirmation)
+Change: a conclusion now waits for every resistor-dependent node (cap 6), not 2 readings. Held-out = `BENCH_SEED=777`, never used for tuning.
+
+| | tuning before | tuning after | held-out before | held-out after |
+|---|---|---|---|---|
+| out-of-model confident-wrong | 7.36 % | 6.57 % | 7.12 % | **6.19 %** |
+| of which detectable (some node > 3 meter sigma off) | 1.86 % | 1.10 % | 2.76 % | 1.57 % |
+| of which undetectable by any voltage probe | 5.50 % | 5.47 % | 4.36 % | 4.62 % |
+| in-model top-1 (equivalence-aware) | 98.44 % | 98.44 % | 98.78 % | 98.78 % |
+| in-model + 5 % parts (equivalence-aware) | 97.89 % | 97.78 % | 97.56 % | 98.00 % |
+| mean probes, in-model | 1.53 | 1.73 | 1.54 | 1.74 |
+
+The < 5 % target is **not met**, and cannot be with voltage probes alone on this bench. The undetectable part is a floor: in those sessions the
+true circuit gives the same voltages (within meter noise) as a modeled hypothesis at every node, e.g. `R3 x10 + R4 short` is exactly `R4 short`,
+and a x1.5 drift sits inside meter + part tolerance of "nominal". Any rule that withholds confidence there withholds it from the identical
+in-model case too: raising `UNMODELED_PRIOR` to 0.25 / 0.4 gives 5.26 % / 4.69 % out-of-model but drops in-model top-1 to 97.78 % / 95.89 % (below
+the 98 % bar), so the prior stays 0.15. Lowering the floor needs a different measurement (ohmmeter, current) or reporting electrically
+equivalent alternatives instead of one label. Grounding false-accept 0 and silent KCL violations 0 are unchanged.

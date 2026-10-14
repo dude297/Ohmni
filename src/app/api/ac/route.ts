@@ -4,6 +4,11 @@ import { z } from 'zod';
 import { analyze } from '../../../lib/ac/analysis';
 import { AcError } from '../../../lib/ac/engine';
 import { validateAcGraph, type AcGraph } from '../../../lib/ac/types';
+import { clientIp } from '@/lib/server/rateLimit';
+
+// One analysis at a time per client: the single ngspice worker is shared, so one client must not queue several
+// back-to-back analyses ahead of everyone else. ponytail: per instance (in-memory), like the rate limiter.
+const inFlight = new Set<string>();
 
 const body = z.object({
   graph: z.unknown(),
@@ -40,6 +45,9 @@ async function handle(req: Request) {
   if (errors.length) return err(422, 'INVALID_GRAPH', 'AC circuit graph is invalid', errors);
   if (faults && !measuredPoints?.length) return err(422, 'INVALID_REQUEST', 'faults requires measuredPoints');
 
+  const client = clientIp(req.headers);
+  if (inFlight.has(client)) return err(429, 'BUSY', 'An AC analysis from this client is already running; wait for it to finish.');
+  inFlight.add(client);
   try {
     const result = await analyze(graph as AcGraph, { faults, measuredPoints });
     return Response.json({ result });
@@ -49,6 +57,8 @@ async function handle(req: Request) {
     if (e instanceof AcError)
       return err(e.code === 'BUSY' ? 429 : e.code === 'TIMEOUT' ? 504 : 422, e.code === 'SIM_FAILED' ? 'UNSOLVABLE' : e.code, e.message);
     throw e;
+  } finally {
+    inFlight.delete(client);
   }
 }
 
