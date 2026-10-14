@@ -74,7 +74,9 @@ describe('route coverage', () => {
   it('proxy matcher covers every limited route and every POST API route', async () => {
     const { config } = await import('../../src/proxy');
     const { LIMITED_ROUTES } = await import('../../src/lib/server/rateLimit');
-    expect([...config.matcher].sort()).toEqual([...LIMITED_ROUTES].sort());
+    const matched = (p: string) => config.matcher.some((m) => new RegExp(`^${m}$`).test(p));
+    expect(LIMITED_ROUTES.filter((r) => !matched(r))).toEqual([]);
+    expect(matched('/_next/static/chunk.js') || matched('/samples/clear-divider.png')).toBe(false);
     const { readdirSync, readFileSync, statSync } = await import('node:fs');
     const { join, sep } = await import('node:path');
     const posts: string[] = [];

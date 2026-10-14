@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "smoke": "node scripts/smoke.mjs",
+    "smoke:postdeploy": "node scripts/postdeploy-smoke.mjs",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {

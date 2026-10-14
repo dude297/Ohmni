@@ -1,10 +1,11 @@
+import { observe } from '@/lib/server/observe';
 import { connection } from 'next/server';
 import { geminiModel } from '@/lib/ai/gemini';
 import { groqModel } from '@/lib/ai/groq';
 // Env presence only — never emit key values or lengths.
 const on = (k: string) => Boolean(process.env[k]);
 
-export async function GET() {
+async function handle() {
   await connection(); // read env at request time (Anbaric loads keys at boot, not build)
   return Response.json({
     status: 'ok',
@@ -17,3 +18,5 @@ export async function GET() {
     },
   });
 }
+
+export const GET = observe('/api/health', handle);

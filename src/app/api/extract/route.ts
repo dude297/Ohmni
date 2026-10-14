@@ -1,7 +1,9 @@
+import { observe } from '@/lib/server/observe';
 import { extractWithFallback } from '@/lib/ai/vision';
 import { routeExtraction } from '@/lib/ai/jev';
 import { verifyTopology } from '@/lib/ai/secondary';
 import { readFormData, sniffImage, bodyErrorResponse } from '@/lib/server/readBody';
+import { consentMissing, CONSENT_MESSAGE } from '@/lib/server/consent';
 import { validateGraph } from '@/lib/circuit/validate';
 import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '@/lib/circuit/types';
 
@@ -10,13 +12,17 @@ const MAX = 5 * 1024 * 1024;
 const err = (status: number, code: string, message: string) =>
   Response.json({ error: { code, message } }, { status });
 
-export async function POST(req: Request) {
+async function handle(req: Request) {
   let file: unknown;
+  let consent = false;
   try {
-    file = (await readFormData(req)).get('image');
+    const fd = await readFormData(req);
+    file = fd.get('image');
+    consent = fd.get('aiConsent') === 'true';
   } catch (e) {
     return bodyErrorResponse(e);
   }
+  if (consentMissing(consent)) return err(422, 'CONSENT_REQUIRED', CONSENT_MESSAGE);
   if (!(file instanceof File)) return err(400, 'MISSING_IMAGE', 'Field "image" is required');
   if (file.size > MAX) return err(413, 'TOO_LARGE', 'Image must be 5MB or smaller');
 
@@ -51,3 +57,5 @@ export async function POST(req: Request) {
   }
   return Response.json({ extraction, route: routed.route, trace });
 }
+
+export const POST = observe('/api/extract', handle);
