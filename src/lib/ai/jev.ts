@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { CandidateExtraction, ModelTraceEvent, RouteChoice } from '../circuit/types';
+import { fence, FENCE_RULE } from './fence';
 
 // Owner: Agent C. Jev choice routing over structured text state. Falls back to ask_user.
 // Locked to BeatAPI's FREE Jev model. Paid ids (e.g. jev-1.13) are refused, never silently used.
@@ -80,12 +81,12 @@ export async function routeExtraction(input: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        state: buildState(input.extraction, input.validationErrors),
+        state: fence(buildState(input.extraction, input.validationErrors)), // warnings/ids come from the user's image
         model,
         questions: {
           route: {
             type: 'choice',
-            instructions: 'Decide the next step for this extracted circuit.',
+            instructions: `Decide the next step for this extracted circuit. ${FENCE_RULE}`,
             criteria: CRITERIA,
           },
         },
