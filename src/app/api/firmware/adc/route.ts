@@ -1,3 +1,4 @@
+import { observe } from '@/lib/server/observe';
 import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
 import { validateGraph } from '../../../../lib/circuit/validate';
@@ -24,7 +25,7 @@ const body = z.object({
 const err = (status: number, code: string, message: string, details?: string[]) =>
   Response.json({ error: { code, message, ...(details && { details }) } }, { status });
 
-export async function POST(req: Request) {
+async function handle(req: Request) {
   let raw: unknown;
   try {
     raw = await readJson(req);
@@ -58,3 +59,5 @@ export async function POST(req: Request) {
   // trace is returned both inside result (like /api/probe) and at top level (as specified)
   return Response.json({ result: { ...result, configUsed: cfg, ...(extracted && { extracted }), ...(proposedDiff && { proposedDiff }), trace }, trace });
 }
+
+export const POST = observe('/api/firmware/adc', handle);

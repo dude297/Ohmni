@@ -1,3 +1,4 @@
+import { observe } from '@/lib/server/observe';
 import { readJson, bodyErrorResponse } from '@/lib/server/readBody';
 import { z } from 'zod';
 import { reviewCircuit, mentorExplain, REVIEW_DISCLAIMER } from '../../../lib/review';
@@ -21,7 +22,7 @@ const body = z.object({
 const err = (status: number, code: string, message: string, details?: string[]) =>
   Response.json({ error: { code, message, ...(details && { details }) } }, { status });
 
-export async function POST(req: Request) {
+async function handle(req: Request) {
   let raw: unknown;
   try {
     raw = await readJson(req);
@@ -48,3 +49,5 @@ export async function POST(req: Request) {
   }
   return Response.json({ result: { advisory: true, disclaimer: REVIEW_DISCLAIMER, findings: review.findings, solution: review.solution, mentor: mentorOut, trace } });
 }
+
+export const POST = observe('/api/review', handle);
