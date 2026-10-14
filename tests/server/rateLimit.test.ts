@@ -56,15 +56,15 @@ describe('proxy', () => {
     new NextRequest('http://localhost/api/extract', { method: 'POST', headers: { 'x-forwarded-for': ip, ...headers } });
 
   it('returns 429 JSON with Retry-After', async () => {
-    for (let i = 0; i < 6; i++) expect(proxy(req('7.7.7.7')).status).toBe(200);
-    const res = proxy(req('7.7.7.7'));
+    for (let i = 0; i < 6; i++) expect((await proxy(req('7.7.7.7'))).status).toBe(200);
+    const res = (await proxy(req('7.7.7.7')));
     expect(res.status).toBe(429);
     expect(Number(res.headers.get('retry-after'))).toBeGreaterThan(0);
     expect((await res.json()).error.code).toBe('RATE_LIMITED');
   });
 
   it('returns 413 for oversized body', async () => {
-    const res = proxy(req('8.8.8.8', { 'content-length': '9000000' }));
+    const res = (await proxy(req('8.8.8.8', { 'content-length': '9000000' })));
     expect(res.status).toBe(413);
     expect((await res.json()).error.code).toBe('TOO_LARGE');
   });
