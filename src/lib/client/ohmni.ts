@@ -71,9 +71,10 @@ export function createOhmniApi(getToken: () => Promise<string | null>, fetchImpl
     },
     investigations: {
       open: (b: Body<'investigation'>) => call<{ investigation: Get<typeof P.openInvestigation> }>('POST', '/investigations', b),
-      get: (inv: string) => call<Get<typeof P.getInvestigation>>('GET', `/investigations/${id(inv)}`),
+      /** `ohmmeter: true` lets `probe.next` ask for a power-off resistance reading (`next.kind === 'resistance'`). */
+      get: (inv: string, o: { ohmmeter?: boolean } = {}) => call<Get<typeof P.getInvestigation>>('GET', `/investigations/${id(inv)}${o.ohmmeter ? '?ohmmeter=1' : ''}`),
       close: (inv: string, status: 'resolved' | 'abandoned') => call<{ investigation: Get<typeof P.closeInvestigation> }>('POST', `/investigations/${id(inv)}/close`, { status }),
-      /** Stores the reading and returns the recomputed probe step (render `probe`). */
+      /** Stores the reading (`{ node, volts }` or `{ kind: 'resistance', a, b, ohms }`) and returns the recomputed probe step (render `probe`). */
       measure: (inv: string, b: Body<'measurement'>) => call<Get<typeof P.addMeasurement>>('POST', `/investigations/${id(inv)}/measurements`, b),
       repair: (inv: string) => call<Get<typeof P.proposeRepair>>('POST', `/investigations/${id(inv)}/repair`),
       reportMarkdown: (inv: string) => call<string>('GET', `/investigations/${id(inv)}/report`),

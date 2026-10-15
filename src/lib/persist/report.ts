@@ -1,6 +1,6 @@
 import { solveDC } from '../circuit/solve';
 import type { CircuitGraph } from '../circuit/types';
-import { fmtV, type ProbeStep } from '../probe';
+import { fmtOhm, fmtV, R_MAX, type ProbeStep } from '../probe';
 
 // Investigation report from STORED evidence: deterministic, no model calls. JSON ('ohmni.report.v1') and Markdown.
 
@@ -10,7 +10,8 @@ export const REPORT_DISCLAIMER =
 export type ReportInput = {
   investigation: { id: string; title: string; status: string; opened_at: string; closed_at: string | null };
   revision: { revisionHash: string; graph: CircuitGraph };
-  measurements: { id: string; node: string; value: number; method: string; measured_at: string; supersedes: string | null; provenance: Record<string, unknown> }[];
+  /** quantity 'resistance' = power-off reading between node and reference_node (absent = voltage vs ground). */
+  measurements: { id: string; node: string; reference_node?: string; quantity?: string; value: number; method: string; measured_at: string; supersedes: string | null; provenance: Record<string, unknown> }[];
   probe: ProbeStep;
   proposals: { id: string; patch: unknown; verification_node: string; expect_value: number; tolerance: number; status: string; created_at: string }[];
   verifications: { repair_proposal_id: string; verified: boolean; delta: number; engine_version: string; created_at: string }[];
@@ -52,7 +53,7 @@ export function buildReport(d: ReportInput, engineVersion: string, generatedAt =
     measurements: d.measurements.map((m) => ({
       id: m.id,
       node: m.node,
-      volts: m.value,
+      ...(m.quantity === 'resistance' ? { quantity: 'resistance' as const, reference: m.reference_node, ohms: m.value } : { quantity: 'voltage' as const, volts: m.value }),
       method: m.method,
       at: m.measured_at,
       role: m.provenance?.kind === 'verification' ? ('verification' as const) : superseded.has(m.id) ? ('superseded' as const) : ('evidence' as const),
@@ -93,8 +94,12 @@ export function reportMarkdown(r: Report): string {
   for (const c of r.revision.components) L.push(`| ${cell(c.id)} | ${c.kind} | ${c.value} ${c.kind === 'resistor' ? 'Ω' : 'V'} | ${cell(c.positiveNode)} | ${cell(c.negativeNode)} |`);
   L.push('', '## Measurements', '', '| Time | Node | Reading | Expected (design) | Method | Use |', '|---|---|---|---|---|---|');
   for (const m of r.measurements) {
+    if (m.quantity === 'resistance') {
+      L.push(`| ${m.at} | ${cell(m.node)}–${cell(m.reference)} (power off) | ${m.ohms! >= R_MAX ? 'OL' : fmtOhm(m.ohms!)} | — | ${m.method} | ${m.role} |`);
+      continue;
+    }
     const exp = r.designVoltages[m.node];
-    L.push(`| ${m.at} | ${cell(m.node)} | ${fmtV(m.volts)} | ${exp === undefined ? '—' : fmtV(exp)} | ${m.method} | ${m.role} |`);
+    L.push(`| ${m.at} | ${cell(m.node)} | ${fmtV(m.volts!)} | ${exp === undefined ? '—' : fmtV(exp)} | ${m.method} | ${m.role} |`);
   }
   if (!r.measurements.length) L.push('| — | — | — | — | — | no readings yet |');
   L.push('', '## Diagnosis (recomputed from stored evidence)', '');

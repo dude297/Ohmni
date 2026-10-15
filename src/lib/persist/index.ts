@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { CircuitGraph } from '../circuit/types';
 import { validateGraph } from '../circuit/validate';
 import { revisionId } from '../circuit/revision';
-import { probeStep, type Observation, type ProbeStep } from '../probe';
+import { probeStep, R_MAX, type ProbeStep, type Reading } from '../probe';
 import { RepairError, repairStep, VerifyInputError, verifyHypothesis } from '../repair';
 import { adminDb, ApiError, dbFail, engineVersion, type Caller } from '../server/supabase';
 
@@ -11,6 +11,13 @@ import { adminDb, ApiError, dbFail, engineVersion, type Caller } from '../server
 // recomputed here from STORED evidence and written with the service role, only after the caller's access was proven.
 
 const name = z.string().trim().min(1).max(120);
+const readingMeta = {
+  method: z.enum(['typed', 'voice', 'csv', 'instrument']),
+  instrument: z.string().max(120).optional(),
+  supersedes: z.uuid().optional(),
+  provenance: z.record(z.string(), z.unknown()).optional(),
+  ohmmeter: z.boolean().optional(), // let the guide ask for power-off resistance readings (also on once one is stored)
+};
 export const schemas = {
   workspace: z.object({ name }),
   project: z.object({ workspaceId: z.uuid(), name: z.string().trim().min(1).max(200), description: z.string().max(4000).optional() }),
@@ -22,14 +29,11 @@ export const schemas = {
   }),
   investigation: z.object({ revisionId: z.uuid(), title: z.string().trim().min(1).max(200) }),
   close: z.object({ status: z.enum(['resolved', 'abandoned']) }),
-  measurement: z.object({
-    node: z.string().min(1).max(32),
-    volts: z.number().finite().refine((v) => Math.abs(v) < 1e6, 'out of range'),
-    method: z.enum(['typed', 'voice', 'csv', 'instrument']),
-    instrument: z.string().max(120).optional(),
-    supersedes: z.uuid().optional(),
-    provenance: z.record(z.string(), z.unknown()).optional(),
-  }),
+  // Powered node voltage vs ground, or (ohmmeter mode) power-off resistance between nodes a and b (OL: send 1e9).
+  measurement: z.union([
+    z.object({ ...readingMeta, node: z.string().min(1).max(32), volts: z.number().finite().refine((v) => Math.abs(v) < 1e6, 'out of range') }),
+    z.object({ ...readingMeta, kind: z.literal('resistance'), a: z.string().min(1).max(32), b: z.string().min(1).max(32), ohms: z.number().finite().nonnegative().max(1e9) }),
+  ]),
   verify: z.object({
     volts: z.number().finite().refine((v) => Math.abs(v) < 1e6, 'out of range'),
     method: z.enum(['typed', 'voice', 'csv', 'instrument']),
@@ -119,8 +123,10 @@ type Loaded = {
   inv: { id: string; workspace_id: string; project_id: string; revision_id: string; title: string; status: string; opened_at: string; closed_at: string | null };
   graph: CircuitGraph;
   revisionHash: string;
-  measurements: { id: string; node: string; value: number; method: string; measured_at: string; supersedes: string | null; provenance: Record<string, unknown> }[];
+  measurements: { id: string; node: string; reference_node: string; quantity: string; value: number; method: string; measured_at: string; supersedes: string | null; provenance: Record<string, unknown> }[];
 };
+
+const MCOLS = 'id, node, reference_node, quantity, value, method, measured_at, supersedes, provenance';
 
 async function load(c: Caller, id: string): Promise<Loaded> {
   const inv = await one(
@@ -130,7 +136,7 @@ async function load(c: Caller, id: string): Promise<Loaded> {
   const { revision, ...rest } = inv as unknown as Loaded['inv'] & { revision: { graph: CircuitGraph; revision_hash: string } };
   const { data: measurements, error } = await c.db
     .from('measurements')
-    .select('id, node, value, method, measured_at, supersedes, provenance')
+    .select(MCOLS)
     .eq('investigation_id', id)
     .order('measured_at')
     .order('id');
@@ -138,12 +144,17 @@ async function load(c: Caller, id: string): Promise<Loaded> {
   return { inv: rest, graph: revision.graph, revisionHash: revision.revision_hash, measurements: measurements ?? [] };
 }
 
-/** Diagnosis evidence: powered voltage readings that are not superseded and not post-repair verification readings. */
+/** Diagnosis evidence: voltage or power-off resistance readings that are not superseded and not post-repair verification readings. */
 function evidence(l: Loaded) {
   const superseded = new Set(l.measurements.map((m) => m.supersedes).filter(Boolean));
   const used = l.measurements.filter((m) => !superseded.has(m.id) && m.provenance?.kind !== 'verification');
-  return { ids: used.map((m) => m.id), obs: used.map((m): Observation => ({ node: m.node, volts: m.value })) };
+  const obs = used.map((m): Reading => (m.quantity === 'resistance' ? { kind: 'resistance', a: m.node, b: m.reference_node, ohms: m.value } : { node: m.node, volts: m.value }));
+  return { ids: used.map((m) => m.id), obs };
 }
+
+/** Diagnosis from stored evidence. Ohmmeter mode: asked for by the client, or on once the investigation holds a resistance reading. */
+const diagnose = (l: Loaded, obs: Reading[], ohmmeter?: boolean) =>
+  probeStep(l.graph, obs, { ohmmeter: !!ohmmeter || l.measurements.some((m) => m.quantity === 'resistance') });
 
 async function snapshot(l: Loaded, step: ProbeStep, ids: string[]) {
   const rows = step.hypotheses
@@ -164,7 +175,7 @@ async function snapshot(l: Loaded, step: ProbeStep, ids: string[]) {
   return new Map((data ?? []).map((r) => [r.hypothesis_key as string, r.id as string]));
 }
 
-export async function getInvestigation(c: Caller, id: string) {
+export async function getInvestigation(c: Caller, id: string, opts: { ohmmeter?: boolean } = {}) {
   const l = await load(c, id);
   const [hyp, props] = await Promise.all([
     c.db.from('hypotheses').select('id, hypothesis_key, probability, fit, engine_version, evidence_measurement_ids, computed_at').eq('investigation_id', id).order('computed_at', { ascending: false }).order('probability', { ascending: false }).limit(50),
@@ -182,7 +193,7 @@ export async function getInvestigation(c: Caller, id: string) {
     revision: { id: l.inv.revision_id, revisionHash: l.revisionHash, graph: l.graph },
     measurements: l.measurements,
     latestHypotheses: (hyp.data ?? []).filter((h) => h.computed_at === latest),
-    probe: probeStep(l.graph, obs), // always recomputed from stored evidence, never trusted from the snapshot
+    probe: diagnose(l, obs, opts.ohmmeter), // always recomputed from stored evidence, never trusted from the snapshot
     proposals: props.data ?? [],
     verifications: vers.data ?? [],
   };
@@ -200,7 +211,12 @@ export async function closeInvestigation(c: Caller, id: string, b: z.infer<typeo
 export async function addMeasurement(c: Caller, id: string, b: z.infer<typeof schemas.measurement>) {
   const l = await load(c, id);
   if (l.inv.status !== 'open') throw new ApiError(409, 'INVESTIGATION_CLOSED', 'This investigation is closed.');
-  if (!nodesOf(l.graph).includes(b.node) || b.node === l.graph.groundNode)
+  const nodes = nodesOf(l.graph);
+  if ('kind' in b) {
+    const bad = [b.a, b.b].find((n) => !nodes.includes(n));
+    if (bad) throw new ApiError(422, 'UNKNOWN_NODE', `Node "${bad}" is not a node of this circuit.`);
+    if (b.a === b.b) throw new ApiError(422, 'INVALID_REQUEST', 'A resistance reading needs two different nodes.');
+  } else if (!nodes.includes(b.node) || b.node === l.graph.groundNode)
     throw new ApiError(422, 'UNKNOWN_NODE', `Node "${b.node}" is not a measurable node of this circuit.`);
   if (b.provenance && 'kind' in b.provenance) throw new ApiError(422, 'INVALID_REQUEST', 'provenance.kind is reserved.');
   const m = await one(
@@ -210,22 +226,23 @@ export async function addMeasurement(c: Caller, id: string, b: z.infer<typeof sc
         workspace_id: l.inv.workspace_id,
         investigation_id: id,
         revision_id: l.inv.revision_id,
-        node: b.node,
-        value: b.volts,
-        unit: 'V',
+        ...('kind' in b
+          ? // ponytail: OL (1e9) is stored as R_MAX: the engine reads anything >= R_MAX as over-range, and the column caps values below 1e9
+            { node: b.a, reference_node: b.b, quantity: 'resistance', unit: 'Ω', value: Math.min(b.ohms, R_MAX), powered: false }
+          : { node: b.node, value: b.volts, unit: 'V' }),
         method: b.method,
         instrument: b.instrument,
         supersedes: b.supersedes,
         provenance: b.provenance ?? {},
         entered_by: c.user.id,
       })
-      .select('id, node, value, method, measured_at, supersedes, provenance')
+      .select(MCOLS)
       .single(),
     'add measurement',
   );
   l.measurements.push(m);
   const { ids, obs } = evidence(l);
-  const step = probeStep(l.graph, obs);
+  const step = diagnose(l, obs, b.ohmmeter);
   await snapshot(l, step, ids);
   return { measurement: m, probe: step };
 }
@@ -243,7 +260,7 @@ export async function proposeRepair(c: Caller, id: string) {
     throw e;
   }
   if (!result.proposals.length) return { ...result, stored: [] };
-  const keyToId = await snapshot(l, probeStep(l.graph, obs), ids);
+  const keyToId = await snapshot(l, diagnose(l, obs), ids);
   const rows = result.proposals
     .filter((p) => keyToId.has(p.hypothesisId))
     .map((p) => ({

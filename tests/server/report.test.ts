@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LOADED_BRIDGE_12V } from '@/lib/circuit/fixtures';
-import { probeStep } from '@/lib/probe';
+import { probeStep, R_MAX } from '@/lib/probe';
 import { buildReport, reportMarkdown, REPORT_DISCLAIMER } from '@/lib/persist/report';
 
 const m = (id: string, node: string, value: number, extra: Partial<{ supersedes: string; provenance: Record<string, unknown> }> = {}) => ({
@@ -60,5 +60,22 @@ describe('investigation report', () => {
     expect(buildReport({ ...base, latestHypotheses: snap(0.5) }, 'x').diagnosis.reproducibility.status).toBe('differs');
     expect(buildReport({ ...base, latestHypotheses: snap(1, ['1', '2']) }, 'x').diagnosis.reproducibility.status).toBe('stale_snapshot');
     expect(buildReport(base, 'x').diagnosis.reproducibility.status).toBe('no_snapshot');
+  });
+
+  it('reports power-off resistance readings with their node pair, OL at over-range', () => {
+    const ms = [
+      { ...m('1', 'A', 4700), quantity: 'resistance', reference_node: 'GND' },
+      { ...m('2', 'B', R_MAX), quantity: 'resistance', reference_node: 'C' },
+      m('3', 'C', 0),
+    ];
+    const r = buildReport(
+      { investigation: { id: 'i', title: 't', status: 'open', opened_at: 't0', closed_at: null }, revision: { revisionHash: 'rev_x', graph: LOADED_BRIDGE_12V }, measurements: ms, probe: probeStep(LOADED_BRIDGE_12V, []), proposals: [], verifications: [] },
+      'x',
+    );
+    expect(r.measurements[0]).toMatchObject({ quantity: 'resistance', node: 'A', reference: 'GND', ohms: 4700 });
+    expect(r.measurements[2]).toMatchObject({ quantity: 'voltage', node: 'C', volts: 0 });
+    const md = reportMarkdown(r);
+    expect(md).toContain('| A–GND (power off) | 4.7 kΩ | — |');
+    expect(md).toContain('| B–C (power off) | OL | — |');
   });
 });
