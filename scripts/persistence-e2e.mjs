@@ -203,6 +203,26 @@ try {
   const t = exp.json?.tables ?? {};
   check('export has every table', exp.status === 200 && exp.json?.schema === 'ohmni.workspace-export.v1' && t.measurements?.length === 6 && t.repair_proposals?.length >= 1 && t.verifications?.length === 2 && t.workspace_members?.length === 1, `${exp.status} m=${t.measurements?.length}`);
   check('outsider cannot export', (await call(B.token, 'GET', `/api/v1/workspaces/${wsId}/export`)).status === 404);
+
+  // Ohmmeter mode: power-off resistance readings are stored as evidence and feed the recomputed diagnosis.
+  const inv2 = (await call(A.token, 'POST', '/api/v1/investigations', { revisionId: rev.json.revision.id, title: 'ohmmeter' })).json.investigation.id;
+  for (const [node, volts] of [['C', 0], ['A', 7.533]]) await call(A.token, 'POST', `/api/v1/investigations/${inv2}/measurements`, { node, volts, method: 'typed' });
+  const v3 = await call(A.token, 'POST', `/api/v1/investigations/${inv2}/measurements`, { node: 'B', volts: 5.22, method: 'typed', ohmmeter: true });
+  const ask = v3.json?.probe?.next;
+  check('ohmmeter: guide asks for a power-off reading', v3.status === 200 && ask?.kind === 'resistance' && v3.json.probe.done === false, JSON.stringify(ask));
+  const sameNode = await call(A.token, 'POST', `/api/v1/investigations/${inv2}/measurements`, { kind: 'resistance', a: 'A', b: 'A', ohms: 10, method: 'typed' });
+  const badNode = await call(A.token, 'POST', `/api/v1/investigations/${inv2}/measurements`, { kind: 'resistance', a: 'A', b: 'Z9', ohms: 10, method: 'typed' });
+  check('ohmmeter: same node / unknown node -> 422', sameNode.status === 422 && badNode.json?.error?.code === 'UNKNOWN_NODE', `${sameNode.status} ${badNode.status}`);
+  const truth = ask?.ohmOutcomes?.find((o) => o.hypothesisIds.includes('R6:open'))?.ohms;
+  const r1 = await call(A.token, 'POST', `/api/v1/investigations/${inv2}/measurements`, { kind: 'resistance', a: ask?.a, b: ask?.b, ohms: truth, method: 'instrument', instrument: 'DMM' });
+  const rm = r1.json?.measurement;
+  check('ohmmeter: reading stored as power-off resistance', r1.status === 200 && rm?.quantity === 'resistance' && rm.node === ask.a && rm.reference_node === ask.b && Math.abs(rm.value - truth) < 1e-6 && r1.json.probe.hypotheses[0].id === 'R6:open', `${r1.status} ${JSON.stringify(rm)}`);
+  const ol = await call(A.token, 'POST', `/api/v1/investigations/${inv2}/measurements`, { kind: 'resistance', a: ask?.a, b: ask?.b, ohms: 1e9, method: 'typed', supersedes: rm?.id });
+  check('ohmmeter: OL (1e9) accepted and stored at meter over-range', ol.status === 200 && ol.json?.measurement?.value === 1e8, `${ol.status} ${ol.json?.measurement?.value}`);
+  const g2 = await call(A.token, 'GET', `/api/v1/investigations/${inv2}`);
+  check('ohmmeter: mode persists on reload without the flag', g2.json?.measurements?.length === 5 && g2.json?.probe?.hypotheses?.length > 0);
+  const md2 = await (await fetch(`${base}/api/v1/investigations/${inv2}/report`, { headers: { authorization: `Bearer ${A.token}` } })).text();
+  check('ohmmeter: report lists power-off readings (OL shown)', md2.includes('(power off)') && md2.includes('| OL |'));
   await call(A.token, 'POST', `/api/v1/workspaces/${wsId}/members`, { email: B.email, role: 'viewer' });
   check('viewer cannot bulk-export', (await call(B.token, 'GET', `/api/v1/workspaces/${wsId}/export`)).status === 403);
   const vDel = await call(B.token, 'POST', `/api/v1/workspaces/${wsId}/delete`, { confirm: 'e2e bench' });

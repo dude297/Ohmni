@@ -1,7 +1,7 @@
 import type { CircuitGraph } from '../circuit/types';
 import { solveDC, type DCSolution } from '../circuit/solve';
 import { validateGraph } from '../circuit/validate';
-import { modeledHypotheses, probeStep, type Observation } from '../probe';
+import { isResistance, modeledHypotheses, probeStep, type Observation, type Reading } from '../probe';
 
 // Repair Studio: Observe -> Diagnose (probe posterior) -> Propose -> Simulate -> Approve -> Verify.
 // Every number is solver-simulated; patches only restore the CONFIRMED design (no rewiring, no new voltage).
@@ -85,8 +85,9 @@ export function faultCase(graph: CircuitGraph, hypothesisId: string, nodes: stri
 
 export class RepairError extends Error {}
 
-export function repairStep(graph: CircuitGraph, observations: Observation[]): RepairResult {
-  const step = probeStep(graph, observations);
+export function repairStep(graph: CircuitGraph, readings: Reading[]): RepairResult {
+  const step = probeStep(graph, readings); // resistance readings (ohmmeter mode) count as evidence; support is shown for voltages
+  const observations = readings.filter((o): o is Observation => !isResistance(o));
   const hyps = modeledHypotheses(step); // repairs are proposed among modeled faults only; step.fitWarning carries the misfit
   // No repair is proposed when no modeled fault explains the readings: a confident-looking fix would be invented.
   if (step.fit === 'poor' || step.hypotheses[0]?.id === 'unmodeled') {
