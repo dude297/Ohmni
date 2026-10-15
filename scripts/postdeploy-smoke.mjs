@@ -37,6 +37,17 @@ const graph = {
   groundNode: 'GND',
   measureNode: 'VOUT',
 };
+const bridge = {
+  schemaVersion: 1,
+  components: [
+    { id: 'V1', kind: 'dc_voltage', value: 12, positiveNode: 'VIN', negativeNode: 'GND' },
+    R('R1', 1000, 'VIN', 'A'), R('R2', 2000, 'A', 'GND'), R('R3', 1500, 'VIN', 'B'), R('R4', 1000, 'B', 'GND'),
+    R('R5', 3300, 'A', 'B'), R('R6', 680, 'B', 'C'), R('R7', 1200, 'C', 'GND'),
+  ],
+  groundNode: 'GND',
+  measureNode: 'C',
+};
+const bridgeObs = [{ node: 'C', volts: 0 }, { node: 'A', volts: 7.533 }, { node: 'B', volts: 5.22 }];
 const post = (body) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body });
 
 const checks = [
@@ -48,6 +59,27 @@ const checks = [
   ['POST /api/solve bad JSON -> 400', async () => {
     const { res } = await get('/api/solve', post('{nope'));
     return res.status === 400 ? null : `status ${res.status}`;
+  }],
+  // Demo bridge, C reads 0 V: the guide must land on R6 open, the repair must target it, and verify must be server-judged.
+  ['POST /api/probe bridge C=0, A=7.533, B=5.22 -> R6 open, done', async () => {
+    const { res, data } = await get('/api/probe', post(JSON.stringify({ graph: bridge, userConfirmed: true, observations: bridgeObs })));
+    const top = data?.result?.hypotheses?.[0];
+    return res.status === 200 && top?.id === 'R6:open' && top.probability > 0.9 && data.result.done === true ? null : `status ${res.status}, top ${top?.id} ${top?.probability}`;
+  }],
+  ['POST /api/repair + /api/repair/verify bridge -> R6 fix, verified at the server expectation only', async () => {
+    const { res, data } = await get('/api/repair', post(JSON.stringify({ graph: bridge, userConfirmed: true, observations: bridgeObs })));
+    const p = data?.result?.proposals?.[0];
+    if (res.status !== 200 || p?.hypothesisId !== 'R6:open') return `repair status ${res.status}, first ${p?.hypothesisId}`;
+    const verify = (volts) => get('/api/repair/verify', post(JSON.stringify({ graph: bridge, userConfirmed: true, hypothesisId: 'R6:open', revisionId: data.result.revisionId, measured: { node: p.verification.node, volts } })));
+    const ok = await verify(p.verification.expectVolts);
+    const off = await verify(p.verification.expectVolts + 1);
+    if (ok.res.status !== 200 || ok.data?.result?.verified !== true) return `verify ok status ${ok.res.status}, verified ${ok.data?.result?.verified}`;
+    return off.data?.result?.verified === false ? null : `off-by-1V verified ${off.data?.result?.verified}`;
+  }],
+  ['GET /api/v1/workspaces without token -> 503 (persistence off) or 401', async () => {
+    const { res, data } = await get('/api/v1/workspaces');
+    const code = data?.error?.code;
+    return (res.status === 503 && code === 'PERSISTENCE_DISABLED') || (res.status === 401 && code === 'UNAUTHENTICATED') ? null : `status ${res.status} ${code}`;
   }],
   ['GET /probe -> 200, core tier, security headers', async () => {
     const { res } = await get('/probe');
