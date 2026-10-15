@@ -235,6 +235,30 @@ try {
   const left = await admin.storage.from('artifacts').list(`${wsId}/${projectId}`);
   check('stored images removed with the workspace', !left.data?.length);
   check('deleted workspace not listed', !(await call(A.token, 'GET', '/api/v1/workspaces')).json?.workspaces?.some((w) => w.workspace?.id === wsId));
+
+  // Account deletion: C owns a shared workspace (D is editor and authored a project there) and a solo one.
+  const C = await user('c');
+  const D = await user('d');
+  users.push(C, D);
+  const shared = (await call(C.token, 'POST', '/api/v1/workspaces', { name: 'e2e shared' })).json.workspace.id;
+  const solo = (await call(C.token, 'POST', '/api/v1/workspaces', { name: 'e2e solo' })).json.workspace.id;
+  workspaces.push(shared, solo);
+  await call(C.token, 'POST', `/api/v1/workspaces/${shared}/members`, { email: D.email, role: 'editor' });
+  const dProj = (await call(D.token, 'POST', '/api/v1/projects', { workspaceId: shared, name: 'by D' })).json?.project?.id;
+  check('account: wrong confirmation -> 422', (await call(D.token, 'POST', '/api/v1/account/delete', { confirm: C.email })).json?.error?.code === 'CONFIRMATION_MISMATCH');
+  const cBlocked = await call(C.token, 'POST', '/api/v1/account/delete', { confirm: C.email });
+  check('account: sole owner of a shared workspace -> 409, nothing deleted', cBlocked.status === 409 && cBlocked.json?.error?.code === 'LAST_OWNER' && (await call(C.token, 'GET', '/api/v1/workspaces')).json?.workspaces?.length === 2, `${cBlocked.status}`);
+  const dDel = await call(D.token, 'POST', '/api/v1/account/delete', { confirm: D.email.toUpperCase() });
+  check('account: member deletes account, shared workspace kept', dDel.status === 200 && dDel.json?.membershipsRemoved === 1 && dDel.json.workspacesDeleted.length === 0, `${dDel.status} ${JSON.stringify(dDel.json)}`);
+  if (dDel.status === 200) users.splice(users.indexOf(D), 1);
+  const { data: orphan } = await admin.from('projects').select('id, created_by').eq('id', dProj).maybeSingle();
+  check("account: deleted member's project stays, author cleared", !!orphan && orphan.created_by === null);
+  check('account: deleted user token no longer works', (await call(D.token, 'GET', '/api/v1/workspaces')).status === 401);
+  const cDel = await call(C.token, 'POST', '/api/v1/account/delete', { confirm: C.email });
+  check('account: last member deletes account -> both workspaces deleted', cDel.status === 200 && cDel.json?.workspacesDeleted?.length === 2, `${cDel.status} ${JSON.stringify(cDel.json)}`);
+  if (cDel.status === 200) users.splice(users.indexOf(C), 1);
+  const { count } = await admin.from('workspaces').select('id', { count: 'exact', head: true }).in('id', [shared, solo]);
+  check('account: workspaces gone from the database', count === 0);
 } finally {
   for (const w of workspaces) {
     const { error } = await admin.from('workspaces').delete().eq('id', w);

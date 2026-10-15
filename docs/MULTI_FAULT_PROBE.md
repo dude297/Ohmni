@@ -14,7 +14,7 @@ Nominal 0.5; each single = 0.5 / (number of single faults), as in `probeStep`. E
 
 ## Equivalence merging
 
-If a pair predicts the same voltage at every node (within 1e-9 V) as an already-kept hypothesis (nominal, a single, or an earlier pair), it is dropped and a line is added to `notes` ("X + Y merged into Z"). Its prior mass is NOT added to the survivor (it would inflate e.g. "supply dead", which absorbs every pair containing the dead supply). Bridge: 364 pair candidates, 332 kept, 32 merged.
+If a pair predicts the same voltage at every node (within 0.5 meter sigma, `EQ_SIGMAS`, so no voltage measurement could tell them apart) as an already-kept hypothesis (nominal, a single, or an earlier pair), it is dropped and a line is added to `notes` ("X + Y merged into Z"). Its prior mass is NOT added to the survivor (it would inflate e.g. "supply dead", which absorbs every pair containing the dead supply). Bridge: 364 pair candidates, 281 kept, 83 merged.
 
 ## Cap
 
