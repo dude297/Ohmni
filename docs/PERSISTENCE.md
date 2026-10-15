@@ -42,5 +42,5 @@ Signed-in calls to `/api/extract` / `/api/explain` with a `projectId` store trac
 
 ## Known gaps
 - No invitation emails (members must have signed in once), no artifact (file) upload yet; the `reports` table is unused (reports are generated on demand).
-- Account deletion (`POST /account/delete`, migration `20261015000000_account_deletion.sql`): policy = delete solo workspaces, refuse while sole owner of a shared one, keep shared evidence with the author cleared. Change it if a customer contract needs reassignment instead.
+- Account deletion (`POST /api/v1/account/delete`, migration `20261015000000_account_deletion.sql`): policy = delete solo workspaces, refuse while sole owner of a shared one, keep shared evidence with the author cleared. Change it if a customer contract needs reassignment instead.
 - Hypothesis snapshots store the top 12 hypotheses (plus any ≥ 1 %) per reading; the full posterior is recomputable from stored evidence.
